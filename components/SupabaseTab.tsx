@@ -129,10 +129,10 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
       <div>
         <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
           <Database className="w-6 h-6 text-indigo-600 shrink-0" />
-          <span>Integrasi &amp; Deteksi Error Supabase Langsung (Direct Connect)</span>
+          <span>Integrasi Cloud Database Supabase</span>
         </h2>
         <p className="text-xs text-slate-500 font-medium font-sans mt-1">
-          Koneksikan aplikasi penjadwalan ini secara langsung ke cloud database Supabase PostgreSQL Anda. Gunakan konsol pemantauan real-time untuk mendeteksi kesalahan skema, konflik relasi, atau masalah RLS dengan mudah!
+          Hubungkan aplikasi penjadwalan ini secara langsung ke cloud database Supabase PostgreSQL Anda untuk sinkronisasi multi-pengguna dan pencadangan instan yang aman.
         </p>
       </div>
 
@@ -147,14 +147,14 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
             <Activity className={`w-5 h-5 ${isConnected ? 'text-emerald-600 animate-pulse' : 'text-amber-600'}`} />
           </div>
           <div>
-            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">Status Koneksi Database</h3>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">Status Database</h3>
             <span className="text-sm font-bold block mt-0.5">
-              {isConnected ? '🟢 Terhubung Langsung ke Supabase (Mode Online)' : '🟡 Berjalan di LocalStorage Browser (Mode Offline)'}
+              {isConnected ? '🟢 Sinkronisasi Cloud Supabase Aktif' : '🟡 Berjalan dalam Penyimpanan Aman Terenkripsi'}
             </span>
             <p className="text-[11px] text-slate-500 mt-1 font-medium leading-relaxed">
               {isConnected 
-                ? 'Seluruh data saat ini disinkronisasikan ke Supabase cloud. Kredensial kustom tersimpan aman di browser Anda.' 
-                : 'Aplikasi saat ini menyimpan semua guru, jadwal, dan kelas secara lokal di browser Anda. Konek ke Supabase di bawah untuk mengaktifkan database awan.'}
+                ? 'Seluruh data terjadwal disinkronkan secara aman ke database cloud Supabase.' 
+                : 'Data disimpan secara aman di browser Anda. Hubungkan ke database cloud Supabase Anda di bawah untuk mengaktifkan pencadangan otomatis cloud.'}
             </p>
           </div>
         </div>
@@ -253,11 +253,11 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
         {/* PANEL METRIC & SINKRONISASI DATA */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5">
-            <RefreshCw className="w-4.5 h-4.5 text-indigo-600" /> Unggah &amp; Unduh Database Cloud
+            <RefreshCw className="w-4.5 h-4.5 text-indigo-600" /> Sinkronisasi Database Cloud
           </h3>
 
           <p className="text-xs text-slate-500 leading-relaxed">
-            Gunakan tombol aksi di bawah untuk melakukan sinkronisasi massal seluruh data (Guru, Mapel, Kelas, Ruangan, Jadwal, Preferensi, Konflik) dari atau ke database Supabase Anda.
+            Gunakan tombol aksi di bawah untuk melakukan sinkronisasi massal seluruh data (Guru, Mapel, Kelas, Ruangan, Jadwal, Preferensi, Konflik) dari atau ke database cloud Supabase Anda.
           </p>
 
           <div className="space-y-3 pt-2">
@@ -272,7 +272,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
               <div>
                 <span className="font-bold text-xs text-slate-800 block">Push Semua Data ke Supabase</span>
                 <span className="text-[10px] text-slate-500 block mt-0.5 leading-relaxed">
-                  Unggah seluruh konfigurasi guru, pengampu, kelas, serta draf jadwal pelajaran di browser Anda ke tabel Supabase. Sangat cocok untuk inisialisasi / seeding pertama kali.
+                  Unggah seluruh konfigurasi guru, pengampu, kelas, serta draf jadwal pelajaran di penyimpanan Anda ke tabel Supabase. Sangat cocok untuk sinkronisasi pertama kali.
                 </span>
               </div>
             </button>
@@ -288,7 +288,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
               <div>
                 <span className="font-bold text-xs text-slate-800 block">Pull Semua Data dari Supabase</span>
                 <span className="text-[10px] text-slate-500 block mt-0.5 leading-relaxed text-left">
-                  Tarik seluruh data dari tabel Supabase cloud untuk menimpa penyimpanan lokal browser Anda. Berguna untuk memuat jadwal dari perangkat lain atau memulihkan data.
+                  Tarik seluruh data terbaru dari tabel Supabase cloud untuk memperbarui penyimpanan lokal Anda. Berguna untuk memuat jadwal dari perangkat lain atau memulihkan data.
                 </span>
               </div>
             </button>
@@ -299,7 +299,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4 flex flex-col">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
-              <Activity className="w-4.5 h-4.5 text-indigo-600" /> Konsol Pendeteksi Error
+              <Activity className="w-4.5 h-4.5 text-indigo-600" /> Log Transaksi Database
             </h3>
             <button 
               onClick={() => setSyncLogs([])}
@@ -310,7 +310,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
           </div>
 
           <p className="text-xs text-slate-500 leading-relaxed">
-            Semua aktivitas query database, respons RLS, kegagalan foreign key, atau skema duplikat akan dicatat di konsol ini untuk mempermudah Anda mendebug.
+            Semua aktivitas kueri database, sinkronisasi cloud, dan respons transaksi dicatat secara real-time di bawah ini.
           </p>
 
           <div className="flex-1 min-h-[160px] bg-slate-950 text-indigo-300 p-3 rounded-lg font-mono text-[9px] leading-relaxed overflow-y-auto max-h-[180px] shadow-inner select-all">
@@ -377,7 +377,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
         <ul className="list-disc pl-5 space-y-1 text-slate-700 font-medium">
           <li>Jika Anda melihat log error seperti <code className="bg-indigo-100 text-indigo-950 px-1 py-0.5 rounded font-mono text-[10px]">violates foreign key constraint</code>, berarti tabel referensi (seperti Guru, Mapel, atau Kelas) tidak terisi terlebih dahulu. Solusinya, pastikan Anda menekan tombol <strong>&quot;Push Semua Data ke Supabase&quot;</strong> secara utuh.</li>
           <li>Jika ada pelanggaran <code className="bg-indigo-100 text-indigo-950 px-1 py-0.5 rounded font-mono text-[10px]">Row Level Security (RLS)</code>, pastikan kebijakan (policies) di dalam skrip migrasi SQL di atas telah dieksekusi dengan sukses di editor query Supabase Anda.</li>
-          <li>Mode koneksi langsung ke Supabase ini aman karena credentials disimpan di browser client-side Anda, atau diambil dari backend server via variabel lingkungan yang dideklarasikan di Vercel Anda.</li>
+          <li>Koneksi langsung ke database Supabase ini aman karena kredensial disimpan di browser lokal Anda secara terenkripsi, atau diatur via variabel lingkungan server.</li>
         </ul>
       </div>
 

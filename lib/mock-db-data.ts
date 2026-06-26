@@ -3,39 +3,39 @@ import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajara
 export const MOCK_GURU: Guru[] = [
   {
     id: 'g-1',
-    nip: '198105122009021003',
-    nama: 'Ahmad Subarjo, S.Pd. (Matematika)',
+    nip: '197205121998031003',
+    nama: 'Drs. H. Ahmad Subarjo, M.Pd. (Matematika)',
     jenis_kelamin: 'Laki-laki',
     no_hp: '081234567890',
     status_aktif: true,
   },
   {
     id: 'g-2',
-    nip: '198503252011012004',
-    nama: 'Siti Rahma, M.Pd. (B. Indonesia)',
+    nip: '198103252009012004',
+    nama: 'Siti Rahma, S.Pd., M.Pd. (B. Indonesia)',
     jenis_kelamin: 'Perempuan',
     no_hp: '081298765432',
     status_aktif: true,
   },
   {
     id: 'g-3',
-    nip: '197911042005011002',
-    nama: 'Drs. Bambang Wijaya (IPA)',
+    nip: '197511042003121002',
+    nama: 'Dr. Bambang Wijaya, M.Si. (IPA)',
     jenis_kelamin: 'Laki-laki',
     no_hp: '085611223344',
     status_aktif: true,
   },
   {
     id: 'g-4',
-    nip: '198801152015032001',
-    nama: 'Rina Kartika, S.S. (B. Inggris)',
+    nip: '198501152011032001',
+    nama: 'Rina Kartika, S.S., M.Hum. (B. Inggris)',
     jenis_kelamin: 'Perempuan',
     no_hp: '087755667788',
     status_aktif: true,
   },
   {
     id: 'g-5',
-    nip: '199207222019081005',
+    nip: '199007222015081005',
     nama: 'Budi Hartono, S.Pd. (IPS)',
     jenis_kelamin: 'Laki-laki',
     no_hp: '089911223344',
@@ -43,7 +43,7 @@ export const MOCK_GURU: Guru[] = [
   },
   {
     id: 'g-6',
-    nip: '199009102018041002',
+    nip: '198809102014041002',
     nama: 'Eko Prasetyo, S.Pd.Or. (PJOK)',
     jenis_kelamin: 'Laki-laki',
     no_hp: '081377889900',
@@ -51,10 +51,82 @@ export const MOCK_GURU: Guru[] = [
   },
   {
     id: 'g-7',
-    nip: '198412032010012003',
-    nama: 'Dewi Lestari, S.Sn. (Seni)',
+    nip: '198312032010012003',
+    nama: 'Dewi Lestari, S.Sn. (Seni Budaya)',
     jenis_kelamin: 'Perempuan',
     no_hp: '082144556677',
+    status_aktif: true,
+  },
+  {
+    id: 'g-8',
+    nip: '197804182005021001',
+    nama: 'Haji Muhammad Rizal, S.Ag. (PAI)',
+    jenis_kelamin: 'Laki-laki',
+    no_hp: '081211223344',
+    status_aktif: true,
+  },
+  {
+    id: 'g-9',
+    nip: '198208102010012002',
+    nama: 'Yosefina Maria, S.Th. (PKn / Agama)',
+    jenis_kelamin: 'Perempuan',
+    no_hp: '081355667788',
+    status_aktif: true,
+  },
+  {
+    id: 'g-10',
+    nip: '197003151996021001',
+    nama: 'Drs. I Ketut Widana, M.Si. (PKn)',
+    jenis_kelamin: 'Laki-laki',
+    no_hp: '085744556677',
+    status_aktif: true,
+  },
+  {
+    id: 'g-11',
+    nip: '199211052019031008',
+    nama: 'Hendra Wijaya, S.Kom. (Informatika)',
+    jenis_kelamin: 'Laki-laki',
+    no_hp: '089677889900',
+    status_aktif: true,
+  },
+  {
+    id: 'g-12',
+    nip: '198702202012012003',
+    nama: 'Tri Astuti, S.Pd. (Prakarya)',
+    jenis_kelamin: 'Perempuan',
+    no_hp: '082211223344',
+    status_aktif: true,
+  },
+  {
+    id: 'g-13',
+    nip: '198905142016031002',
+    nama: 'Agus Susanto, S.Pd. (Bahasa Daerah)',
+    jenis_kelamin: 'Laki-laki',
+    no_hp: '087855667788',
+    status_aktif: true,
+  },
+  {
+    id: 'g-14',
+    nip: '198410222010012005',
+    nama: 'Sri Wahyuni, S.Psi. (BK)',
+    jenis_kelamin: 'Perempuan',
+    no_hp: '089511223344',
+    status_aktif: true,
+  },
+  {
+    id: 'g-15',
+    nip: '199406182020082001',
+    nama: 'Mega Utama, M.Pd. (Matematika)',
+    jenis_kelamin: 'Perempuan',
+    no_hp: '081388990011',
+    status_aktif: true,
+  },
+  {
+    id: 'g-16',
+    nip: '199503122022012002',
+    nama: 'Diana Putri, S.Pd. (IPA)',
+    jenis_kelamin: 'Perempuan',
+    no_hp: '081266778899',
     status_aktif: true,
   }
 ];
@@ -88,19 +160,55 @@ export const MOCK_MAPEL: MataPelajaran[] = [
     id: 'm-5',
     kode_mapel: 'IPS',
     nama_mapel: 'Ilmu Pengetahuan Sosial',
-    jumlah_jam_per_minggu: 3,
+    jumlah_jam_per_minggu: 4,
   },
   {
     id: 'm-6',
-    kode_mapel: 'OJE',
-    nama_mapel: 'Pendidikan Jasmani & Olahraga',
-    jumlah_jam_per_minggu: 2,
+    kode_mapel: 'PJK',
+    nama_mapel: 'Pendidikan Jasmani, Olahraga & Kesehatan',
+    jumlah_jam_per_minggu: 3,
   },
   {
     id: 'm-7',
-    kode_mapel: 'SND',
+    kode_mapel: 'SEN',
     nama_mapel: 'Seni Budaya',
     jumlah_jam_per_minggu: 2,
+  },
+  {
+    id: 'm-8',
+    kode_mapel: 'AGM',
+    nama_mapel: 'Pendidikan Agama & Budi Pekerti',
+    jumlah_jam_per_minggu: 3,
+  },
+  {
+    id: 'm-9',
+    kode_mapel: 'PPN',
+    nama_mapel: 'Pendidikan Pancasila & Kewarganegaraan',
+    jumlah_jam_per_minggu: 2,
+  },
+  {
+    id: 'm-10',
+    kode_mapel: 'INF',
+    nama_mapel: 'Informatika',
+    jumlah_jam_per_minggu: 2,
+  },
+  {
+    id: 'm-11',
+    kode_mapel: 'PRK',
+    nama_mapel: 'Prakarya',
+    jumlah_jam_per_minggu: 2,
+  },
+  {
+    id: 'm-12',
+    kode_mapel: 'MLO',
+    nama_mapel: 'Bahasa Daerah (Muatan Lokal)',
+    jumlah_jam_per_minggu: 2,
+  },
+  {
+    id: 'm-13',
+    kode_mapel: 'BK',
+    nama_mapel: 'Bimbingan Konseling',
+    jumlah_jam_per_minggu: 1,
   }
 ];
 
@@ -109,19 +217,37 @@ export const MOCK_KELAS: Kelas[] = [
     id: 'c-1',
     nama_kelas: 'VII A',
     tingkat: 'VII',
-    wali_kelas: 'Ahmad Subarjo, S.Pd.',
+    wali_kelas: 'Drs. H. Ahmad Subarjo, M.Pd.',
   },
   {
     id: 'c-2',
     nama_kelas: 'VII B',
     tingkat: 'VII',
-    wali_kelas: 'Siti Rahma, M.Pd.',
+    wali_kelas: 'Siti Rahma, S.Pd., M.Pd.',
   },
   {
     id: 'c-3',
     nama_kelas: 'VIII A',
     tingkat: 'VIII',
-    wali_kelas: 'Drs. Bambang Wijaya',
+    wali_kelas: 'Dr. Bambang Wijaya, M.Si.',
+  },
+  {
+    id: 'c-4',
+    nama_kelas: 'VIII B',
+    tingkat: 'VIII',
+    wali_kelas: 'Rina Kartika, S.S., M.Hum.',
+  },
+  {
+    id: 'c-5',
+    nama_kelas: 'IX A',
+    tingkat: 'IX',
+    wali_kelas: 'Budi Hartono, S.Pd.',
+  },
+  {
+    id: 'c-6',
+    nama_kelas: 'IX B',
+    tingkat: 'IX',
+    wali_kelas: 'Mega Utama, M.Pd.',
   }
 ];
 
@@ -139,17 +265,37 @@ export const MOCK_RUANGAN: Ruangan[] = [
   {
     id: 'r-3',
     nama_ruangan: 'Kelas VIII A',
-    kapasitas: 36,
+    kapasitas: 32,
   },
   {
     id: 'r-4',
+    nama_ruangan: 'Kelas VIII B',
+    kapasitas: 32,
+  },
+  {
+    id: 'r-5',
+    nama_ruangan: 'Kelas IX A',
+    kapasitas: 32,
+  },
+  {
+    id: 'r-6',
+    nama_ruangan: 'Kelas IX B',
+    kapasitas: 32,
+  },
+  {
+    id: 'r-7',
     nama_ruangan: 'Laboratorium Komputer',
     kapasitas: 40,
   },
   {
-    id: 'r-5',
+    id: 'r-8',
     nama_ruangan: 'Lapangan Olahraga',
     kapasitas: 80,
+  },
+  {
+    id: 'r-9',
+    nama_ruangan: 'Laboratorium IPA',
+    kapasitas: 36,
   }
 ];
 
@@ -165,64 +311,119 @@ export const MOCK_JAM_PELAJARAN: JamPelajaran[] = [
 ];
 
 export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
-  // Matematika (g-1)
-  { id: 'a-1', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-1', jumlah_jam: 5 }, // VII A
-  { id: 'a-2', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-2', jumlah_jam: 5 }, // VII B
-  { id: 'a-3', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-3', jumlah_jam: 4 }, // VIII A
+  // --- KELAS VII A ---
+  { id: 'a-7a-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-1', jumlah_jam: 3 },  // Agama (Rizal)
+  { id: 'a-7a-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-1', jumlah_jam: 2 }, // PKn (Widana)
+  { id: 'a-7a-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-1', jumlah_jam: 4 },  // B. Indonesia (Siti)
+  { id: 'a-7a-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-1', jumlah_jam: 5 },  // Matematika (Ahmad)
+  { id: 'a-7a-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-1', jumlah_jam: 4 },  // B. Inggris (Rina)
+  { id: 'a-7a-6', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-1', jumlah_jam: 4 },  // IPA (Bambang)
+  { id: 'a-7a-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-1', jumlah_jam: 4 },  // IPS (Budi)
+  { id: 'a-7a-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-1', jumlah_jam: 3 },  // PJOK (Eko)
+  { id: 'a-7a-9', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-1', jumlah_jam: 2 },  // Seni Budaya (Dewi)
+  { id: 'a-7a-10', guru_id: 'g-11', mapel_id: 'm-10', kelas_id: 'c-1', jumlah_jam: 2 }, // Informatika (Hendra)
+  { id: 'a-7a-11', guru_id: 'g-12', mapel_id: 'm-11', kelas_id: 'c-1', jumlah_jam: 2 }, // Prakarya (Tri)
+  { id: 'a-7a-12', guru_id: 'g-13', mapel_id: 'm-12', kelas_id: 'c-1', jumlah_jam: 2 }, // B. Daerah (Agus)
+  { id: 'a-7a-13', guru_id: 'g-14', mapel_id: 'm-13', kelas_id: 'c-1', jumlah_jam: 1 }, // BK (Sri)
 
-  // Bahasa Indonesia (g-2)
-  { id: 'a-4', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-1', jumlah_jam: 4 },
-  { id: 'a-5', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-2', jumlah_jam: 4 },
-  { id: 'a-6', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-3', jumlah_jam: 4 },
+  // --- KELAS VII B ---
+  { id: 'a-7b-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-2', jumlah_jam: 3 },
+  { id: 'a-7b-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-2', jumlah_jam: 2 },  // PKn (Maria)
+  { id: 'a-7b-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-2', jumlah_jam: 4 },
+  { id: 'a-7b-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-2', jumlah_jam: 5 },
+  { id: 'a-7b-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-2', jumlah_jam: 4 },
+  { id: 'a-7b-6', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-2', jumlah_jam: 4 },
+  { id: 'a-7b-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-2', jumlah_jam: 4 },
+  { id: 'a-7b-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-2', jumlah_jam: 3 },
+  { id: 'a-7b-9', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-2', jumlah_jam: 2 },
+  { id: 'a-7b-10', guru_id: 'g-11', mapel_id: 'm-10', kelas_id: 'c-2', jumlah_jam: 2 },
+  { id: 'a-7b-11', guru_id: 'g-12', mapel_id: 'm-11', kelas_id: 'c-2', jumlah_jam: 2 },
+  { id: 'a-7b-12', guru_id: 'g-13', mapel_id: 'm-12', kelas_id: 'c-2', jumlah_jam: 2 },
+  { id: 'a-7b-13', guru_id: 'g-14', mapel_id: 'm-13', kelas_id: 'c-2', jumlah_jam: 1 },
 
-  // IPA (g-3)
-  { id: 'a-7', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-1', jumlah_jam: 4 },
-  { id: 'a-8', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-2', jumlah_jam: 4 },
-  { id: 'a-9', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-3', jumlah_jam: 4 },
+  // --- KELAS VIII A ---
+  { id: 'a-8a-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-3', jumlah_jam: 3 },
+  { id: 'a-8a-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-3', jumlah_jam: 2 },
+  { id: 'a-8a-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-3', jumlah_jam: 4 },
+  { id: 'a-8a-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-3', jumlah_jam: 5 },
+  { id: 'a-8a-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-3', jumlah_jam: 4 },
+  { id: 'a-8a-6', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-3', jumlah_jam: 4 },
+  { id: 'a-8a-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-3', jumlah_jam: 4 },
+  { id: 'a-8a-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-3', jumlah_jam: 3 },
+  { id: 'a-8a-9', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-3', jumlah_jam: 2 },
+  { id: 'a-8a-10', guru_id: 'g-11', mapel_id: 'm-10', kelas_id: 'c-3', jumlah_jam: 2 },
+  { id: 'a-8a-11', guru_id: 'g-12', mapel_id: 'm-11', kelas_id: 'c-3', jumlah_jam: 2 },
+  { id: 'a-8a-12', guru_id: 'g-13', mapel_id: 'm-12', kelas_id: 'c-3', jumlah_jam: 2 },
+  { id: 'a-8a-13', guru_id: 'g-14', mapel_id: 'm-13', kelas_id: 'c-3', jumlah_jam: 1 },
 
-  // Bahasa Inggris (g-4)
-  { id: 'a-10', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-1', jumlah_jam: 4 },
-  { id: 'a-11', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-2', jumlah_jam: 4 },
-  { id: 'a-12', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-3', jumlah_jam: 4 },
+  // --- KELAS VIII B ---
+  { id: 'a-8b-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-4', jumlah_jam: 3 },
+  { id: 'a-8b-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-4', jumlah_jam: 2 },
+  { id: 'a-8b-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-4', jumlah_jam: 4 },
+  { id: 'a-8b-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-4', jumlah_jam: 5 }, // Matematika (Mega)
+  { id: 'a-8b-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-4', jumlah_jam: 4 },
+  { id: 'a-8b-6', guru_id: 'g-16', mapel_id: 'm-3', kelas_id: 'c-4', jumlah_jam: 4 }, // IPA (Diana)
+  { id: 'a-8b-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-4', jumlah_jam: 4 },
+  { id: 'a-8b-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-4', jumlah_jam: 3 },
+  { id: 'a-8b-9', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-4', jumlah_jam: 2 },
+  { id: 'a-8b-10', guru_id: 'g-11', mapel_id: 'm-10', kelas_id: 'c-4', jumlah_jam: 2 },
+  { id: 'a-8b-11', guru_id: 'g-12', mapel_id: 'm-11', kelas_id: 'c-4', jumlah_jam: 2 },
+  { id: 'a-8b-12', guru_id: 'g-13', mapel_id: 'm-12', kelas_id: 'c-4', jumlah_jam: 2 },
+  { id: 'a-8b-13', guru_id: 'g-14', mapel_id: 'm-13', kelas_id: 'c-4', jumlah_jam: 1 },
 
-  // IPS (g-5)
-  { id: 'a-13', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-1', jumlah_jam: 3 },
-  { id: 'a-14', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-2', jumlah_jam: 3 },
-  { id: 'a-15', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-3', jumlah_jam: 3 },
+  // --- KELAS IX A ---
+  { id: 'a-9a-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-5', jumlah_jam: 3 },
+  { id: 'a-9a-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-5', jumlah_jam: 2 },
+  { id: 'a-9a-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-5', jumlah_jam: 4 },
+  { id: 'a-9a-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-5', jumlah_jam: 5 },
+  { id: 'a-9a-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-5', jumlah_jam: 4 },
+  { id: 'a-9a-6', guru_id: 'g-16', mapel_id: 'm-3', kelas_id: 'c-5', jumlah_jam: 4 },
+  { id: 'a-9a-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-5', jumlah_jam: 4 },
+  { id: 'a-9a-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-5', jumlah_jam: 3 },
+  { id: 'a-9a-9', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-5', jumlah_jam: 2 },
+  { id: 'a-9a-10', guru_id: 'g-11', mapel_id: 'm-10', kelas_id: 'c-5', jumlah_jam: 2 },
+  { id: 'a-9a-11', guru_id: 'g-12', mapel_id: 'm-11', kelas_id: 'c-5', jumlah_jam: 2 },
+  { id: 'a-9a-12', guru_id: 'g-13', mapel_id: 'm-12', kelas_id: 'c-5', jumlah_jam: 2 },
+  { id: 'a-9a-13', guru_id: 'g-14', mapel_id: 'm-13', kelas_id: 'c-5', jumlah_jam: 1 },
 
-  // PJOK (g-6) - Diajar di Lapangan (r-5)
-  { id: 'a-16', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-1', jumlah_jam: 2 },
-  { id: 'a-17', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-2', jumlah_jam: 2 },
-  { id: 'a-18', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-3', jumlah_jam: 2 },
-
-  // Seni Budaya (g-7) - Diajar di Lab atau Kelas
-  { id: 'a-19', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-1', jumlah_jam: 2 },
-  { id: 'a-20', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-2', jumlah_jam: 2 },
-  { id: 'a-21', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-3', jumlah_jam: 2 }
+  // --- KELAS IX B ---
+  { id: 'a-9b-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-6', jumlah_jam: 3 },
+  { id: 'a-9b-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-6', jumlah_jam: 2 },
+  { id: 'a-9b-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-6', jumlah_jam: 4 },
+  { id: 'a-9b-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-6', jumlah_jam: 5 },
+  { id: 'a-9b-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-6', jumlah_jam: 4 },
+  { id: 'a-9b-6', guru_id: 'g-16', mapel_id: 'm-3', kelas_id: 'c-6', jumlah_jam: 4 },
+  { id: 'a-9b-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-6', jumlah_jam: 4 },
+  { id: 'a-9b-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-6', jumlah_jam: 3 },
+  { id: 'a-9b-9', guru_id: 'g-7', mapel_id: 'm-7', kelas_id: 'c-6', jumlah_jam: 2 },
+  { id: 'a-9b-10', guru_id: 'g-11', mapel_id: 'm-10', kelas_id: 'c-6', jumlah_jam: 2 },
+  { id: 'a-9b-11', guru_id: 'g-12', mapel_id: 'm-11', kelas_id: 'c-6', jumlah_jam: 2 },
+  { id: 'a-9b-12', guru_id: 'g-13', mapel_id: 'm-12', kelas_id: 'c-6', jumlah_jam: 2 },
+  { id: 'a-9b-13', guru_id: 'g-14', mapel_id: 'm-13', kelas_id: 'c-6', jumlah_jam: 1 }
 ];
 
 export const MOCK_PREFERENSI: PreferensiGuru[] = [
   {
     id: 'p-g-1',
-    guru_id: 'g-1', // Ahmad
+    guru_id: 'g-1',
     hari_tidak_bersedia: ['Senin'],
-    jam_tidak_bersedia: [1, 2], // Tidak bisa mengajar Senin pagi jam ke-1 dan ke-2
+    jam_tidak_bersedia: [1, 2],
     hari_favorit: ['Selasa', 'Rabu'],
     jam_favorit: [3, 4],
     max_jam_per_hari: 6
   },
   {
     id: 'p-g-2',
-    guru_id: 'g-2', // Siti
+    guru_id: 'g-2',
     hari_tidak_bersedia: ['Jumat'],
-    jam_tidak_bersedia: [7, 8], // Tidak bisa Jumat sore
+    jam_tidak_bersedia: [7, 8],
     hari_favorit: ['Kamis', 'Sabtu'],
     jam_favorit: [1, 2],
     max_jam_per_hari: 6
   },
   {
     id: 'p-g-3',
-    guru_id: 'g-3', // Bambang
+    guru_id: 'g-3',
     hari_tidak_bersedia: [],
     jam_tidak_bersedia: [],
     hari_favorit: ['Senin', 'Selasa'],
@@ -231,7 +432,7 @@ export const MOCK_PREFERENSI: PreferensiGuru[] = [
   },
   {
     id: 'p-g-4',
-    guru_id: 'g-4', // Rina
+    guru_id: 'g-4',
     hari_tidak_bersedia: ['Rabu'],
     jam_tidak_bersedia: [5, 6],
     hari_favorit: ['Senin', 'Jumat'],
@@ -240,7 +441,7 @@ export const MOCK_PREFERENSI: PreferensiGuru[] = [
   },
   {
     id: 'p-g-5',
-    guru_id: 'g-5', // Budi
+    guru_id: 'g-5',
     hari_tidak_bersedia: [],
     jam_tidak_bersedia: [],
     hari_favorit: ['Kamis', 'Jumat'],
@@ -249,7 +450,7 @@ export const MOCK_PREFERENSI: PreferensiGuru[] = [
   },
   {
     id: 'p-g-6',
-    guru_id: 'g-6', // Eko
+    guru_id: 'g-6',
     hari_tidak_bersedia: ['Sabtu'],
     jam_tidak_bersedia: [7, 8],
     hari_favorit: ['Senin', 'Selasa'],
@@ -258,11 +459,20 @@ export const MOCK_PREFERENSI: PreferensiGuru[] = [
   },
   {
     id: 'p-g-7',
-    guru_id: 'g-7', // Dewi
+    guru_id: 'g-7',
     hari_tidak_bersedia: [],
     jam_tidak_bersedia: [],
     hari_favorit: ['Rabu', 'Kamis'],
     jam_favorit: [4, 5],
+    max_jam_per_hari: 6
+  },
+  {
+    id: 'p-g-8',
+    guru_id: 'g-8',
+    hari_tidak_bersedia: ['Jumat'],
+    jam_tidak_bersedia: [5, 6, 7, 8], // Sholat Jumat
+    hari_favorit: ['Senin', 'Selasa'],
+    jam_favorit: [1, 2, 3],
     max_jam_per_hari: 6
   }
 ];

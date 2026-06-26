@@ -20,13 +20,15 @@ interface GridTabProps {
   selectedCell: { hari: Hari; jam_ke: number; scheduleId?: string | null } | null;
   setSelectedCell: (cell: { hari: Hari; jam_ke: number; scheduleId?: string | null } | null) => void;
   handleCellClick: (hari: Hari, jamKe: number, scheduleId: string | null | undefined) => void;
-  handleManualDeleteSlot: (scheduleId: string) => void;
+  handleManualDeleteSlot: (scheduleId: string, skipConfirm?: boolean) => void;
   handleExportExcel: () => void;
   handlePrintPDF: () => void;
   filteredScheduleMatrix: { [key: number]: { [key in Hari]?: Jadwal[] } };
   setActiveTab: (tab: string) => void;
   hariAktif: Hari[];
   pengampu: PengampuMataPelajaran[];
+  onRefresh?: () => void;
+  addLogMessage?: (msg: string) => void;
 }
 
 export default function GridTab({
@@ -50,7 +52,9 @@ export default function GridTab({
   filteredScheduleMatrix,
   setActiveTab,
   hariAktif,
-  pengampu
+  pengampu,
+  onRefresh,
+  addLogMessage
 }: GridTabProps) {
   // States untuk Cetak PDF kustom profesional
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -228,6 +232,192 @@ export default function GridTab({
   // Find selected teacher if any
   const selectedSchedule = selectedCell?.scheduleId ? jadwal.find(s => s.id === selectedCell.scheduleId) : null;
   const selectedGuruId = selectedSchedule ? selectedSchedule.guru_id : null;
+
+  // --- FITUR TAMBAHAN: INTERAKTIF MODAL EDIT & TAMBAH JADWAL MANUAL ---
+  const [activeEditCell, setActiveEditCell] = useState<{ hari: Hari; jam_ke: number; scheduleId?: string | null } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [manualAddMode, setManualAddMode] = useState<'pengampu' | 'custom'>('pengampu');
+  const [selectedPengampuId, setSelectedPengampuId] = useState<string>('');
+  const [customKelasId, setCustomKelasId] = useState<string>('');
+  const [customGuruId, setCustomGuruId] = useState<string>('');
+  const [customMapelId, setCustomMapelId] = useState<string>('');
+  const [manualRuanganId, setManualRuanganId] = useState<string>('');
+  const [quickRoomEdit, setQuickRoomEdit] = useState<boolean>(false);
+
+  const onCellClicked = (hari: Hari, jamKe: number, scheduleId: string | null | undefined) => {
+    if (selectedCell) {
+      // Complete swap/move
+      handleCellClick(hari, jamKe, scheduleId);
+    } else {
+      // Open modal for this cell
+      setActiveEditCell({ hari, jam_ke: jamKe, scheduleId });
+      setQuickRoomEdit(false);
+      setShowDeleteConfirm(false);
+      
+      // Filter relevant assignments
+      let preselectedPengampu = '';
+      if (filterType === 'kelas') {
+        const classPengampu = pengampu.filter(p => p.kelas_id === filterId);
+        // Find one that still has quota and is not in conflict, or just has quota
+        const hungryNoConflict = classPengampu.find(p => {
+          const count = jadwal.filter(s => s.kelas_id === filterId && s.guru_id === p.guru_id && s.mapel_id === p.mapel_id).length;
+          const hasConflict = jadwal.some(s => s.hari === hari && s.jam_ke === jamKe && s.guru_id === p.guru_id);
+          return count < p.jumlah_jam && !hasConflict;
+        });
+        const hungry = hungryNoConflict || classPengampu.find(p => {
+          const count = jadwal.filter(s => s.kelas_id === filterId && s.guru_id === p.guru_id && s.mapel_id === p.mapel_id).length;
+          return count < p.jumlah_jam;
+        });
+        preselectedPengampu = hungry ? hungry.id : (classPengampu[0]?.id || '');
+        setCustomKelasId(filterId);
+        setCustomGuruId(guru[0]?.id || '');
+        setCustomMapelId(mapel[0]?.id || '');
+      } else if (filterType === 'guru') {
+        const teacherPengampu = pengampu.filter(p => p.guru_id === filterId);
+        const hungryNoConflict = teacherPengampu.find(p => {
+          const count = jadwal.filter(s => s.kelas_id === p.kelas_id && s.guru_id === filterId && s.mapel_id === p.mapel_id).length;
+          const hasConflict = jadwal.some(s => s.hari === hari && s.jam_ke === jamKe && s.guru_id === filterId);
+          return count < p.jumlah_jam && !hasConflict;
+        });
+        const hungry = hungryNoConflict || teacherPengampu.find(p => {
+          const count = jadwal.filter(s => s.kelas_id === p.kelas_id && s.guru_id === filterId && s.mapel_id === p.mapel_id).length;
+          return count < p.jumlah_jam;
+        });
+        preselectedPengampu = hungry ? hungry.id : (teacherPengampu[0]?.id || '');
+        setCustomKelasId(kelas[0]?.id || '');
+        setCustomGuruId(filterId);
+        setCustomMapelId(mapel[0]?.id || '');
+      } else {
+        const hungryNoConflict = pengampu.find(p => {
+          const count = jadwal.filter(s => s.kelas_id === p.kelas_id && s.guru_id === p.guru_id && s.mapel_id === p.mapel_id).length;
+          const hasConflict = jadwal.some(s => s.hari === hari && s.jam_ke === jamKe && s.guru_id === p.guru_id);
+          return count < p.jumlah_jam && !hasConflict;
+        });
+        const hungry = hungryNoConflict || pengampu.find(p => {
+          const count = jadwal.filter(s => s.kelas_id === p.kelas_id && s.guru_id === p.guru_id && s.mapel_id === p.mapel_id).length;
+          return count < p.jumlah_jam;
+        });
+        preselectedPengampu = hungry ? hungry.id : (pengampu[0]?.id || '');
+        setCustomKelasId(kelas[0]?.id || '');
+        setCustomGuruId(guru[0]?.id || '');
+        setCustomMapelId(mapel[0]?.id || '');
+      }
+      setSelectedPengampuId(preselectedPengampu);
+      
+      // Default room
+      if (filterType === 'ruangan') {
+        setManualRuanganId(filterId);
+      } else if (scheduleId) {
+        const existing = jadwal.find(s => s.id === scheduleId);
+        setManualRuanganId(existing?.ruangan_id || ruangan[0]?.id || '');
+      } else {
+        setManualRuanganId(ruangan[0]?.id || '');
+      }
+      setManualAddMode('pengampu');
+    }
+  };
+
+  const handleSaveManualSlot = () => {
+    if (!activeEditCell) return;
+    const { hari, jam_ke } = activeEditCell;
+
+    let targetKelasId = '';
+    let targetGuruId = '';
+    let targetMapelId = '';
+    let targetRuanganId = manualRuanganId || ruangan[0]?.id || '';
+
+    if (manualAddMode === 'pengampu') {
+      const selectedP = pengampu.find(p => p.id === selectedPengampuId);
+      if (!selectedP) {
+        alert('Harap pilih Mata Pelajaran / Guru yang valid.');
+        return;
+      }
+      targetKelasId = selectedP.kelas_id;
+      targetGuruId = selectedP.guru_id;
+      targetMapelId = selectedP.mapel_id;
+    } else {
+      if (!customKelasId || !customGuruId || !customMapelId) {
+        alert('Harap lengkapi semua kolom Kelas, Guru, dan Mata Pelajaran.');
+        return;
+      }
+      targetKelasId = customKelasId;
+      targetGuruId = customGuruId;
+      targetMapelId = customMapelId;
+    }
+
+    // Validation: check if teacher is already busy at this time (hari, jam_ke)
+    const teacherConflict = jadwal.find(s => s.hari === hari && s.jam_ke === jam_ke && s.guru_id === targetGuruId);
+    if (teacherConflict) {
+      const otherClass = kelas.find(c => c.id === teacherConflict.kelas_id)?.nama_kelas || 'kelas lain';
+      if (!confirm(`⚠️ Peringatan: Guru yang dipilih sudah mengajar di kelas ${otherClass} pada hari ${hari} Jam ke-${jam_ke}.\n\nTetap simpan jadwal ini (mengabaikan bentrok)?`)) {
+        return;
+      }
+    }
+
+    // Validation: check if class is already busy at this time
+    const classConflict = jadwal.find(s => s.hari === hari && s.jam_ke === jam_ke && s.kelas_id === targetKelasId);
+    if (classConflict) {
+      const otherSubject = mapel.find(m => m.id === classConflict.mapel_id)?.nama_mapel || 'mapel lain';
+      if (!confirm(`⚠️ Peringatan: Kelas yang dipilih sudah diisi oleh pelajaran ${otherSubject} pada hari ${hari} Jam ke-${jam_ke}.\n\nTetap simpan jadwal ini (mengabaikan bentrok)?`)) {
+        return;
+      }
+    }
+
+    // Validation: check if room is already occupied at this time
+    const roomConflict = jadwal.find(s => s.hari === hari && s.jam_ke === jam_ke && s.ruangan_id === targetRuanganId);
+    if (roomConflict) {
+      const conflictingClass = kelas.find(c => c.id === roomConflict.kelas_id)?.nama_kelas || 'kelas';
+      if (!confirm(`⚠️ Peringatan: Ruangan yang dipilih sedang digunakan oleh kelas ${conflictingClass} pada hari ${hari} Jam ke-${jam_ke}.\n\nTetap simpan jadwal ini (mengabaikan bentrok)?`)) {
+        return;
+      }
+    }
+
+    // Create new schedule slot
+    const newSlot: Jadwal = {
+      id: `manual-s-${Date.now()}`,
+      assignment_id: manualAddMode === 'pengampu' ? selectedPengampuId : `custom-p-${Date.now()}`,
+      kelas_id: targetKelasId,
+      guru_id: targetGuruId,
+      mapel_id: targetMapelId,
+      ruangan_id: targetRuanganId,
+      hari,
+      jam_ke
+    };
+
+    const updatedJadwal = [...jadwal, newSlot];
+    LocalDB.saveJadwal(updatedJadwal);
+    
+    if (onRefresh) onRefresh();
+    if (addLogMessage) {
+      const subjectName = mapel.find(m => m.id === targetMapelId)?.nama_mapel || 'Mapel';
+      const teacherName = guru.find(g => g.id === targetGuruId)?.nama.split(',')[0] || 'Guru';
+      const className = kelas.find(c => c.id === targetKelasId)?.nama_kelas || 'Kelas';
+      addLogMessage(`📝 Berhasil menambahkan jadwal manual: ${subjectName} oleh ${teacherName} di Kelas ${className} (${hari}, Jam Ke-${jam_ke}).`);
+    }
+
+    setActiveEditCell(null);
+  };
+
+  const handleUpdateRoom = (newRoomId: string) => {
+    if (!activeEditCell || !activeEditCell.scheduleId) return;
+    const targetSlot = jadwal.find(s => s.id === activeEditCell.scheduleId);
+    if (!targetSlot) return;
+
+    const updated = jadwal.map(s => {
+      if (s.id === activeEditCell.scheduleId) {
+        return { ...s, ruangan_id: newRoomId };
+      }
+      return s;
+    });
+    LocalDB.saveJadwal(updated);
+    if (onRefresh) onRefresh();
+    if (addLogMessage) {
+      const roomName = ruangan.find(r => r.id === newRoomId)?.nama_ruangan || 'Ruangan';
+      const subjectName = mapel.find(m => m.id === targetSlot.mapel_id)?.nama_mapel || 'Mapel';
+      addLogMessage(`📍 Berhasil memperbarui ruangan secara manual: ${subjectName} dipindahkan ke ${roomName}.`);
+    }
+    setActiveEditCell(null);
+  };
 
   // 1. Hitung progres pemenuhan jam mengajar secara reaktif berdasarkan filter aktif
   const getFulfillmentProgress = () => {
@@ -617,7 +807,7 @@ export default function GridTab({
                       return (
                         <td 
                           key={d} 
-                          onClick={() => handleCellClick(d as Hari, p.jam_ke, sInCell[0]?.id)}
+                          onClick={() => onCellClicked(d as Hari, p.jam_ke, sInCell[0]?.id)}
                           className={`border p-2.5 text-center transition-all cursor-pointer relative min-h-[60px] align-top select-none ${cellStyle}`}
                         >
                           {sInCell.length === 0 ? (
@@ -1329,6 +1519,392 @@ export default function GridTab({
                 Mulai Cetak / Simpan PDF
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* FITUR TAMBAHAN: INTERAKTIF CELL ACTION MODAL (MANUAL OVERRIDE / ADD / UPDATE) */}
+      {activeEditCell && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Header */}
+            <div className="bg-indigo-900 text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-850 rounded-lg">
+                  <Calendar className="w-5 h-5 text-indigo-200" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold tracking-tight text-white">Atur Jadwal Manual</h3>
+                  <p className="text-[11px] text-indigo-200 font-mono mt-0.5">{activeEditCell.hari} — Jam Pelajaran Ke-{activeEditCell.jam_ke}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setActiveEditCell(null)}
+                className="p-1.5 text-indigo-200 hover:text-white bg-indigo-850 hover:bg-indigo-800 rounded-lg transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content Scrollable */}
+            <div className="p-6 overflow-y-auto space-y-5">
+              
+              {/* IF CELL IS OCCUPIED (EDIT/UPDATE MODE) */}
+              {activeEditCell.scheduleId ? (() => {
+                const currentSlot = jadwal.find(s => s.id === activeEditCell.scheduleId);
+                if (!currentSlot) return null;
+                const m = mapel.find(sub => sub.id === currentSlot.mapel_id);
+                const g = guru.find(t => t.id === currentSlot.guru_id);
+                const c = kelas.find(cls => cls.id === currentSlot.kelas_id);
+                const r = ruangan.find(rm => rm.id === currentSlot.ruangan_id);
+
+                return (
+                  <div className="space-y-4">
+                    {/* Detail Pelajaran Saat Ini */}
+                    <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-2.5">
+                      <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider block">Pelajaran Terjadwal Saat Ini:</span>
+                      <div className="grid grid-cols-2 gap-3 text-xs text-slate-700">
+                        <div>
+                          <p className="text-[10px] text-slate-450 uppercase">Mata Pelajaran</p>
+                          <p className="font-bold text-slate-900 mt-0.5">{m ? m.nama_mapel : 'Tidak Diketahui'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-450 uppercase">Guru Pengajar</p>
+                          <p className="font-bold text-slate-900 mt-0.5">{g ? g.nama : 'Tidak Diketahui'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-450 uppercase">Kelas</p>
+                          <p className="font-semibold text-indigo-800 mt-0.5">Kelas {c ? c.nama_kelas : 'Tidak Diketahui'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-450 uppercase">Ruangan</p>
+                          <p className="font-semibold text-indigo-800 mt-0.5">📍 {r ? r.nama_ruangan : 'Aula'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="space-y-3 pt-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Pilih Tindakan:</span>
+                      
+                      {/* Action 1: Swap/Move */}
+                      <button
+                        onClick={() => {
+                          setSelectedCell({ hari: activeEditCell.hari, jam_ke: activeEditCell.jam_ke, scheduleId: activeEditCell.scheduleId });
+                          setActiveEditCell(null);
+                          if (addLogMessage) addLogMessage(`Sel dipilih: ${activeEditCell.hari} Jam ke-${activeEditCell.jam_ke}. Pilih slot lain untuk dipindahkan atau ditukar.`);
+                        }}
+                        className="w-full p-3 text-left bg-white border border-slate-200 hover:border-amber-400 hover:bg-amber-50/30 rounded-xl transition flex items-start gap-3 cursor-pointer group"
+                      >
+                        <div className="p-2 bg-slate-100 group-hover:bg-amber-100 text-slate-600 group-hover:text-amber-700 rounded-lg shrink-0">
+                          <Play className="w-4 h-4 rotate-90" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 group-hover:text-amber-950">Tukar / Pindahkan Posisi Jadwal</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5 font-sans leading-normal">Aktifkan sirkulasi pemindahan. Selanjutnya klik sel mana pun untuk ditukar atau dipindahkan.</p>
+                        </div>
+                      </button>
+
+                      {/* Action 2: Change Room Quick Edit */}
+                      <div className="border border-slate-200 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-slate-800">Ubah Ruangan Saja</p>
+                          <button 
+                            onClick={() => setQuickRoomEdit(!quickRoomEdit)}
+                            className="text-[10px] font-bold text-indigo-650 hover:underline cursor-pointer"
+                          >
+                            {quickRoomEdit ? 'Batal' : 'Ubah Ruangan'}
+                          </button>
+                        </div>
+                        
+                        {quickRoomEdit ? (
+                          <div className="flex gap-2 animate-fade-in mt-1.5">
+                            <select
+                              value={manualRuanganId}
+                              onChange={(e) => setManualRuanganId(e.target.value)}
+                              className="flex-1 text-xs p-2 bg-white border border-slate-250 rounded-lg focus:outline-indigo-500"
+                            >
+                              {ruangan.map(rm => (
+                                <option key={rm.id} value={rm.id}>{rm.nama_ruangan}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleUpdateRoom(manualRuanganId)}
+                              className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition cursor-pointer"
+                            >
+                              Simpan
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-500 leading-normal">Ruangan saat ini diatur di {r ? r.nama_ruangan : 'Aula'}. Ubah ruangan cepat jika terjadi bentrok fisik.</p>
+                        )}
+                      </div>
+
+                      {/* Action 3: Delete */}
+                      {showDeleteConfirm ? (
+                        <div className="w-full p-4 bg-rose-50 border border-rose-200 rounded-xl space-y-3 animate-fade-in text-left">
+                          <p className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+                            <AlertTriangle className="w-4 h-4 text-rose-600" />
+                            Konfirmasi Penghapusan
+                          </p>
+                          <p className="text-[11px] text-rose-700 leading-normal">
+                            Apakah Anda yakin ingin melepas slot pelajaran ini dari jadwal? Tindakan ini akan mengosongkan jam pelajaran ke-{activeEditCell.jam_ke} pada hari {activeEditCell.hari} ini.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                if (activeEditCell.scheduleId) {
+                                  handleManualDeleteSlot(activeEditCell.scheduleId, true);
+                                  setActiveEditCell(null);
+                                  setShowDeleteConfirm(false);
+                                }
+                              }}
+                              className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg transition text-center cursor-pointer shadow-xs"
+                            >
+                              Ya, Lepaskan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowDeleteConfirm(false)}
+                              className="flex-1 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition text-center cursor-pointer"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowDeleteConfirm(true);
+                          }}
+                          className="w-full p-3 text-left bg-white border border-rose-150 hover:border-rose-350 hover:bg-rose-50/30 rounded-xl transition flex items-start gap-3 cursor-pointer group"
+                        >
+                          <div className="p-2 bg-rose-50 group-hover:bg-rose-100 text-rose-600 rounded-lg shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 group-hover:text-rose-950">Lepaskan (Hapus) dari Jadwal</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5 leading-normal font-sans">Mengosongkan sel jam pelajaran ini. Guru dan kelas terkait akan dibebaskan kembali.</p>
+                          </div>
+                        </button>
+                      )}
+
+                    </div>
+                  </div>
+                );
+              })() : (
+                /* IF CELL IS EMPTY (ADD/CREATE MODE) */
+                <div className="space-y-4">
+                  {/* Mode Selector Tab */}
+                  <div className="flex bg-slate-100 p-1 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setManualAddMode('pengampu')}
+                      className={`flex-1 text-center py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${manualAddMode === 'pengampu' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      Daftar Pengampu Kelas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualAddMode('custom')}
+                      className={`flex-1 text-center py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${manualAddMode === 'custom' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      Form Bebas (Custom)
+                    </button>
+                  </div>
+
+                  {/* Mode A: Daftar Pengampu */}
+                  {manualAddMode === 'pengampu' && (() => {
+                    // Filter pengampu based on filterType
+                    let eligiblePengampu = pengampu;
+                    if (filterType === 'kelas') {
+                      eligiblePengampu = pengampu.filter(p => p.kelas_id === filterId);
+                    } else if (filterType === 'guru') {
+                      eligiblePengampu = pengampu.filter(p => p.guru_id === filterId);
+                    }
+
+                    // Map each with its scheduling status and conflict status
+                    const mappedPengampu = eligiblePengampu.map(p => {
+                      const scheduled = jadwal.filter(s => s.kelas_id === p.kelas_id && s.guru_id === p.guru_id && s.mapel_id === p.mapel_id).length;
+                      const isMet = scheduled >= p.jumlah_jam;
+                      
+                      // Check for conflicts at this exact slot (activeEditCell.hari, activeEditCell.jam_ke)
+                      const conflictSlot = jadwal.find(s => s.hari === activeEditCell.hari && s.jam_ke === activeEditCell.jam_ke && s.guru_id === p.guru_id);
+                      const otherClass = conflictSlot ? kelas.find(cl => cl.id === conflictSlot.kelas_id)?.nama_kelas : null;
+                      const hasConflict = !!conflictSlot;
+
+                      return {
+                        ...p,
+                        scheduled,
+                        isMet,
+                        hasConflict,
+                        otherClass
+                      };
+                    });
+
+                    // Filter out those who have already fulfilled their teaching quota (isMet === true)
+                    // "Kalau misalkan jam guru sudah full berarti tidak muncul lagi di popup pas klik grid kosong, alias hanya guru yg belum 100%"
+                    const unfulfilledPengampu = mappedPengampu.filter(p => !p.isMet);
+
+                    if (unfulfilledPengampu.length === 0) {
+                      return (
+                        <div className="p-5 border border-amber-100 bg-amber-50 rounded-xl text-center">
+                          <p className="text-xs font-semibold text-amber-800">✨ Kuota Jam Mengajar Sudah Terpenuhi</p>
+                          <p className="text-[10px] text-amber-600 mt-1 leading-relaxed">Semua guru/pelajaran untuk kelas ini sudah terjadwal 100% sesuai alokasi JP. Gunakan tab <b>Form Bebas (Custom)</b> jika ingin menyisipkan pelajaran tambahan.</p>
+                        </div>
+                      );
+                    }
+
+                    // Sort so that those without conflicts (hasConflict === false) are on top
+                    const sortedPengampu = [...unfulfilledPengampu].sort((a, b) => {
+                      if (a.hasConflict && !b.hasConflict) return 1;
+                      if (!a.hasConflict && b.hasConflict) return -1;
+                      return 0;
+                    });
+
+                    return (
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mata Pelajaran & Guru (Belum 100%):</label>
+                        <div className="border border-slate-200 rounded-xl max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white shadow-xs">
+                          {sortedPengampu.map(p => {
+                            const m = mapel.find(sub => sub.id === p.mapel_id);
+                            const g = guru.find(t => t.id === p.guru_id);
+                            const c = kelas.find(cls => cls.id === p.kelas_id);
+
+                            return (
+                              <label 
+                                key={p.id}
+                                className={`flex items-start gap-3 p-3 text-xs hover:bg-slate-50 cursor-pointer transition ${selectedPengampuId === p.id ? 'bg-indigo-50/50 hover:bg-indigo-50' : ''}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="selectedPengampu"
+                                  value={p.id}
+                                  checked={selectedPengampuId === p.id}
+                                  onChange={() => setSelectedPengampuId(p.id)}
+                                  className="w-4 h-4 text-indigo-600 mt-1"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="font-bold text-slate-850 truncate">{m ? m.nama_mapel : 'Mapel'}</p>
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800">
+                                      {p.scheduled}/{p.jumlah_jam} JP
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 truncate mt-0.5">👤 {g ? g.nama.split(',')[0] : 'Guru'} {filterType !== 'kelas' && c ? `— Kelas ${c.nama_kelas}` : ''}</p>
+                                  
+                                  {/* Conflict / Availability Badge */}
+                                  <div className="mt-1.5 flex items-center">
+                                    {p.hasConflict ? (
+                                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-150 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                        Bentrok: Mengajar di Kelas {p.otherClass}
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-150 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        Tersedia (Bebas Bentrok)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Mode B: Form Bebas */}
+                  {manualAddMode === 'custom' && (
+                    <div className="space-y-3 border border-slate-150 p-4 rounded-xl bg-slate-50/50">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Kelas:</label>
+                        <select
+                          value={customKelasId}
+                          onChange={(e) => setCustomKelasId(e.target.value)}
+                          className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500"
+                        >
+                          <option value="">-- Pilih Kelas --</option>
+                          {kelas.map(c => (
+                            <option key={c.id} value={c.id}>Kelas {c.nama_kelas}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Guru Pengajar:</label>
+                          <select
+                            value={customGuruId}
+                            onChange={(e) => setCustomGuruId(e.target.value)}
+                            className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500"
+                          >
+                            <option value="">-- Pilih Guru --</option>
+                            {guru.map(g => (
+                              <option key={g.id} value={g.id}>{g.nama.split(',')[0]}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Mata Pelajaran:</label>
+                          <select
+                            value={customMapelId}
+                            onChange={(e) => setCustomMapelId(e.target.value)}
+                            className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500"
+                          >
+                            <option value="">-- Pilih Pelajaran --</option>
+                            {mapel.map(m => (
+                              <option key={m.id} value={m.id}>{m.nama_mapel} ({m.kode_mapel})</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pilihan Ruangan (Berlaku untuk kedua mode) */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Ruangan Lokasi:</label>
+                    <select
+                      value={manualRuanganId}
+                      onChange={(e) => setManualRuanganId(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500"
+                    >
+                      {ruangan.map(rm => (
+                        <option key={rm.id} value={rm.id}>{rm.nama_ruangan} {filterType === 'ruangan' && filterId === rm.id ? '(Aktif)' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-150 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveEditCell(null)}
+                className="px-4 py-2 bg-white text-slate-700 font-bold border border-slate-200 rounded-lg text-xs hover:bg-slate-100 transition cursor-pointer"
+              >
+                Tutup
+              </button>
+              
+              {!activeEditCell.scheduleId && (
+                <button
+                  type="button"
+                  onClick={handleSaveManualSlot}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md hover:shadow-lg"
+                >
+                  Tambahkan ke Jadwal
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
       )}

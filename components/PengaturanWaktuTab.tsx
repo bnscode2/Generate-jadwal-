@@ -33,7 +33,10 @@ export default function PengaturanWaktuTab({
   const [editJamMulai, setEditJamMulai] = useState<string>('');
   const [editJamSelesai, setEditJamSelesai] = useState<string>('');
 
-  const handleToggleDay = (day: Hari) => {
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingToggleDay, setPendingToggleDay] = useState<Hari | null>(null);
+
+  const handleToggleDay = (day: Hari, force = false) => {
     let updated: Hari[];
     if (hariAktif.includes(day)) {
       if (hariAktif.length <= 1) {
@@ -44,11 +47,9 @@ export default function PengaturanWaktuTab({
       // Check if there are schedules on this day
       const schedules = LocalDB.getJadwal();
       const hasSchedules = schedules.some(s => s.hari === day);
-      if (hasSchedules) {
-        const confirmRemove = window.confirm(
-          `Peringatan: Terdapat jadwal pelajaran aktif pada hari ${day}. Jika Anda menonaktifkan hari ini, jadwal terkait mungkin tidak akan ditampilkan. Apakah Anda yakin ingin melanjutkan?`
-        );
-        if (!confirmRemove) return;
+      if (hasSchedules && !force) {
+        setPendingToggleDay(day);
+        return;
       }
       
       updated = hariAktif.filter(d => d !== day);
@@ -60,6 +61,7 @@ export default function PengaturanWaktuTab({
     onUpdateHariAktif(updated);
     LocalDB.saveHariAktif(updated);
     loadDatabase();
+    setPendingToggleDay(null);
     setLogMessages(prev => [
       `📅 Konfigurasi Hari Aktif diperbarui: [${updated.join(', ')}]`,
       ...prev
@@ -95,20 +97,16 @@ export default function PengaturanWaktuTab({
   };
 
   const handleDeletePeriod = (id: string, jamKe: number) => {
-    // Check if schedules exist for this period
-    const schedules = LocalDB.getJadwal();
-    const hasSchedules = schedules.some(s => s.jam_ke === jamKe);
-    if (hasSchedules) {
-      const confirmDelete = window.confirm(
-        `Peringatan: Terdapat jadwal pelajaran aktif pada Jam Ke-${jamKe}. Menghapus jam ini dapat memicu konflik visual. Apakah Anda yakin?`
-      );
-      if (!confirmDelete) return;
-    }
+    // Set pending delete state to trigger in-UI inline confirmation
+    setPendingDeleteId(id);
+  };
 
+  const confirmDeletePeriod = (id: string, jamKe: number) => {
     const updated = jamPelajaran.filter(p => p.id !== id);
     onUpdateJamPelajaran(updated);
     LocalDB.saveJamPelajaran(updated);
     loadDatabase();
+    setPendingDeleteId(null);
     
     setLogMessages(prev => [
       `🗑️ Menghapus Jam Pelajaran Ke-${jamKe}`,
@@ -197,6 +195,34 @@ export default function PengaturanWaktuTab({
             <p className="text-xs text-slate-500 leading-relaxed">
               Tentukan hari-hari dalam seminggu di mana kegiatan belajar mengajar berlangsung. Penjadwal otomatis hanya akan menempatkan slot pelajaran pada hari yang terpilih.
             </p>
+
+            {pendingToggleDay && (
+              <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-xl space-y-2.5 animate-fade-in text-left">
+                <p className="text-[11px] font-bold text-rose-900 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-500" />
+                  Konfirmasi Menonaktifkan Hari {pendingToggleDay}
+                </p>
+                <p className="text-[10px] text-rose-700 leading-normal">
+                  Terdapat jadwal pelajaran aktif pada hari <b>{pendingToggleDay}</b>. Jika dinonaktifkan, jadwal terkait mungkin tidak akan ditampilkan di grid. Apakah Anda yakin?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleDay(pendingToggleDay, true)}
+                    className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] rounded-lg transition text-center cursor-pointer shadow-xs"
+                  >
+                    Ya, Nonaktifkan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingToggleDay(null)}
+                    className="flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-[10px] rounded-lg transition text-center cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Checkbox selector */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -333,6 +359,42 @@ export default function PengaturanWaktuTab({
                   ) : (
                     jamPelajaran.map((p) => {
                       const isEditing = editPeriodId === p.id;
+                      const isPendingDelete = pendingDeleteId === p.id;
+                      const schedules = LocalDB.getJadwal();
+                      const hasSchedules = schedules.some(s => s.jam_ke === p.jam_ke);
+
+                      if (isPendingDelete) {
+                        return (
+                          <tr key={p.id} className="bg-rose-50 hover:bg-rose-100/60 transition-colors">
+                            <td className="p-3 font-bold text-rose-900">
+                              Jam Ke-{p.jam_ke}
+                            </td>
+                            <td colSpan={3} className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-2 text-xs">
+                                <span className="text-rose-700 font-medium text-[11px] flex items-center gap-1">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                  {hasSchedules ? 'Ada jadwal aktif! Tetap hapus?' : 'Yakin ingin menghapus?'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => confirmDeletePeriod(p.id, p.jam_ke)}
+                                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-md text-[10px] transition cursor-pointer shadow-xs"
+                                >
+                                  Ya, Hapus
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setPendingDeleteId(null)}
+                                  className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-md text-[10px] transition cursor-pointer"
+                                >
+                                  Batal
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }
+
                       return (
                         <tr key={p.id} className="hover:bg-slate-50/40">
                           <td className="p-3 font-bold text-slate-800">
