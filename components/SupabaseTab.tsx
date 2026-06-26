@@ -1,160 +1,384 @@
 'use client';
 
-import React from 'react';
-import { Database, Info, Activity, Clock, ShieldCheck, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Database, Info, Activity, Clock, ShieldCheck, ExternalLink, 
+  RefreshCw, UploadCloud, DownloadCloud, CheckCircle2, AlertCircle, Play, AlertTriangle 
+} from 'lucide-react';
 import { SUPABASE_SQL_MIGRATION } from '../lib/database-schema';
+import { getSupabaseConfig, saveSupabaseConfig, isSupabaseModeActive } from '../lib/supabaseClient';
+import { SupabaseSyncService } from '../lib/supabaseSync';
 
 interface SupabaseTabProps {
   setLogMessages: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
+  const [supabaseUrl, setSupabaseUrl] = useState(() => {
+    const config = getSupabaseConfig();
+    return config.supabaseUrl || '';
+  });
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState(() => {
+    const config = getSupabaseConfig();
+    return config.supabaseAnonKey || '';
+  });
+  const [isConnected, setIsConnected] = useState(() => {
+    return isSupabaseModeActive();
+  });
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [syncLogs, setSyncLogs] = useState<string[]>([]);
+
+
+  const handleConnect = async () => {
+    if (!supabaseUrl.trim() || !supabaseAnonKey.trim()) {
+      alert('Mohon masukkan URL dan Anon Key Supabase terlebih dahulu.');
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+    setSyncLogs(prev => ['Mencoba menghubungkan langsung ke Supabase...', ...prev]);
+
+    // Simpan dulu untuk dites koneksinya
+    saveSupabaseConfig(supabaseUrl, supabaseAnonKey);
+
+    const test = await SupabaseSyncService.testConnection();
+    setIsTesting(false);
+    setTestResult(test);
+
+    if (test.success) {
+      setIsConnected(true);
+      setLogMessages(prev => ['Terhubung secara langsung ke database cloud Supabase!', ...prev]);
+      setSyncLogs(prev => [
+        `✅ ${test.message}`,
+        'Aplikasi kini beroperasi dalam MODE DIRECT SUPABASE.',
+        ...prev
+      ]);
+    } else {
+      setIsConnected(false);
+      // Hapus config jika tes koneksi gagal agar tidak masuk ke mode rusak
+      saveSupabaseConfig('', '');
+      setSyncLogs(prev => [`❌ Koneksi gagal: ${test.message}`, ...prev]);
+    }
+  };
+
+  const handleDisconnect = () => {
+    saveSupabaseConfig('', '');
+    setSupabaseUrl('');
+    setSupabaseAnonKey('');
+    setIsConnected(false);
+    setTestResult(null);
+    setLogMessages(prev => ['Koneksi Supabase diputuskan. Kembali ke mode penyimpanan lokal offline.', ...prev]);
+    setSyncLogs(prev => ['🔌 Koneksi diputuskan. Aplikasi kembali ke mode penyimpanan offline LocalStorage.', ...prev]);
+  };
+
+  const handlePush = async () => {
+    if (!confirm('Apakah Anda yakin ingin MENGUNGGAH (PUSH) semua data lokal Anda ke Supabase? Data di tabel Supabase yang berbenturan mungkin akan di-update.')) {
+      return;
+    }
+    setIsSyncing(true);
+    setSyncLogs(prev => ['🚀 Memulai pengunggahan data (PUSH) ke Supabase...', ...prev]);
+
+    const result = await SupabaseSyncService.pushAll();
+    setIsSyncing(false);
+
+    // Append logs ke sync console
+    if (result.logs && result.logs.length > 0) {
+      setSyncLogs(prev => [...result.logs.map(log => `[PUSH] ${log}`), ...prev]);
+    }
+
+    if (result.success) {
+      setLogMessages(prev => ['Berhasil mensinkronisasikan dan mengunggah data ke Supabase cloud!', ...prev]);
+      alert('Unggah data ke Supabase berhasil!');
+    } else {
+      setLogMessages(prev => [`Error pengunggahan data ke Supabase: ${result.message}`, ...prev]);
+      alert(`Gagal mengunggah data: ${result.message}`);
+    }
+  };
+
+  const handlePull = async () => {
+    if (!confirm('Peringatan! Mengunduh (PULL) data dari Supabase akan MENIMPA semua data lokal Anda di browser saat ini. Apakah Anda yakin ingin melanjutkan?')) {
+      return;
+    }
+    setIsSyncing(true);
+    setSyncLogs(prev => ['📥 Memulai pengunduhan data (PULL) dari Supabase...', ...prev]);
+
+    const result = await SupabaseSyncService.pullAll();
+    setIsSyncing(false);
+
+    if (result.logs && result.logs.length > 0) {
+      setSyncLogs(prev => [...result.logs.map(log => `[PULL] ${log}`), ...prev]);
+    }
+
+    if (result.success) {
+      setLogMessages(prev => ['Berhasil mengunduh seluruh data terbaru dari Supabase!', ...prev]);
+      alert('Berhasil mengunduh data terbaru dari Supabase ke browser lokal Anda!');
+      // Reload window agar perubahan state termuat sempurna di tab dashboard
+      window.location.reload();
+    } else {
+      setLogMessages(prev => [`Error pengunduhan data dari Supabase: ${result.message}`, ...prev]);
+      alert(`Gagal mengunduh data: ${result.message}`);
+    }
+  };
+
   return (
-    <div className="space-y-6 lg:col-span-1">
+    <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900">Supabase SQL Schema &amp; Panduan Integrasi</h2>
-        <p className="text-xs text-slate-500 font-medium font-sans">Salin skrip DDL/DML migrasi database di bawah ini untuk digunakan di cloud Supabase SQL Editor Anda.</p>
+        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <Database className="w-6 h-6 text-indigo-600 shrink-0" />
+          <span>Integrasi &amp; Deteksi Error Supabase Langsung (Direct Connect)</span>
+        </h2>
+        <p className="text-xs text-slate-500 font-medium font-sans mt-1">
+          Koneksikan aplikasi penjadwalan ini secara langsung ke cloud database Supabase PostgreSQL Anda. Gunakan konsol pemantauan real-time untuk mendeteksi kesalahan skema, konflik relasi, atau masalah RLS dengan mudah!
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start font-sans">
-        
-        {/* TUTORIAL CARD IN INDONESIAN */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-4 text-xs shadow-xs text-slate-600 font-medium">
-          <h3 className="font-semibold text-sm text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5">
-            <Database className="w-4 h-4 text-indigo-600 font-bold" /> Panduan Langkah (Langkah-ke-Langkah)
-          </h3>
-
-          <ol className="list-decimal pl-4.5 space-y-3 text-slate-605 leading-relaxed">
-            <li>
-              <strong className="text-slate-800 font-semibold">Buat Proyek Baru:</strong> Buka akun konsol <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-indigo-650 font-bold hover:underline">Supabase.com</a>, dan daftarkan sebuah proyek database baru.
-            </li>
-            <li>
-              <strong className="text-slate-800 font-semibold">Buka SQL Editor:</strong> Di menu navigasi sidebar sebelah kiri Supabase, klik tab <i>SQL Editor</i> lalu buat tab baru <i>&quot;New Query&quot;</i>.
-            </li>
-            <li>
-              <strong className="text-slate-800 font-semibold">Jalankan Migrasi:</strong> Salin seluruh kode schema SQL migrasi di sebelah kanan, tempel ke editor, lalu klik tombol <b className="text-indigo-700 bg-indigo-50 px-1 py-0.5 border border-indigo-200 rounded text-[10px]">Run</b>.
-            </li>
-            <li>
-              <strong className="text-slate-800 font-semibold">Koneksikan Client UI:</strong> Tambahkan variabel environment berikut di dalam file <code className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded text-indigo-700 font-mono font-bold">.env.local</code> di aplikasi lokal Anda saat deploy di Vercel:
-              <pre className="bg-slate-50 border border-slate-200 p-2.5 rounded text-[10px] font-mono mt-1.5 leading-normal text-slate-700 font-bold">
-NEXT_PUBLIC_SUPABASE_URL=&quot;url-kamu&quot;{"\n"}
-NEXT_PUBLIC_SUPABASE_ANON_KEY=&quot;anon-key-kamu&quot;
-              </pre>
-            </li>
-          </ol>
-
-          <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-slate-600">
-            <span className="font-semibold text-indigo-850 block mb-1 flex items-center gap-1"><Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" /> Penjelasan Teknis:</span>
-            Kami telah melengkapi index pencarian komposit dan relasi kunci asing (Foreign Keys CASCADE) di semua tabel guna memberikan performa penjadwalan query tercepat!
+      {/* Mode Status Indicator */}
+      <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-sans ${
+        isConnected 
+          ? 'bg-emerald-50 border-emerald-200 text-emerald-950' 
+          : 'bg-amber-50 border-amber-200 text-amber-950'
+      }`}>
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-lg shrink-0 ${isConnected ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-amber-500/10 border border-amber-500/20'}`}>
+            <Activity className={`w-5 h-5 ${isConnected ? 'text-emerald-600 animate-pulse' : 'text-amber-600'}`} />
+          </div>
+          <div>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">Status Koneksi Database</h3>
+            <span className="text-sm font-bold block mt-0.5">
+              {isConnected ? '🟢 Terhubung Langsung ke Supabase (Mode Online)' : '🟡 Berjalan di LocalStorage Browser (Mode Offline)'}
+            </span>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium leading-relaxed">
+              {isConnected 
+                ? 'Seluruh data saat ini disinkronisasikan ke Supabase cloud. Kredensial kustom tersimpan aman di browser Anda.' 
+                : 'Aplikasi saat ini menyimpan semua guru, jadwal, dan kelas secara lokal di browser Anda. Konek ke Supabase di bawah untuk mengaktifkan database awan.'}
+            </p>
           </div>
         </div>
 
-        {/* COPYABLE CODE CONSOLE */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 lg:col-span-2 space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-slate-800 text-sm">Skrip SQL Migrasi Database</h3>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText(SUPABASE_SQL_MIGRATION);
-                alert('Skrip migrasi SQL berhasil disalin ke papan klip Anda.');
-                setLogMessages(prev => ['Skrip DDL migrasi SQL berhasil disalin ke clipboard.', ...prev]);
-              }}
-              className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer"
+        {isConnected && (
+          <button
+            onClick={handleDisconnect}
+            className="px-3.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg text-xs border border-rose-200 cursor-pointer transition shrink-0"
+          >
+            Putuskan Koneksi Supabase
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+        
+        {/* PANEL KONEKTOR DAN KREDENSIAL */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5">
+              <ShieldCheck className="w-4.5 h-4.5 text-indigo-600" /> Atur Kredensial Supabase Anda
+            </h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">NEXT_PUBLIC_SUPABASE_URL</label>
+                <input
+                  type="text"
+                  placeholder="https://xxx.supabase.co"
+                  value={supabaseUrl}
+                  onChange={(e) => setSupabaseUrl(e.target.value)}
+                  disabled={isConnected}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-indigo-500 focus:border-indigo-500 text-slate-800 font-mono disabled:opacity-60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</label>
+                <textarea
+                  placeholder="Kunci anonim yang diawali dengan eyJhbGciOi..."
+                  value={supabaseAnonKey}
+                  onChange={(e) => setSupabaseAnonKey(e.target.value)}
+                  disabled={isConnected}
+                  rows={3}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-indigo-500 focus:border-indigo-500 text-slate-800 font-mono disabled:opacity-60 leading-normal"
+                />
+              </div>
+            </div>
+
+            {testResult && (
+              <div className={`p-3 rounded-lg border text-xs leading-relaxed flex items-start gap-1.5 ${
+                testResult.success 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
+                {testResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <span className="font-bold block">{testResult.success ? 'Koneksi Sukses!' : 'Koneksi Gagal'}</span>
+                  <span className="text-[10px] mt-0.5 block">{testResult.message}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 mt-4">
+            {!isConnected ? (
+              <button
+                onClick={handleConnect}
+                disabled={isTesting}
+                className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {isTesting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Mengecek Koneksi...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    Koneksikan &amp; Simpan
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="text-center text-xs font-semibold text-emerald-600 py-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                Aplikasi Berhasil Terkoneksi 🥳
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* PANEL METRIC & SINKRONISASI DATA */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
+          <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5">
+            <RefreshCw className="w-4.5 h-4.5 text-indigo-600" /> Unggah &amp; Unduh Database Cloud
+          </h3>
+
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Gunakan tombol aksi di bawah untuk melakukan sinkronisasi massal seluruh data (Guru, Mapel, Kelas, Ruangan, Jadwal, Preferensi, Konflik) dari atau ke database Supabase Anda.
+          </p>
+
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={handlePush}
+              disabled={!isConnected || isSyncing}
+              className="w-full p-4 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 rounded-xl transition cursor-pointer text-left flex items-start gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Salin SQL Schema
+              <div className="p-2 bg-indigo-100 rounded-lg text-indigo-650 shrink-0 mt-0.5">
+                <UploadCloud className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-bold text-xs text-slate-800 block">Push Semua Data ke Supabase</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5 leading-relaxed">
+                  Unggah seluruh konfigurasi guru, pengampu, kelas, serta draf jadwal pelajaran di browser Anda ke tabel Supabase. Sangat cocok untuk inisialisasi / seeding pertama kali.
+                </span>
+              </div>
+            </button>
+
+            <button
+              onClick={handlePull}
+              disabled={!isConnected || isSyncing}
+              className="w-full p-4 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl transition cursor-pointer text-left flex items-start gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="p-2 bg-emerald-100 rounded-lg text-emerald-650 shrink-0 mt-0.5">
+                <DownloadCloud className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-bold text-xs text-slate-800 block">Pull Semua Data dari Supabase</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5 leading-relaxed text-left">
+                  Tarik seluruh data dari tabel Supabase cloud untuk menimpa penyimpanan lokal browser Anda. Berguna untuk memuat jadwal dari perangkat lain atau memulihkan data.
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* LOG KONSOL UNTUK DETEKSI KESALAHAN */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4 flex flex-col">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+              <Activity className="w-4.5 h-4.5 text-indigo-600" /> Konsol Pendeteksi Error
+            </h3>
+            <button 
+              onClick={() => setSyncLogs([])}
+              className="text-[10px] text-slate-400 hover:text-slate-600 font-bold transition"
+            >
+              Clear
             </button>
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 font-mono text-[10px] text-slate-600 overflow-x-auto h-96 shadow-inner leading-relaxed">
-            <pre>{SUPABASE_SQL_MIGRATION}</pre>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Semua aktivitas query database, respons RLS, kegagalan foreign key, atau skema duplikat akan dicatat di konsol ini untuk mempermudah Anda mendebug.
+          </p>
+
+          <div className="flex-1 min-h-[160px] bg-slate-950 text-indigo-300 p-3 rounded-lg font-mono text-[9px] leading-relaxed overflow-y-auto max-h-[180px] shadow-inner select-all">
+            {syncLogs.length === 0 ? (
+              <div className="text-slate-500 italic h-full flex items-center justify-center">
+                Belum ada log transaksi database...
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {syncLogs.map((log, idx) => {
+                  let logColor = "text-indigo-300";
+                  if (log.startsWith('❌') || log.startsWith('ERROR:') || log.includes('[PUSH] ERROR:')) {
+                    logColor = "text-rose-400 font-bold";
+                  } else if (log.startsWith('✅') || log.includes('BERHASIL')) {
+                    logColor = "text-emerald-400 font-bold";
+                  } else if (log.startsWith('[PULL]')) {
+                    logColor = "text-sky-300";
+                  }
+                  return (
+                    <div key={idx} className={`${logColor} border-b border-slate-900/40 pb-0.5`}>
+                      {log}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
       </div>
 
-      {/* FITUR TAMBAHAN: MODUL KEEP ALIVE & CRON-JOB.ORG GUIDE */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-xl p-6 text-white space-y-5 shadow-lg border border-indigo-500/30 font-sans">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-500/20 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-600/20 border border-indigo-400/30 rounded-lg">
-              <Activity className="w-6 h-6 text-indigo-400 animate-pulse" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <span>Modul Keep Alive (Anti-Pause Supabase)</span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
-                  Ready to Use
-                </span>
-              </h3>
-              <p className="text-xs text-indigo-200/80 mt-1">
-                Database Supabase gratis akan secara otomatis di-pause jika tidak aktif selama 1 minggu. Gunakan endpoint keep-alive kami untuk menjaganya tetap aktif selamanya!
-              </p>
-            </div>
+      {/* SQL SCHEMA CARD FOR MIGRATION */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs font-sans">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-slate-800 text-sm">Skrip SQL Migrasi Database (Wajib Dijalankan di Supabase Anda)</h3>
+            <p className="text-slate-500 text-[11px] mt-0.5">
+              Sebelum melakukan koneksi langsung ke Supabase, buat query baru di SQL Editor Supabase Anda dan jalankan skrip di bawah ini untuk menginisialisasi skema tabel.
+            </p>
           </div>
-          <a 
-            href="https://cron-job.org" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition whitespace-nowrap"
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText(SUPABASE_SQL_MIGRATION);
+              alert('Skrip migrasi SQL berhasil disalin ke papan klip Anda.');
+              setSyncLogs(prev => ['📋 Skrip DDL migrasi SQL berhasil disalin ke clipboard.', ...prev]);
+            }}
+            className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0 self-start sm:self-auto"
           >
-            <span>Buka Cron-job.org</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+            Salin SQL Schema
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs leading-relaxed">
-          {/* Langkah 1 */}
-          <div className="bg-slate-800/40 p-4 rounded-lg border border-slate-700/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-bold text-[10px]">1</span>
-              <h4 className="font-bold text-slate-100">Dapatkan Endpoint Keep Alive</h4>
-            </div>
-            <p className="text-slate-300">
-              Kami telah menyediakan API Route otomatis khusus untuk melakukan ping ringan (<code className="bg-slate-950 text-indigo-300 px-1 py-0.5 rounded font-mono font-bold text-[10px]">SELECT 1</code>) ke database Supabase Anda:
-            </p>
-            <div className="bg-slate-950/80 border border-slate-800 p-2 rounded text-[10px] font-mono text-indigo-300 select-all leading-normal overflow-x-auto">
-              https://domain-anda.vercel.app/api/keep-alive
-            </div>
-          </div>
-
-          {/* Langkah 2 */}
-          <div className="bg-slate-800/40 p-4 rounded-lg border border-slate-700/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-bold text-[10px]">2</span>
-              <h4 className="font-bold text-slate-100">Konfigurasi DATABASE_URL</h4>
-            </div>
-            <p className="text-slate-300">
-              Pastikan Anda telah mengisi variabel lingkungan di Vercel/environment:
-            </p>
-            <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded text-[10px] font-mono text-indigo-200 space-y-1">
-              <div className="font-bold text-slate-400 text-[9px] uppercase">Key:</div>
-              <div>DATABASE_URL</div>
-              <div className="font-bold text-slate-400 text-[9px] uppercase mt-1">Value:</div>
-              <div className="text-[9px] text-indigo-400 truncate">postgresql://postgres:[password]@db...</div>
-            </div>
-          </div>
-
-          {/* Langkah 3 */}
-          <div className="bg-slate-800/40 p-4 rounded-lg border border-slate-700/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-bold text-[10px]">3</span>
-              <h4 className="font-bold text-slate-100">Set-up Scheduler Gratis</h4>
-            </div>
-            <p className="text-slate-300">
-              Daftarkan akun gratis di <strong className="text-white">cron-job.org</strong> dan buat Cronjob baru:
-            </p>
-            <ul className="list-disc pl-4 space-y-1 text-slate-300 text-[11px]">
-              <li><strong>URL:</strong> Berikan link API Keep Alive (Langkah 1).</li>
-              <li><strong>Execution:</strong> Setiap 12 jam sekali sudah sangat cukup.</li>
-              <li><strong>Request:</strong> Metode GET (Default).</li>
-            </ul>
-          </div>
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 font-mono text-[10px] text-slate-600 overflow-x-auto h-72 shadow-inner leading-relaxed select-all">
+          <pre>{SUPABASE_SQL_MIGRATION}</pre>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2 text-[10px] text-indigo-300/80 bg-indigo-950/50 p-3 rounded-lg border border-indigo-500/10">
-          <Clock className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span>Keuntungan Menggunakan Endpoint: Query dieksekusi dengan aman melalui serverless function Vercel menggunakan koneksi aman PostgreSQL sehingga kredensial database Anda tidak pernah bocor ke sisi klien.</span>
-        </div>
+      {/* FOOTER TIPS */}
+      <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-950 font-sans space-y-1.5">
+        <span className="font-bold flex items-center gap-1.5 text-indigo-900">
+          <AlertTriangle className="w-4 h-4 text-indigo-600" />
+          Tips &amp; Trik Pemecahan Masalah (Troubleshooting):
+        </span>
+        <ul className="list-disc pl-5 space-y-1 text-slate-700 font-medium">
+          <li>Jika Anda melihat log error seperti <code className="bg-indigo-100 text-indigo-950 px-1 py-0.5 rounded font-mono text-[10px]">violates foreign key constraint</code>, berarti tabel referensi (seperti Guru, Mapel, atau Kelas) tidak terisi terlebih dahulu. Solusinya, pastikan Anda menekan tombol <strong>&quot;Push Semua Data ke Supabase&quot;</strong> secara utuh.</li>
+          <li>Jika ada pelanggaran <code className="bg-indigo-100 text-indigo-950 px-1 py-0.5 rounded font-mono text-[10px]">Row Level Security (RLS)</code>, pastikan kebijakan (policies) di dalam skrip migrasi SQL di atas telah dieksekusi dengan sukses di editor query Supabase Anda.</li>
+          <li>Mode koneksi langsung ke Supabase ini aman karena credentials disimpan di browser client-side Anda, atau diambil dari backend server via variabel lingkungan yang dideklarasikan di Vercel Anda.</li>
+        </ul>
       </div>
 
     </div>

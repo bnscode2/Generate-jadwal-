@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Download, FileText, Info, Trash2, Calendar, Play, AlertTriangle, CheckCircle, HelpCircle, BarChart3, BookOpen, Users, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, FileText, Info, Trash2, Calendar, Play, AlertTriangle, CheckCircle, HelpCircle, BarChart3, BookOpen, Users, Clock, Printer, X, Settings } from 'lucide-react';
 import { Guru, Kelas, MataPelajaran, Ruangan, JamPelajaran, Jadwal, Hari, KonflikJadwal, PengampuMataPelajaran } from '../lib/types';
 import { LocalDB } from '../lib/db';
 
@@ -52,6 +52,60 @@ export default function GridTab({
   hariAktif,
   pengampu
 }: GridTabProps) {
+  // States untuk Cetak PDF kustom profesional
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printSchoolName, setPrintSchoolName] = useState(() => {
+    return LocalDB.getCurrentUser()?.nama_sekolah || 'SMA NEGERI 1 AI INDONESIA';
+  });
+  const [printAcademicYear, setPrintAcademicYear] = useState('Tahun Ajaran 2026/2027');
+  const [printPrincipalName, setPrintPrincipalName] = useState('Drs. H. Mulyono, M.Pd.');
+  const [printPrincipalNip, setPrintPrincipalNip] = useState('19740815 200003 1 002');
+  const [printCoordinatorName, setPrintCoordinatorName] = useState('Siti Aminah, S.Pd.');
+  const [printCoordinatorNip, setPrintCoordinatorNip] = useState('19810312 200801 2 015');
+  const [printScope, setPrintScope] = useState<'current' | 'all_classes' | 'all_teachers'>('current');
+  const [printDate, setPrintDate] = useState(() => {
+    const today = new Date();
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+  });
+  const [printCity, setPrintCity] = useState('Jakarta');
+
+  // Helper untuk generate matrix jadwal mandiri per entitas (kelas/guru) sewaktu print massal
+  const generateMatrix = (fType: 'kelas' | 'guru' | 'ruangan', fId: string) => {
+    const matrix: { [key: number]: { [key in Hari]?: Jadwal[] } } = {};
+
+    for (const p of jamPelajaran) {
+      matrix[p.jam_ke] = {};
+      for (const d of hariAktif) {
+        matrix[p.jam_ke][d] = [];
+      }
+    }
+
+    for (const s of jadwal) {
+      let match = false;
+      if (fType === 'kelas' && s.kelas_id === fId) match = true;
+      if (fType === 'guru' && s.guru_id === fId) match = true;
+      if (fType === 'ruangan' && s.ruangan_id === fId) match = true;
+
+      if (match && matrix[s.jam_ke] && matrix[s.jam_ke][s.hari]) {
+        matrix[s.jam_ke][s.hari]!.push(s);
+      }
+    }
+
+    return matrix;
+  };
+
+  const handleExecutePrint = () => {
+    setShowPrintModal(false);
+    // Beri sedikit waktu agar state update dan render selesai sebelum dialog print browser terbuka
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
   // Helper to check what conflicts would occur if we swapped selected cell with (targetHari, targetJamKe)
   const getSwapConflicts = (targetHari: Hari, targetJamKe: number): string[] => {
     if (!selectedCell || !selectedCell.scheduleId) return [];
@@ -341,11 +395,11 @@ export default function GridTab({
             <Download className="w-3.5 h-3.5 text-indigo-500" /> Ekspor Excel (CSV)
           </button>
           <button 
-            onClick={handlePrintPDF}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-655 font-bold border border-slate-200 rounded-lg text-xs hover:text-slate-900 transition hover:bg-slate-50 cursor-pointer"
-            title="Cetak/Print PDF Jadwal"
+            onClick={() => setShowPrintModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer"
+            title="Cetak/Print PDF Jadwal dengan Format Profesional"
           >
-            <FileText className="w-3.5 h-3.5 text-indigo-500" /> Cetak PDF
+            <Printer className="w-3.5 h-3.5" /> Cetak PDF Profesional
           </button>
         </div>
 
@@ -612,11 +666,11 @@ export default function GridTab({
                                   </div>
 
                                   {/* Extra metadata dependant on filters */}
-                                  <div className="text-[9px] text-slate-500 flex items-center justify-center gap-1 mt-1 font-mono font-medium">
-                                    <span className="bg-slate-100 px-1 py-0.5 rounded leading-none text-slate-600">
+                                  <div className="text-[9px] text-slate-500 flex flex-col items-center gap-1 mt-1 font-mono font-medium">
+                                    <span className="bg-slate-100 px-1.5 py-0.5 rounded leading-none text-slate-600 block text-center w-full max-w-[115px] truncate" title={mappedKelas ? `Kelas ${mappedKelas.nama_kelas}` : 'Kelas'}>
                                       Kelas {mappedKelas ? mappedKelas.nama_kelas : 'Kelas'}
                                     </span>
-                                    <span className="bg-slate-100 px-1 py-0.5 rounded leading-none text-slate-600">
+                                    <span className="bg-slate-100 px-1.5 py-0.5 rounded leading-none text-slate-600 block text-center w-full max-w-[115px] truncate" title={mappedRuangan ? mappedRuangan.nama_ruangan : 'Aula'}>
                                       📍 {mappedRuangan ? mappedRuangan.nama_ruangan.replace('Kelas ', '') : 'Aula'}
                                     </span>
                                   </div>
@@ -859,6 +913,415 @@ export default function GridTab({
         </div>
 
       </div>
+
+      {/* RENDER HELPER UNTUK HALAMAN CETAK PDF */}
+      {(() => {
+        const renderPrintPageHeader = (title: string, subtitle?: string) => {
+          return (
+            <div className="text-center space-y-1.5 pb-3 border-b-2 border-slate-800 font-sans relative">
+              <h1 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">{printSchoolName}</h1>
+              <p className="text-[10px] text-slate-500 italic font-mono">Alamat: Jl. Raya Pendidikan No. 45, Kurikulum Berbasis AI Modern</p>
+              <div className="pt-1">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-900 bg-indigo-50/60 inline-block px-3 py-1 rounded border border-indigo-200">
+                  Jadwal Pelajaran &amp; Mengajar Guru - {printAcademicYear}
+                </h2>
+              </div>
+              <div className="flex justify-between items-center text-[10px] text-slate-700 font-medium pt-2">
+                <span>Target: <strong className="text-slate-900">{title}</strong></span>
+                {subtitle && <span>{subtitle}</span>}
+                <span>Semester Ganjil / Genap</span>
+              </div>
+            </div>
+          );
+        };
+
+        const renderPrintTable = (matrix: { [key: number]: { [key in Hari]?: Jadwal[] } }) => {
+          return (
+            <table className="print-table w-full border-collapse">
+              <thead>
+                <tr>
+                  <th style={{ width: '12%' }} className="border border-slate-600 bg-slate-100 p-2 text-[10px] font-bold text-slate-800 text-center">Jam Ke / Waktu</th>
+                  {hariAktif.map(day => (
+                    <th key={day} style={{ width: `${88 / hariAktif.length}%` }} className="border border-slate-600 bg-slate-100 p-2 text-[10px] font-bold text-slate-800 text-center">{day}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {jamPelajaran.map(p => (
+                  <tr key={p.id}>
+                    {/* Period details */}
+                    <td className="border border-slate-400 bg-slate-50/50 p-2 text-center align-middle" style={{ verticalAlign: 'middle' }}>
+                      <div className="font-bold text-indigo-900 text-[10px]">Ke-{p.jam_ke}</div>
+                      <div className="text-[8px] text-slate-500 font-mono font-medium mt-0.5">{p.jam_mulai} - {p.jam_selesai}</div>
+                    </td>
+                    
+                    {/* Days cells */}
+                    {hariAktif.map(day => {
+                      const sInCell = matrix[p.jam_ke]?.[day as Hari] || [];
+                      return (
+                        <td key={day} className="border border-slate-400 p-2 text-center align-top h-[55px] min-h-[55px]">
+                          {sInCell.length === 0 ? (
+                            <div className="text-slate-400 italic text-[9px] flex items-center justify-center h-full">-</div>
+                          ) : (
+                            sInCell.map(sc => {
+                              const m = mapel.find(sub => sub.id === sc.mapel_id);
+                              const g = guru.find(tea => tea.id === sc.guru_id);
+                              const cl = kelas.find(cli => cli.id === sc.kelas_id);
+                              const r = ruangan.find(rm => rm.id === sc.ruangan_id);
+                              return (
+                                <div key={sc.id} className="space-y-1 leading-snug">
+                                  {/* Subject */}
+                                  <div className="font-extrabold text-slate-950 text-[10.5px]">
+                                    {m ? m.nama_mapel : 'Mapel'}
+                                  </div>
+                                  {/* Teacher */}
+                                  <div className="text-[9px] text-indigo-900 font-bold">
+                                    👤 {g ? g.nama.split(',')[0] : 'Guru'}
+                                  </div>
+                                  {/* Class and Room - top and bottom stacked! */}
+                                  <div className="text-[8px] text-slate-600 font-mono mt-0.5 space-y-0.5">
+                                    <div className="bg-slate-50 border border-slate-100 rounded py-0.5 px-1 truncate">Kelas: {cl ? cl.nama_kelas : '-'}</div>
+                                    <div className="bg-slate-50 border border-slate-100 rounded py-0.5 px-1 truncate">📍 {r ? r.nama_ruangan.replace('Kelas ', '') : '-'}</div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        };
+
+        const renderPrintFooter = () => {
+          return (
+            <div className="grid grid-cols-2 gap-8 text-[10px] pt-4 font-sans leading-relaxed">
+              <div className="space-y-1">
+                <span className="block text-slate-500 italic">Catatan Penyelenggara:</span>
+                <p className="text-slate-600 text-[9px] max-w-sm">
+                  1. Jadwal ini disusun secara otomatis menggunakan sistem algoritma anti-bentrok berbasis prioritas.<br />
+                  2. Perubahan jadwal secara mandiri hanya diperkenankan atas persetujuan Waka Kurikulum.
+                </p>
+              </div>
+              
+              {/* Signatures */}
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="space-y-12">
+                  <div>
+                    <span className="block">Mengetahui,</span>
+                    <span className="block font-bold">Kepala Sekolah {printSchoolName}</span>
+                  </div>
+                  <div>
+                    <span className="block font-bold underline">{printPrincipalName}</span>
+                    <span className="block text-[8px] text-slate-500">NIP. {printPrincipalNip}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-12">
+                  <div>
+                    <span className="block">{printCity}, {printDate}</span>
+                    <span className="block font-bold">Waka Urusan Kurikulum</span>
+                  </div>
+                  <div>
+                    <span className="block font-bold underline">{printCoordinatorName}</span>
+                    <span className="block text-[8px] text-slate-500">NIP. {printCoordinatorNip}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <>
+            {/* PRINT AREA (Hidden on screen, visible only on print) */}
+            <div className="hidden print:block print-only-container w-full font-sans text-slate-950">
+              
+              <style dangerouslySetInnerHTML={{ __html: `
+                @media print {
+                  @page {
+                    size: A4 landscape !important;
+                    margin: 8mm 12mm 8mm 12mm !important;
+                  }
+                  body {
+                    background: white !important;
+                    color: black !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
+                  header, footer, nav, aside, button, select, input, .no-print, .print\\:hidden, #root-layout-header, #auth-root, [role="tablist"] {
+                    display: none !important;
+                  }
+                  .print-page-break {
+                    page-break-after: always !important;
+                    break-after: page !important;
+                  }
+                  .print-table {
+                    width: 100% !important;
+                    border-collapse: collapse !important;
+                    table-layout: fixed !important;
+                  }
+                  .print-table th {
+                    background-color: #f1f5f9 !important;
+                    color: #0f172a !important;
+                    font-weight: bold !important;
+                    border: 1px solid #475569 !important;
+                    font-size: 10px !important;
+                    padding: 6px 4px !important;
+                  }
+                  .print-table td {
+                    border: 1px solid #94a3b8 !important;
+                    font-size: 9px !important;
+                    padding: 5px 3px !important;
+                    vertical-align: top !important;
+                  }
+                }
+              `}} />
+
+              {/* Scopes mapping */}
+              {printScope === 'current' && (
+                <div className="space-y-6">
+                  {renderPrintPageHeader(
+                    filterType === 'kelas' ? (kelas.find(c => c.id === filterId)?.nama_kelas || 'Seluruh Kelas') :
+                    filterType === 'guru' ? (guru.find(g => g.id === filterId)?.nama || 'Seluruh Guru') :
+                    (ruangan.find(r => r.id === filterId)?.nama_ruangan || 'Seluruh Ruangan')
+                  )}
+                  
+                  {renderPrintTable(generateMatrix(filterType, filterId))}
+                  
+                  {renderPrintFooter()}
+                </div>
+              )}
+
+              {printScope === 'all_classes' && kelas.map((c, idx) => (
+                <div key={c.id} className={`space-y-6 ${idx < kelas.length - 1 ? 'print-page-break' : ''}`}>
+                  {renderPrintPageHeader(`KELAS ${c.nama_kelas}`, c.wali_kelas ? `Wali Kelas: ${c.wali_kelas}` : undefined)}
+                  
+                  {renderPrintTable(generateMatrix('kelas', c.id))}
+                  
+                  {renderPrintFooter()}
+                </div>
+              ))}
+
+              {printScope === 'all_teachers' && guru.filter(g => g.status_aktif).map((g, idx) => {
+                const activeTeachers = guru.filter(tea => tea.status_aktif);
+                return (
+                  <div key={g.id} className={`space-y-6 ${idx < activeTeachers.length - 1 ? 'print-page-break' : ''}`}>
+                    {renderPrintPageHeader(`GURU: ${g.nama}`, g.nip ? `NIP: ${g.nip}` : undefined)}
+                    
+                    {renderPrintTable(generateMatrix('guru', g.id))}
+                    
+                    {renderPrintFooter()}
+                  </div>
+                );
+              })}
+
+            </div>
+          </>
+        );
+      })()}
+
+      {/* MODAL KUSTOMISASI CETAK PDF (print:hidden) */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 md:p-6 z-50 overflow-y-auto print:hidden font-sans">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-650 to-indigo-850 p-5 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-indigo-200" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">Pengaturan Cetak Jadwal Profesional</h3>
+                  <p className="text-[10px] text-indigo-200 font-medium mt-0.5">Kustomisasi header, tanda tangan, dan lingkup cetak A4 Landscape</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowPrintModal(false)}
+                className="p-1.5 rounded-lg hover:bg-white/10 text-white transition cursor-pointer"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              {/* Iframe warning to prevent user confusion */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-900 text-[11px] leading-relaxed space-y-1">
+                <p className="font-bold">⚠️ Catatan Penting untuk Browser &amp; iFrame:</p>
+                <p>Aplikasi ini berjalan di dalam frame pratinjau. Beberapa peramban memblokir cetak langsung dari dalam frame. Jika setelah klik tombol cetak di bawah dialog print browser tidak muncul, silakan klik tombol <strong>&ldquo;Buka di Tab Baru&rdquo;</strong> di kanan atas, lalu cetak dari sana.</p>
+              </div>
+
+              {/* Scope Selection */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <span className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide">1. Pilih Lingkup Cetak (A4 Landscape)</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPrintScope('current')}
+                    className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                      printScope === 'current' 
+                        ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-100 text-indigo-950 font-semibold' 
+                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <span className="text-xs font-bold block">Tampilan Saringan</span>
+                    <span className="text-[9px] text-slate-500 mt-1 leading-normal">Hanya mencetak filter aktif saat ini: {
+                      filterType === 'kelas' ? (kelas.find(c => c.id === filterId)?.nama_kelas || 'Kelas') :
+                      filterType === 'guru' ? (guru.find(g => g.id === filterId)?.nama.split(',')[0] || 'Guru') :
+                      'Ruangan'
+                    }</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPrintScope('all_classes')}
+                    className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                      printScope === 'all_classes' 
+                        ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-100 text-indigo-950 font-semibold' 
+                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <span className="text-xs font-bold block">Semua Kelas Sekaligus</span>
+                    <span className="text-[9px] text-slate-500 mt-1 leading-normal">Mencetak jadwal {kelas.length} kelas secara berurutan, tiap kelas 1 lembar terpisah.</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPrintScope('all_teachers')}
+                    className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                      printScope === 'all_teachers' 
+                        ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-100 text-indigo-950 font-semibold' 
+                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <span className="text-xs font-bold block">Semua Guru Aktif</span>
+                    <span className="text-[9px] text-slate-500 mt-1 leading-normal">Mencetak jadwal mengajar masing-masing guru aktif, tiap guru 1 lembar terpisah.</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Header Customization */}
+              <div className="space-y-3">
+                <span className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-1">2. Kop Surat &amp; Identitas Sekolah</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">NAMA SEKOLAH / INSTANSI</label>
+                    <input 
+                      type="text" 
+                      value={printSchoolName} 
+                      onChange={(e) => setPrintSchoolName(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-indigo-500 text-slate-800 font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">TAHUN AJARAN / SEMESTER</label>
+                    <input 
+                      type="text" 
+                      value={printAcademicYear} 
+                      onChange={(e) => setPrintAcademicYear(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-indigo-500 text-slate-800"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Signatures & Place */}
+              <div className="space-y-3">
+                <span className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-1">3. Tanda Tangan &amp; Lokasi Pengesahan</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">KOTA PENGESAHAN</label>
+                    <input 
+                      type="text" 
+                      value={printCity} 
+                      onChange={(e) => setPrintCity(e.target.value)}
+                      placeholder="Contoh: Jakarta"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-indigo-500 text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">TANGGAL DOKUMEN</label>
+                    <input 
+                      type="text" 
+                      value={printDate} 
+                      onChange={(e) => setPrintDate(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-indigo-500 text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-100 space-y-2">
+                    <span className="block text-[9px] font-bold text-indigo-950 uppercase">Pihak 1 (Kiri): Kepala Sekolah</span>
+                    <div>
+                      <label className="block text-[9px] text-slate-500 mb-0.5">NAMA KEPALA SEKOLAH</label>
+                      <input 
+                        type="text" 
+                        value={printPrincipalName} 
+                        onChange={(e) => setPrintPrincipalName(e.target.value)}
+                        className="w-full text-[11px] p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500 text-slate-850 font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-slate-500 mb-0.5">NIP KEPALA SEKOLAH</label>
+                      <input 
+                        type="text" 
+                        value={printPrincipalNip} 
+                        onChange={(e) => setPrintPrincipalNip(e.target.value)}
+                        className="w-full text-[11px] p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500 text-slate-850 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-100 space-y-2">
+                    <span className="block text-[9px] font-bold text-indigo-950 uppercase">Pihak 2 (Kanan): Waka Kurikulum</span>
+                    <div>
+                      <label className="block text-[9px] text-slate-500 mb-0.5">NAMA WAKA KURIKULUM</label>
+                      <input 
+                        type="text" 
+                        value={printCoordinatorName} 
+                        onChange={(e) => setPrintCoordinatorName(e.target.value)}
+                        className="w-full text-[11px] p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500 text-slate-850 font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-slate-500 mb-0.5">NIP WAKA KURIKULUM</label>
+                      <input 
+                        type="text" 
+                        value={printCoordinatorNip} 
+                        onChange={(e) => setPrintCoordinatorNip(e.target.value)}
+                        className="w-full text-[11px] p-1.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500 text-slate-850 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer buttons */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-150 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowPrintModal(false)}
+                className="px-4 py-2 bg-white text-slate-700 font-bold border border-slate-200 rounded-lg text-xs hover:bg-slate-100 transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecutePrint}
+                className="px-5 py-2 bg-indigo-650 hover:bg-indigo-750 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md hover:shadow-lg"
+              >
+                <Printer className="w-4 h-4" />
+                Mulai Cetak / Simpan PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
