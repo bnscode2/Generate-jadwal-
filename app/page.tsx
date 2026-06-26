@@ -755,7 +755,7 @@ export default function AdministrativeDashboard() {
     <div className="min-h-screen bg-slate-100/60 text-slate-800 flex flex-col font-sans selection:bg-indigo-600 selection:text-white" id="main-root">
       
       {/* HEADER SECTION */}
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-45 px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-45 px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs print:hidden">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -828,7 +828,7 @@ export default function AdministrativeDashboard() {
       <div className="flex-1 flex flex-col lg:flex-row relative">
         
         {/* SIDE BAR NAVIGATION */}
-        <aside className={`shrink-0 border-slate-200 bg-white flex flex-col justify-between transition-all duration-300 ease-in-out z-50
+        <aside className={`shrink-0 border-slate-200 bg-white flex flex-col justify-between transition-all duration-300 ease-in-out z-50 print:hidden
           fixed inset-y-0 left-0 lg:sticky lg:top-[73px] lg:h-[calc(100vh-73px)] overflow-y-auto lg:translate-x-0
           ${sidebarOpen 
             ? 'translate-x-0 w-72 p-4 border-r shadow-2xl lg:shadow-xs lg:w-64' 
@@ -946,7 +946,7 @@ export default function AdministrativeDashboard() {
         </aside>
 
         {/* MAIN PANEL CONTENT WINDOW */}
-        <main className="flex-1 bg-slate-50/50 p-6 overflow-y-auto">
+        <main className="flex-1 bg-slate-50/50 p-6 overflow-y-auto print:p-0 print:bg-white">
           {activeTab === 'dashboard' && (
             <DashboardTab 
               guru={guru}

@@ -342,6 +342,7 @@ export default function GridTab({
 
   return (
     <div className="space-y-6">
+      <div className="print:hidden space-y-6">
       
       {/* FILTERING CONTROLS FOR CALENDAR TABLE */}
       <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs font-sans">
@@ -913,6 +914,7 @@ export default function GridTab({
         </div>
 
       </div>
+      </div>
 
       {/* RENDER HELPER UNTUK HALAMAN CETAK PDF */}
       {(() => {
@@ -935,14 +937,14 @@ export default function GridTab({
           );
         };
 
-        const renderPrintTable = (matrix: { [key: number]: { [key in Hari]?: Jadwal[] } }) => {
+        const renderPrintTable = (matrix: { [key: number]: { [key in Hari]?: Jadwal[] } }, currentType: 'kelas' | 'guru' | 'ruangan') => {
           return (
             <table className="print-table w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ width: '12%' }} className="border border-slate-600 bg-slate-100 p-2 text-[10px] font-bold text-slate-800 text-center">Jam Ke / Waktu</th>
+                  <th style={{ width: '12%' }} className="border border-slate-600 bg-slate-100 p-1.5 text-[10px] font-bold text-slate-800 text-center">Jam Ke / Waktu</th>
                   {hariAktif.map(day => (
-                    <th key={day} style={{ width: `${88 / hariAktif.length}%` }} className="border border-slate-600 bg-slate-100 p-2 text-[10px] font-bold text-slate-800 text-center">{day}</th>
+                    <th key={day} style={{ width: `${88 / hariAktif.length}%` }} className="border border-slate-600 bg-slate-100 p-1.5 text-[10px] font-bold text-slate-800 text-center">{day}</th>
                   ))}
                 </tr>
               </thead>
@@ -950,7 +952,7 @@ export default function GridTab({
                 {jamPelajaran.map(p => (
                   <tr key={p.id}>
                     {/* Period details */}
-                    <td className="border border-slate-400 bg-slate-50/50 p-2 text-center align-middle" style={{ verticalAlign: 'middle' }}>
+                    <td className="border border-slate-400 bg-slate-50/50 p-1.5 text-center align-middle" style={{ verticalAlign: 'middle' }}>
                       <div className="font-bold text-indigo-900 text-[10px]">Ke-{p.jam_ke}</div>
                       <div className="text-[8px] text-slate-500 font-mono font-medium mt-0.5">{p.jam_mulai} - {p.jam_selesai}</div>
                     </td>
@@ -959,7 +961,7 @@ export default function GridTab({
                     {hariAktif.map(day => {
                       const sInCell = matrix[p.jam_ke]?.[day as Hari] || [];
                       return (
-                        <td key={day} className="border border-slate-400 p-2 text-center align-top h-[55px] min-h-[55px]">
+                        <td key={day} className="border border-slate-400 p-1.5 print:p-1 text-center align-top h-[55px] min-h-[55px] print:h-auto print:min-h-0">
                           {sInCell.length === 0 ? (
                             <div className="text-slate-400 italic text-[9px] flex items-center justify-center h-full">-</div>
                           ) : (
@@ -969,19 +971,27 @@ export default function GridTab({
                               const cl = kelas.find(cli => cli.id === sc.kelas_id);
                               const r = ruangan.find(rm => rm.id === sc.ruangan_id);
                               return (
-                                <div key={sc.id} className="space-y-1 leading-snug">
+                                <div key={sc.id} className="space-y-0.5 leading-snug">
                                   {/* Subject */}
-                                  <div className="font-extrabold text-slate-950 text-[10.5px]">
+                                  <div className="font-extrabold text-slate-950 text-[10px] tracking-tight">
                                     {m ? m.nama_mapel : 'Mapel'}
                                   </div>
-                                  {/* Teacher */}
-                                  <div className="text-[9px] text-indigo-900 font-bold">
-                                    👤 {g ? g.nama.split(',')[0] : 'Guru'}
-                                  </div>
-                                  {/* Class and Room - top and bottom stacked! */}
-                                  <div className="text-[8px] text-slate-600 font-mono mt-0.5 space-y-0.5">
-                                    <div className="bg-slate-50 border border-slate-100 rounded py-0.5 px-1 truncate">Kelas: {cl ? cl.nama_kelas : '-'}</div>
-                                    <div className="bg-slate-50 border border-slate-100 rounded py-0.5 px-1 truncate">📍 {r ? r.nama_ruangan.replace('Kelas ', '') : '-'}</div>
+                                  
+                                  {/* Teacher (Show only if NOT printing per teacher page) */}
+                                  {currentType !== 'guru' && (
+                                    <div className="text-[9px] print:text-[8px] text-indigo-900 font-bold">
+                                      👤 {g ? g.nama.split(',')[0] : 'Guru'}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Class and Room - print efficiently! */}
+                                  <div className="text-[8px] text-slate-600 font-mono space-y-0.5 print:space-y-0">
+                                    {currentType !== 'kelas' && (
+                                      <div className="bg-slate-50 border border-slate-100 rounded py-0.5 px-1 truncate print:bg-transparent print:border-none print:p-0 print:font-sans print:font-bold print:text-indigo-950">Kelas: {cl ? cl.nama_kelas : '-'}</div>
+                                    )}
+                                    {currentType !== 'ruangan' && (
+                                      <div className="bg-slate-50 border border-slate-100 rounded py-0.5 px-1 truncate print:bg-transparent print:border-none print:p-0">📍 {r ? r.nama_ruangan.replace('Kelas ', '') : '-'}</div>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -999,10 +1009,10 @@ export default function GridTab({
 
         const renderPrintFooter = () => {
           return (
-            <div className="grid grid-cols-2 gap-8 text-[10px] pt-4 font-sans leading-relaxed">
-              <div className="space-y-1">
-                <span className="block text-slate-500 italic">Catatan Penyelenggara:</span>
-                <p className="text-slate-600 text-[9px] max-w-sm">
+            <div className="grid grid-cols-2 gap-8 text-[10px] pt-4 print:pt-1 font-sans leading-relaxed">
+              <div className="space-y-1 print:space-y-0.5">
+                <span className="block text-slate-500 italic text-[9px]">Catatan Penyelenggara:</span>
+                <p className="text-slate-600 text-[9px] print:text-[8px] max-w-sm">
                   1. Jadwal ini disusun secara otomatis menggunakan sistem algoritma anti-bentrok berbasis prioritas.<br />
                   2. Perubahan jadwal secara mandiri hanya diperkenankan atas persetujuan Waka Kurikulum.
                 </p>
@@ -1010,7 +1020,7 @@ export default function GridTab({
               
               {/* Signatures */}
               <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="space-y-12">
+                <div className="space-y-12 print:space-y-6">
                   <div>
                     <span className="block">Mengetahui,</span>
                     <span className="block font-bold">Kepala Sekolah {printSchoolName}</span>
@@ -1021,7 +1031,7 @@ export default function GridTab({
                   </div>
                 </div>
 
-                <div className="space-y-12">
+                <div className="space-y-12 print:space-y-6">
                   <div>
                     <span className="block">{printCity}, {printDate}</span>
                     <span className="block font-bold">Waka Urusan Kurikulum</span>
@@ -1091,7 +1101,7 @@ export default function GridTab({
                     (ruangan.find(r => r.id === filterId)?.nama_ruangan || 'Seluruh Ruangan')
                   )}
                   
-                  {renderPrintTable(generateMatrix(filterType, filterId))}
+                  {renderPrintTable(generateMatrix(filterType, filterId), filterType)}
                   
                   {renderPrintFooter()}
                 </div>
@@ -1101,7 +1111,7 @@ export default function GridTab({
                 <div key={c.id} className={`space-y-6 ${idx < kelas.length - 1 ? 'print-page-break' : ''}`}>
                   {renderPrintPageHeader(`KELAS ${c.nama_kelas}`, c.wali_kelas ? `Wali Kelas: ${c.wali_kelas}` : undefined)}
                   
-                  {renderPrintTable(generateMatrix('kelas', c.id))}
+                  {renderPrintTable(generateMatrix('kelas', c.id), 'kelas')}
                   
                   {renderPrintFooter()}
                 </div>
@@ -1113,7 +1123,7 @@ export default function GridTab({
                   <div key={g.id} className={`space-y-6 ${idx < activeTeachers.length - 1 ? 'print-page-break' : ''}`}>
                     {renderPrintPageHeader(`GURU: ${g.nama}`, g.nip ? `NIP: ${g.nip}` : undefined)}
                     
-                    {renderPrintTable(generateMatrix('guru', g.id))}
+                    {renderPrintTable(generateMatrix('guru', g.id), 'guru')}
                     
                     {renderPrintFooter()}
                   </div>
