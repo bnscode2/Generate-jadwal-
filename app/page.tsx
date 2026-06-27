@@ -348,8 +348,44 @@ export default function AdministrativeDashboard() {
       setCurrentUser(user);
     }
     
+    let authSubscription: any = null;
+    let pollInterval: any = null;
+
     if (isSupabaseModeActive()) {
       checkSupabaseSession();
+
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        // Subscribe to auth state changes - fires when session is created or refreshed anywhere in the browser
+        const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("Supabase Auth State Event:", event);
+          if (session?.user) {
+            await checkSupabaseSession();
+          }
+        });
+        authSubscription = data.subscription;
+      }
+
+      // Add backup polling interval to ensure we check session every 1.5 seconds if not logged in
+      pollInterval = setInterval(async () => {
+        const currentUserNow = LocalDB.getCurrentUser();
+        if (!currentUserNow) {
+          const supabaseInstance = getSupabaseClient();
+          if (supabaseInstance) {
+            const { data: { session } } = await supabaseInstance.auth.getSession();
+            if (session?.user) {
+              console.log("Backup polling found active session!");
+              await checkSupabaseSession();
+            }
+          }
+        } else {
+          // If we are logged in, we can clear this backup poll
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }
+      }, 1500);
     }
 
     // 1. Listen for cross-window messages from the OAuth popup
@@ -384,6 +420,12 @@ export default function AdministrativeDashboard() {
 
     return () => {
       window.removeEventListener('message', handleOAuthMessage);
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
