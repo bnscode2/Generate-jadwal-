@@ -39,6 +39,8 @@ import {
 
 import { LocalDB } from '../lib/db';
 import { CalendarScheduler } from '../lib/scheduler';
+import { getSupabaseClient, isSupabaseModeActive } from '../lib/supabaseClient';
+import { SupabaseSyncService } from '../lib/supabaseSync';
 
 import DashboardTab from '../components/DashboardTab';
 import GuruTab from '../components/GuruTab';
@@ -106,6 +108,109 @@ export default function AdministrativeDashboard() {
   const [customGoogleEmail, setCustomGoogleEmail] = useState<string>('');
   const [customGoogleName, setCustomGoogleName] = useState<string>('');
   const [googleSchoolName, setGoogleSchoolName] = useState<string>('SMAN 1 AI INDONESIA');
+
+  const checkSupabaseSession = async () => {
+    if (!isSupabaseModeActive()) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Gagal mengambil session Supabase:', error);
+        return;
+      }
+
+      if (session?.user) {
+        const sbUser = session.user;
+        const schoolName = sbUser.user_metadata?.school_name || sbUser.user_metadata?.nama_sekolah || 'SMAN 1 AI INDONESIA';
+        
+        // Mapped user in format LocalDB expects
+        const mappedUser = {
+          username: sbUser.email || sbUser.id,
+          password: '', // Google auth / Supabase auth
+          nama_sekolah: schoolName,
+          role: 'Administrator',
+          isGoogle: true,
+          displayName: sbUser.user_metadata?.full_name || sbUser.user_metadata?.displayName || sbUser.email?.split('@')[0] || 'User'
+        };
+
+        // Save to users list locally if not present
+        const users = LocalDB.getUsers();
+        if (!users.some(u => u.username.toLowerCase() === mappedUser.username.toLowerCase())) {
+          users.push(mappedUser);
+          LocalDB.saveUsers(users);
+        }
+
+        localStorage.setItem('sch_current_user', JSON.stringify(mappedUser));
+        setCurrentUser(mappedUser);
+        setAuthSuccess(`Berhasil masuk via Google: ${mappedUser.displayName}`);
+        setAuthError('');
+        
+        // Let's also sync data down automatically if they just logged in!
+        try {
+          const pullResult = await SupabaseSyncService.pullAll();
+          if (pullResult.success) {
+            setLogMessages(prev => [`🔄 Data berhasil disinkronkan otomatis dari Supabase cloud!`, ...prev]);
+            loadDatabase();
+          }
+        } catch (pullErr) {
+          console.error("Gagal auto-pull saat login:", pullErr);
+        }
+      }
+    } catch (err) {
+      console.error('Error saat memeriksa session Supabase:', err);
+    }
+  };
+
+  const handleGoogleLoginClick = async () => {
+    if (isSupabaseModeActive()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        setAuthError('');
+        setAuthSuccess('Membuka Google Authentication...');
+        try {
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/`,
+              skipBrowserRedirect: true
+            }
+          });
+          
+          if (error) {
+            setAuthError(`Gagal menghubungkan Google Auth: ${error.message}`);
+            setAuthSuccess('');
+            return;
+          }
+
+          if (data?.url) {
+            // Open the real Google Auth url directly in a popup window
+            const authWindow = window.open(
+              data.url,
+              'google_oauth_popup',
+              'width=600,height=700'
+            );
+
+            if (!authWindow) {
+              setAuthError('Popup diblokir! Izinkan pop-up untuk login menggunakan Google.');
+              setAuthSuccess('');
+            }
+          } else {
+            setAuthError('Gagal memuat URL autentikasi Google.');
+            setAuthSuccess('');
+          }
+        } catch (err: any) {
+          setAuthError(`Error Google Sign-In: ${err.message || String(err)}`);
+          setAuthSuccess('');
+        }
+      }
+    } else {
+      // Fallback ke simulasi (Mock) untuk demo offline/lokal
+      setGoogleStep('select');
+      setShowGooglePopup(true);
+    }
+  };
 
   const handleGoogleAccountSelect = (email: string, name: string) => {
     setSelectedGoogleEmail(email);
@@ -224,18 +329,63 @@ export default function AdministrativeDashboard() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (isSupabaseModeActive()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    }
     LocalDB.logout();
     setCurrentUser(null);
     setLogMessages(['Anda telah berhasil keluar dari akun.']);
   };
 
-  // Check auth state initially
+  // Check auth state initially and handle popup redirect callback
   useEffect(() => {
     const user = LocalDB.getCurrentUser();
     if (user) {
       setCurrentUser(user);
     }
+    
+    if (isSupabaseModeActive()) {
+      checkSupabaseSession();
+    }
+
+    // 1. Listen for cross-window messages from the OAuth popup
+    const handleOAuthMessage = async (event: MessageEvent) => {
+      const origin = event.origin;
+      // Allow from current origin or .run.app to support AI Studio Preview URL
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+        return;
+      }
+      
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        console.log("OAuth Success Message Received from popup");
+        setAuthSuccess("Login Google Berhasil! Sedang sinkronisasi session...");
+        await checkSupabaseSession();
+      }
+    };
+
+    window.addEventListener('message', handleOAuthMessage);
+
+    // 2. If the current page itself is running inside a popup opened by opener, notify opener and close
+    if (typeof window !== 'undefined' && window.opener) {
+      try {
+        console.log("Detecting that this window is an OAuth popup callback. Posting message back to opener...");
+        window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+        setTimeout(() => {
+          window.close();
+        }, 600);
+      } catch (err) {
+        console.error("Failed to notify opener:", err);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('message', handleOAuthMessage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Reload database when user switches
@@ -651,195 +801,372 @@ export default function AdministrativeDashboard() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 md:p-6" id="auth-root">
-        <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
-          
-          {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 text-white text-center">
-            <div className="inline-flex bg-white/10 backdrop-blur-md p-3 rounded-2xl font-mono font-black text-2xl mb-3 shadow-inner">
-              JP
-            </div>
-            <h2 className="text-xl font-bold tracking-tight">Penjadwalan Sekolah Otomatis</h2>
-            <p className="text-xs text-indigo-100/95 mt-1 font-medium">Asisten Cerdas Penjadwalan Bebas Bentrok</p>
-          </div>
-
-          <div className="p-6 md:p-8">
-            {/* Tabs */}
-            <div className="flex border-b border-slate-100 mb-6 font-semibold">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('login');
-                  setAuthError('');
-                  setAuthSuccess('');
-                  setShowPassword(false);
-                }}
-                className={`flex-1 pb-3 text-center text-sm transition cursor-pointer ${authMode === 'login' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Masuk (Login)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('register');
-                  setAuthError('');
-                  setAuthSuccess('');
-                  setShowPassword(false);
-                }}
-                className={`flex-1 pb-3 text-center text-sm transition cursor-pointer ${authMode === 'register' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Daftar Akun Baru
-              </button>
+      <>
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 md:p-6" id="auth-root">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
+            
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 text-white text-center">
+              <div className="inline-flex bg-white/10 backdrop-blur-md p-3 rounded-2xl font-mono font-black text-2xl mb-3 shadow-inner">
+                JP
+              </div>
+              <h2 className="text-xl font-bold tracking-tight">Penjadwalan Sekolah Otomatis</h2>
+              <p className="text-xs text-indigo-100/95 mt-1 font-medium">Asisten Cerdas Penjadwalan Bebas Bentrok</p>
             </div>
 
-            {authError && (
-              <div className="mb-4 p-3 bg-rose-50 text-rose-700 text-xs rounded-lg border border-rose-100 font-semibold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{authError}</span>
+            <div className="p-6 md:p-8">
+              {/* Tabs */}
+              <div className="flex border-b border-slate-100 mb-6 font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthError('');
+                    setAuthSuccess('');
+                    setShowPassword(false);
+                  }}
+                  className={`flex-1 pb-3 text-center text-sm transition cursor-pointer ${authMode === 'login' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Masuk (Login)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('register');
+                    setAuthError('');
+                    setAuthSuccess('');
+                    setShowPassword(false);
+                  }}
+                  className={`flex-1 pb-3 text-center text-sm transition cursor-pointer ${authMode === 'register' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Daftar Akun Baru
+                </button>
               </div>
-            )}
 
-            {authSuccess && (
-              <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 text-xs rounded-lg border border-emerald-100 font-semibold flex items-center gap-2">
-                <span>✓ {authSuccess}</span>
-              </div>
-            )}
+              {authError && (
+                <div className="mb-4 p-3 bg-rose-50 text-rose-700 text-xs rounded-lg border border-rose-100 font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
 
-            <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
-              {authMode === 'register' && (
+              {authSuccess && (
+                <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 text-xs rounded-lg border border-emerald-100 font-semibold flex items-center gap-2">
+                  <span>✓ {authSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
+                {authMode === 'register' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nama Sekolah / Instansi</label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                        <Users className="w-4 h-4" />
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Contoh: SMAN 1 Jakarta"
+                        value={authNamaSekolah}
+                        onChange={(e) => setAuthNamaSekolah(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nama Sekolah / Instansi</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Username</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                      <Users className="w-4 h-4" />
+                      <User className="w-4 h-4" />
                     </span>
                     <input
                       type="text"
-                      placeholder="Contoh: SMAN 1 Jakarta"
-                      value={authNamaSekolah}
-                      onChange={(e) => setAuthNamaSekolah(e.target.value)}
+                      placeholder="Masukkan username"
+                      value={authUsername}
+                      onChange={(e) => setAuthUsername(e.target.value)}
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
                       required
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Password</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                      <Lock className="w-4 h-4" />
+                    </span>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Masukkan password"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      className="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600 transition focus:outline-none cursor-pointer"
+                      title={showPassword ? "Sembunyikan Password" : "Tampilkan Password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {authMode === 'login' ? (
+                    <>
+                      <LogIn className="w-4 h-4" /> Masuk Aplikasi
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" /> Registrasi &amp; Mulai
+                    </>
+                  )}
+                </button>
+
+                <div className="relative flex py-1 items-center justify-center">
+                  <div className="flex-grow border-t border-slate-100"></div>
+                  <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">atau</span>
+                  <div className="flex-grow border-t border-slate-100"></div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLoginClick}
+                  className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 rounded-lg text-sm transition shadow-xs active:scale-98 cursor-pointer flex items-center justify-center gap-2.5"
+                >
+                  <svg className="w-4.5 h-4.5 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  <span>Masuk dengan Google</span>
+                </button>
+              </form>
+
+              {authMode === 'login' && (
+                <div className="mt-6 p-3.5 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                  <span className="text-[11px] text-slate-500 font-medium block">Akun Demo Instan:</span>
+                  <span className="font-mono text-[11px] text-slate-600 mt-1 block font-bold">
+                    Username: <span className="text-indigo-600 font-bold">admin</span> • Password: <span className="text-indigo-600 font-bold">password123</span>
+                  </span>
+                </div>
               )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Username</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                    <User className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Masukkan username"
-                    value={authUsername}
-                    onChange={(e) => setAuthUsername(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Password</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                    <Lock className="w-4 h-4" />
-                  </span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Masukkan password"
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    className="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600 transition focus:outline-none cursor-pointer"
-                    title={showPassword ? "Sembunyikan Password" : "Tampilkan Password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-              >
-                {authMode === 'login' ? (
-                  <>
-                    <LogIn className="w-4 h-4" /> Masuk Aplikasi
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" /> Registrasi &amp; Mulai
-                  </>
-                )}
-              </button>
-
-              <div className="relative flex py-1 items-center justify-center">
-                <div className="flex-grow border-t border-slate-100"></div>
-                <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">atau</span>
-                <div className="flex-grow border-t border-slate-100"></div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setGoogleStep('select');
-                  setShowGooglePopup(true);
-                }}
-                className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 rounded-lg text-sm transition shadow-xs active:scale-98 cursor-pointer flex items-center justify-center gap-2.5"
-              >
-                <svg className="w-4.5 h-4.5 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Masuk dengan Google</span>
-              </button>
-            </form>
-
-            {authMode === 'login' && (
-              <div className="mt-6 p-3.5 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                <span className="text-[11px] text-slate-500 font-medium block">Akun Demo Instan:</span>
-                <span className="font-mono text-[11px] text-slate-600 mt-1 block font-bold">
-                  Username: <span className="text-indigo-600 font-bold">admin</span> • Password: <span className="text-indigo-600 font-bold">password123</span>
+              
+              <div className="mt-6 text-center border-t border-slate-100 pt-4">
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Database Akun Terisolasi: Setiap akun memiliki penyimpanan jadwal sendiri secara aman.
                 </span>
               </div>
-            )}
-            
-            <div className="mt-6 text-center border-t border-slate-100 pt-4">
-              <span className="text-[11px] text-slate-400 font-medium">
-                Database Akun Terisolasi: Setiap akun memiliki penyimpanan jadwal sendiri secara aman.
-              </span>
-            </div>
 
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Google Sign-In Popup Modal inside !currentUser */}
+        {showGooglePopup && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-300">
+              {/* Google Header */}
+              <div className="p-6 text-center border-b border-slate-100 bg-slate-50 relative">
+                <button 
+                  onClick={() => setShowGooglePopup(false)}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+                <div className="inline-flex justify-center mb-3">
+                  <svg className="w-8 h-8" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">Login dengan Google</h3>
+                <p className="text-xs text-slate-500 mt-1 font-medium">untuk melanjutkan ke JP Penjadwalan Sekolah</p>
+              </div>
+
+              {/* Step 1: Select Account */}
+              {googleStep === 'select' && (
+                <div className="p-6 space-y-4">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Pilih akun Anda</span>
+                  
+                  {/* Account list */}
+                  <div className="space-y-2.5">
+                    <button
+                      onClick={() => handleGoogleAccountSelect('balkhi05@gmail.com', 'Balkhi')}
+                      className="w-full p-3.5 flex items-center gap-3.5 rounded-xl border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 text-left transition cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                        B
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-sm text-slate-800 block">Balkhi</span>
+                        <span className="text-xs text-slate-500 block truncate">balkhi05@gmail.com</span>
+                      </div>
+                      <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-100 shrink-0">Profil Aktif</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setCustomGoogleEmail('');
+                        setCustomGoogleName('');
+                        setGoogleStep('new');
+                      }}
+                      className="w-full p-3.5 flex items-center gap-3.5 rounded-xl border border-dashed border-slate-200 hover:border-indigo-300 hover:bg-slate-50 text-left transition cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg">
+                        +
+                      </div>
+                      <div>
+                        <span className="font-bold text-sm text-slate-700 block">Gunakan Akun Lain</span>
+                        <span className="text-xs text-slate-400 block">Masuk menggunakan email Google baru</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 text-center leading-relaxed mt-4">
+                    Aplikasi Penjadwalan Sekolah menggunakan standar keamanan terisolasi. Kredensial akun Google diproses secara aman dalam runtime terisolasi Anda.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 2: Input Custom Google Account */}
+              {googleStep === 'new' && (
+                <div className="p-6 space-y-4">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Tambah Akun Google Baru</span>
+                  
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nama Lengkap</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Budi Santoso"
+                        value={customGoogleName}
+                        onChange={(e) => setCustomGoogleName(e.target.value)}
+                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Email Google</label>
+                      <input
+                        type="email"
+                        placeholder="Contoh: budi@gmail.com"
+                        value={customGoogleEmail}
+                        onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setGoogleStep('select')}
+                      className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition cursor-pointer text-center"
+                    >
+                      Kembali
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!customGoogleEmail || !customGoogleName) {
+                          alert('Harap isi nama dan email.');
+                          return;
+                        }
+                        handleGoogleAccountSelect(customGoogleEmail, customGoogleName);
+                      }}
+                      className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition cursor-pointer text-center"
+                    >
+                      Lanjutkan
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Input School Name for New Account Registration */}
+              {googleStep === 'school' && (
+                <form onSubmit={handleGoogleRegisterSubmit} className="p-6 space-y-4">
+                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-1">✓ Autentikasi Google Berhasil</span>
+                  
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 text-xs text-emerald-800 leading-relaxed font-medium">
+                    Selamat datang <strong>{selectedGoogleName}</strong>! Ini adalah pertama kalinya Anda masuk. Kami memerlukan nama sekolah atau instansi Anda untuk membuatkan database terisolasi.
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nama Sekolah / Instansi</label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: SMAN 1 AI INDONESIA"
+                      value={googleSchoolName}
+                      onChange={(e) => setGoogleSchoolName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="flex gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setGoogleStep('select')}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition cursor-pointer text-center"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition shadow-md cursor-pointer text-center"
+                    >
+                      Buat Database &amp; Masuk
+                    </button>
+                  </div>
+                </form>
+              )}
+
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -1138,184 +1465,6 @@ export default function AdministrativeDashboard() {
           )}
         </main>
       </div>
-
-      {/* Google Sign-In Popup Modal */}
-      {showGooglePopup && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-300">
-            {/* Google Header */}
-            <div className="p-6 text-center border-b border-slate-100 bg-slate-50 relative">
-              <button 
-                onClick={() => setShowGooglePopup(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-              <div className="inline-flex justify-center mb-3">
-                <svg className="w-8 h-8" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-800">Login dengan Google</h3>
-              <p className="text-xs text-slate-500 mt-1 font-medium">untuk melanjutkan ke JP Penjadwalan Sekolah</p>
-            </div>
-
-            {/* Step 1: Select Account */}
-            {googleStep === 'select' && (
-              <div className="p-6 space-y-4">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Pilih akun Anda</span>
-                
-                {/* Account list */}
-                <div className="space-y-2.5">
-                  <button
-                    onClick={() => handleGoogleAccountSelect('balkhi05@gmail.com', 'Balkhi')}
-                    className="w-full p-3.5 flex items-center gap-3.5 rounded-xl border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 text-left transition cursor-pointer"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
-                      B
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-bold text-sm text-slate-800 block">Balkhi</span>
-                      <span className="text-xs text-slate-500 block truncate">balkhi05@gmail.com</span>
-                    </div>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-100 shrink-0">Profil Aktif</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setCustomGoogleEmail('');
-                      setCustomGoogleName('');
-                      setGoogleStep('new');
-                    }}
-                    className="w-full p-3.5 flex items-center gap-3.5 rounded-xl border border-dashed border-slate-200 hover:border-indigo-300 hover:bg-slate-50 text-left transition cursor-pointer"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg">
-                      +
-                    </div>
-                    <div>
-                      <span className="font-bold text-sm text-slate-700 block">Gunakan Akun Lain</span>
-                      <span className="text-xs text-slate-400 block">Masuk menggunakan email Google baru</span>
-                    </div>
-                  </button>
-                </div>
-
-                <p className="text-[10px] text-slate-400 text-center leading-relaxed mt-4">
-                  Aplikasi Penjadwalan Sekolah menggunakan standar keamanan terisolasi. Kredensial akun Google diproses secara aman dalam runtime terisolasi Anda.
-                </p>
-              </div>
-            )}
-
-            {/* Step 2: Input Custom Google Account */}
-            {googleStep === 'new' && (
-              <div className="p-6 space-y-4">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Tambah Akun Google Baru</span>
-                
-                <div className="space-y-3.5">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nama Lengkap</label>
-                    <input
-                      type="text"
-                      placeholder="Contoh: Budi Santoso"
-                      value={customGoogleName}
-                      onChange={(e) => setCustomGoogleName(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Email Google</label>
-                    <input
-                      type="email"
-                      placeholder="Contoh: budi@gmail.com"
-                      value={customGoogleEmail}
-                      onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setGoogleStep('select')}
-                    className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition cursor-pointer text-center"
-                  >
-                    Kembali
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!customGoogleEmail || !customGoogleName) {
-                        alert('Harap isi nama dan email.');
-                        return;
-                      }
-                      handleGoogleAccountSelect(customGoogleEmail, customGoogleName);
-                    }}
-                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition cursor-pointer text-center"
-                  >
-                    Lanjutkan
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Input School Name for New Account Registration */}
-            {googleStep === 'school' && (
-              <form onSubmit={handleGoogleRegisterSubmit} className="p-6 space-y-4">
-                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-1">✓ Autentikasi Google Berhasil</span>
-                
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 text-xs text-emerald-800 leading-relaxed font-medium">
-                  Selamat datang <strong>{selectedGoogleName}</strong>! Ini adalah pertama kalinya Anda masuk. Kami memerlukan nama sekolah atau instansi Anda untuk membuatkan database terisolasi.
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nama Sekolah / Instansi</label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: SMAN 1 AI INDONESIA"
-                    value={googleSchoolName}
-                    onChange={(e) => setGoogleSchoolName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setGoogleStep('select')}
-                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition cursor-pointer text-center"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition shadow-md cursor-pointer text-center"
-                  >
-                    Buat Database &amp; Masuk
-                  </button>
-                </div>
-              </form>
-            )}
-
-          </div>
-        </div>
-      )}
 
     </div>
   );
