@@ -21,7 +21,10 @@ import {
   LogOut,
   Eye,
   EyeOff,
-  Settings
+  Settings,
+  Trash2,
+  Info,
+  X
 } from 'lucide-react';
 
 import { 
@@ -105,6 +108,14 @@ export default function AdministrativeDashboard() {
 
   // Selected cell for manual swaps
   const [selectedCell, setSelectedCell] = useState<{ hari: Hari; jam_ke: number; scheduleId?: string | null } | null>(null);
+
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'reset_master' | 'clear_schedule';
+  } | null>(null);
 
   // Auth States
   const [currentUser, setCurrentUser] = useState<any | null>(null);
@@ -531,21 +542,51 @@ export default function AdministrativeDashboard() {
 
   // Handle resetting data
   const handleReset = () => {
-    if (window.confirm('Apakah Anda yakin ingin menyetel ulang data master ke data demo default sekolah? Ini akan menghapus jadwal saat ini.')) {
-      LocalDB.resetToDefault();
-      loadDatabase();
-      setLogMessages(['Sistem berhasil disetel ulang ke Data Demo Sekolah SMAN AI.']);
-      setSelectedCell(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Atur Ulang & Pembersihan Data Master',
+      message: 'Silakan pilih tindakan yang Anda inginkan untuk data master sistem Anda.',
+      type: 'reset_master'
+    });
   };
 
   const handleClearJadwal = () => {
-    if (window.confirm('Apakah Anda yakin ingin mengosongkan jadwal pelajaran saat ini?')) {
-      LocalDB.saveJadwal([]);
-      loadDatabase();
-      setLogMessages(['Jadwal pelajaran berhasil dikosongkan.']);
-      setSelectedCell(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Kosongkan Seluruh Jadwal',
+      message: 'Apakah Anda yakin ingin menghapus/mengosongkan seluruh jadwal pelajaran yang telah disusun saat ini? Tindakan ini tidak dapat dibatalkan.',
+      type: 'clear_schedule'
+    });
+  };
+
+  const executeResetDemo = () => {
+    LocalDB.resetToDefault();
+    loadDatabase();
+    setLogMessages(prev => ['Sistem berhasil disetel ulang ke Data Demo Sekolah SMAN AI.', ...prev]);
+    setSelectedCell(null);
+    setConfirmModal(null);
+  };
+
+  const executeClearAllMaster = () => {
+    LocalDB.saveGuru([]);
+    LocalDB.saveMapel([]);
+    LocalDB.saveKelas([]);
+    LocalDB.saveRuangan([]);
+    LocalDB.savePengampu([]);
+    LocalDB.savePreferensi([]);
+    LocalDB.saveJadwal([]);
+    loadDatabase();
+    setLogMessages(prev => ['Seluruh data master (Guru, Mapel, Kelas, Ruangan, Pengampu, Preferensi) & Jadwal berhasil dibersihkan.', ...prev]);
+    setSelectedCell(null);
+    setConfirmModal(null);
+  };
+
+  const executeClearJadwal = () => {
+    LocalDB.saveJadwal([]);
+    loadDatabase();
+    setLogMessages(prev => ['Jadwal pelajaran berhasil dikosongkan.', ...prev]);
+    setSelectedCell(null);
+    setConfirmModal(null);
   };
 
   // --- CRUD GURU ---
@@ -1726,6 +1767,104 @@ export default function AdministrativeDashboard() {
           )}
         </main>
       </div>
+
+      {/* CONFIRMATION MODAL */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4 animate-fade-in font-sans text-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col p-5 space-y-4">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                {confirmModal.type === 'reset_master' ? (
+                  <div className="bg-amber-50 p-2 rounded-full border border-amber-200 text-amber-600">
+                    <RefreshCw className="w-5 h-5 animate-spin-slow" />
+                  </div>
+                ) : (
+                  <div className="bg-rose-50 p-2 rounded-full border border-rose-200 text-rose-600">
+                    <Trash2 className="w-5 h-5" />
+                  </div>
+                )}
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">{confirmModal.title}</h4>
+                  <p className="text-[10px] text-slate-400 font-medium font-mono">KONFIRMASI SISTEM</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setConfirmModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="text-slate-600 font-medium leading-relaxed whitespace-normal py-1">
+              {confirmModal.message}
+            </div>
+
+            {/* Actions for Reset Master */}
+            {confirmModal.type === 'reset_master' && (
+              <div className="flex flex-col gap-2 pt-2">
+                <button 
+                  type="button"
+                  onClick={executeResetDemo}
+                  className="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-850 border border-amber-220 rounded-xl text-left font-bold transition flex items-center justify-between cursor-pointer"
+                >
+                  <div>
+                    <span className="block">1. Atur Ulang ke Data Demo SMAN AI</span>
+                    <span className="block text-[10px] text-amber-600/80 font-medium mt-0.5 normal-case">Mengisi ulang sistem dengan data contoh guru, kelas & mapel</span>
+                  </div>
+                  <RefreshCw className="w-4 h-4 text-amber-500 shrink-0" />
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={executeClearAllMaster}
+                  className="w-full py-2.5 px-3 bg-rose-50 hover:bg-rose-105 text-rose-850 border border-rose-220 rounded-xl text-left font-bold transition flex items-center justify-between cursor-pointer"
+                >
+                  <div>
+                    <span className="block">2. Kosongkan Semua Data Master (Mulai dari Nol)</span>
+                    <span className="block text-[10px] text-rose-600/80 font-medium mt-0.5 normal-case">Hapus total semua biodata guru, mapel, kelas & jadwal</span>
+                  </div>
+                  <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
+                </button>
+
+                <div className="flex justify-end pt-2 border-t border-slate-100">
+                  <button 
+                    type="button"
+                    onClick={() => setConfirmModal(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 font-bold rounded-lg transition cursor-pointer"
+                  >
+                    Batalkan
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Actions for Clear Schedule */}
+            {confirmModal.type === 'clear_schedule' && (
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 font-bold rounded-lg transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="button"
+                  onClick={executeClearJadwal}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-rose-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Kosongkan Jadwal
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
