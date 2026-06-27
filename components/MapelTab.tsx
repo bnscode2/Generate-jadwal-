@@ -42,7 +42,7 @@ export default function MapelTab({
                 value={newMapel.nama_mapel || ''}
                 onChange={(e) => setNewMapel({...newMapel, nama_mapel: e.target.value})}
                 placeholder="contoh: Pendidikan Kewarganegaraan"
-                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 transition-all font-medium"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all font-medium"
                 required
               />
             </div>
@@ -55,7 +55,7 @@ export default function MapelTab({
                   value={newMapel.kode_mapel || ''}
                   onChange={(e) => setNewMapel({...newMapel, kode_mapel: e.target.value})}
                   placeholder="contoh: PKN"
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 transition-all font-medium"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all font-medium"
                   required
                 />
               </div>
@@ -90,7 +90,7 @@ export default function MapelTab({
           <div className="overflow-x-auto text-xs font-sans">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-550 font-mono text-[10px] uppercase font-bold">
+                <tr className="border-b border-slate-200 text-slate-500 font-mono text-[10px] uppercase font-bold">
                   <th className="py-2.5 px-3">Kode Mapel</th>
                   <th className="py-2.5 px-3">Nama Lengkap Mata Pelajaran</th>
                   <th className="py-2.5 px-3">Jumlah Jam Mengajar Seminggu</th>
@@ -108,7 +108,7 @@ export default function MapelTab({
                     <td className="py-3 px-3 text-right">
                       <button 
                         onClick={() => handleDeleteMapel(m.id)}
-                        className="text-rose-605 hover:text-rose-850 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
+                        className="text-rose-600 hover:text-rose-800 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
                         title="Hapus Mapel"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

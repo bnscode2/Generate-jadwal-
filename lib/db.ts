@@ -25,8 +25,17 @@ export class LocalDB {
     const prefixedKey = prefix + key;
     const item = localStorage.getItem(prefixedKey);
     if (!item) {
-      localStorage.setItem(prefixedKey, JSON.stringify(defaultData));
-      return defaultData;
+      // Jika user login bukan admin, kembalikan data kosong demi kenyamanan pengisian baru
+      let finalDefault = defaultData;
+      if (!isGlobal && prefix !== '' && prefix !== 'user_admin_') {
+        if (key === 'sch_hari_aktif') {
+          finalDefault = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as any;
+        } else if (Array.isArray(defaultData)) {
+          finalDefault = [] as any;
+        }
+      }
+      localStorage.setItem(prefixedKey, JSON.stringify(finalDefault));
+      return finalDefault;
     }
     try {
       return JSON.parse(item);
@@ -150,13 +159,15 @@ export class LocalDB {
   static resetToDefault() {
     if (typeof window === 'undefined') return;
     const prefix = this.getUserPrefix();
-    localStorage.setItem(prefix + 'sch_guru', JSON.stringify(MOCK_GURU));
-    localStorage.setItem(prefix + 'sch_mapel', JSON.stringify(MOCK_MAPEL));
-    localStorage.setItem(prefix + 'sch_kelas', JSON.stringify(MOCK_KELAS));
-    localStorage.setItem(prefix + 'sch_ruangan', JSON.stringify(MOCK_RUANGAN));
-    localStorage.setItem(prefix + 'sch_jam_pelajaran', JSON.stringify(MOCK_JAM_PELAJARAN));
-    localStorage.setItem(prefix + 'sch_pengampu', JSON.stringify(MOCK_PENGAMPU));
-    localStorage.setItem(prefix + 'sch_preferensi', JSON.stringify(MOCK_PREFERENSI));
+    const isCustomUser = prefix !== '' && prefix !== 'user_admin_';
+
+    localStorage.setItem(prefix + 'sch_guru', JSON.stringify(isCustomUser ? [] : MOCK_GURU));
+    localStorage.setItem(prefix + 'sch_mapel', JSON.stringify(isCustomUser ? [] : MOCK_MAPEL));
+    localStorage.setItem(prefix + 'sch_kelas', JSON.stringify(isCustomUser ? [] : MOCK_KELAS));
+    localStorage.setItem(prefix + 'sch_ruangan', JSON.stringify(isCustomUser ? [] : MOCK_RUANGAN));
+    localStorage.setItem(prefix + 'sch_jam_pelajaran', JSON.stringify(isCustomUser ? [] : MOCK_JAM_PELAJARAN));
+    localStorage.setItem(prefix + 'sch_pengampu', JSON.stringify(isCustomUser ? [] : MOCK_PENGAMPU));
+    localStorage.setItem(prefix + 'sch_preferensi', JSON.stringify(isCustomUser ? [] : MOCK_PREFERENSI));
     localStorage.setItem(prefix + 'sch_jadwal', JSON.stringify([]));
     this.recalculateConflicts();
   }

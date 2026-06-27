@@ -61,7 +61,7 @@ export default function PengampuTab({
               <select 
                 value={newPengampu.mapel_id || ''}
                 onChange={(e) => setNewPengampu({...newPengampu, mapel_id: e.target.value})}
-                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 font-medium transition-all"
+                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 font-medium transition-all"
                 required
               >
                 <option value="">-- Pilih Bidang Studi --</option>
@@ -117,7 +117,7 @@ export default function PengampuTab({
           <div className="overflow-x-auto text-xs font-sans">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-550 font-mono text-[10px] uppercase font-bold">
+                <tr className="border-b border-slate-200 text-slate-500 font-mono text-[10px] uppercase font-bold">
                   <th className="py-2.5 px-3">Pengajar</th>
                   <th className="py-2.5 px-3">Studi Mapel</th>
                   <th className="py-2.5 px-3">Kelas</th>
@@ -146,7 +146,7 @@ export default function PengampuTab({
                       <td className="py-3 px-3 text-right">
                         <button 
                           onClick={() => handleDeletePengampu(assign.id)}
-                          className="text-rose-605 hover:text-rose-850 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
+                          className="text-rose-600 hover:text-rose-800 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

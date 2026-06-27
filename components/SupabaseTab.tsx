@@ -228,7 +228,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
               <button
                 onClick={handleConnect}
                 disabled={isTesting}
-                className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {isTesting ? (
                   <>
@@ -264,14 +264,14 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
             <button
               onClick={handlePush}
               disabled={!isConnected || isSyncing}
-              className="w-full p-4 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 border border-slate-200 rounded-xl transition cursor-pointer text-left flex items-start gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full p-4 bg-indigo-50/70 hover:bg-indigo-100 border border-indigo-200 hover:border-indigo-300 rounded-xl transition cursor-pointer text-left flex items-start gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
             >
-              <div className="p-2 bg-indigo-100 rounded-lg text-indigo-650 shrink-0 mt-0.5">
+              <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600 shrink-0 mt-0.5">
                 <UploadCloud className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-bold text-xs text-slate-800 block">Push Semua Data ke Supabase</span>
-                <span className="text-[10px] text-slate-500 block mt-0.5 leading-relaxed">
+                <span className="font-bold text-xs text-indigo-950 block">Push Semua Data ke Supabase</span>
+                <span className="text-[10px] text-indigo-800 block mt-0.5 leading-relaxed">
                   Unggah seluruh konfigurasi guru, pengampu, kelas, serta draf jadwal pelajaran di penyimpanan Anda ke tabel Supabase. Sangat cocok untuk sinkronisasi pertama kali.
                 </span>
               </div>
@@ -280,14 +280,14 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
             <button
               onClick={handlePull}
               disabled={!isConnected || isSyncing}
-              className="w-full p-4 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl transition cursor-pointer text-left flex items-start gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full p-4 bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 rounded-xl transition cursor-pointer text-left flex items-start gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
             >
               <div className="p-2 bg-emerald-100 rounded-lg text-emerald-650 shrink-0 mt-0.5">
                 <DownloadCloud className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-bold text-xs text-slate-800 block">Pull Semua Data dari Supabase</span>
-                <span className="text-[10px] text-slate-500 block mt-0.5 leading-relaxed text-left">
+                <span className="font-bold text-xs text-emerald-950 block">Pull Semua Data dari Supabase</span>
+                <span className="text-[10px] text-emerald-800 block mt-0.5 leading-relaxed text-left">
                   Tarik seluruh data terbaru dari tabel Supabase cloud untuk memperbarui penyimpanan lokal Anda. Berguna untuk memuat jadwal dari perangkat lain atau memulihkan data.
                 </span>
               </div>
@@ -357,7 +357,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
               alert('Skrip migrasi SQL berhasil disalin ke papan klip Anda.');
               setSyncLogs(prev => ['📋 Skrip DDL migrasi SQL berhasil disalin ke clipboard.', ...prev]);
             }}
-            className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0 self-start sm:self-auto"
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0 self-start sm:self-auto"
           >
             Salin SQL Schema
           </button>

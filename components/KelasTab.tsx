@@ -56,7 +56,7 @@ export default function KelasTab({
                     value={newKelas.nama_kelas || ''}
                     onChange={(e) => setNewKelas({...newKelas, nama_kelas: e.target.value})}
                     placeholder="contoh: VII A"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 transition-all font-medium"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all font-medium"
                     required
                   />
                 </div>
@@ -82,7 +82,7 @@ export default function KelasTab({
                   value={newKelas.wali_kelas || ''}
                   onChange={(e) => setNewKelas({...newKelas, wali_kelas: e.target.value})}
                   placeholder="contoh: Ahmad Subarjo, S.Pd."
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 transition-all font-medium"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all font-medium"
                 />
               </div>
 
@@ -102,7 +102,7 @@ export default function KelasTab({
             <div className="overflow-x-auto text-xs font-sans">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-550 font-mono text-[10px] uppercase font-bold">
+                  <tr className="border-b border-slate-200 text-slate-500 font-mono text-[10px] uppercase font-bold">
                     <th className="py-2.5 px-3">Nama Kelas</th>
                     <th className="py-2.5 px-3">Tingkat</th>
                     <th className="py-2.5 px-3">Wali Kelas</th>
@@ -118,7 +118,7 @@ export default function KelasTab({
                       <td className="py-3 px-3 text-right">
                         <button 
                           onClick={() => handleDeleteKelas(c.id)}
-                          className="text-rose-605 hover:text-rose-850 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
+                          className="text-rose-600 hover:text-rose-800 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -150,7 +150,7 @@ export default function KelasTab({
                     value={newRuangan.nama_ruangan || ''}
                     onChange={(e) => setNewRuangan({...newRuangan, nama_ruangan: e.target.value})}
                     placeholder="contoh: Lab IPA / Aula"
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 font-medium transition-all"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 font-medium transition-all"
                     required
                   />
                 </div>
@@ -162,7 +162,7 @@ export default function KelasTab({
                     min={1}
                     value={newRuangan.kapasitas || 32}
                     onChange={(e) => setNewRuangan({...newRuangan, kapasitas: Number(e.target.value)})}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 font-bold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 transition-all"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 font-bold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
                     required
                   />
                 </div>
@@ -184,7 +184,7 @@ export default function KelasTab({
             <div className="overflow-x-auto text-xs font-sans">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-550 font-mono text-[10px] uppercase font-bold">
+                  <tr className="border-b border-slate-200 text-slate-500 font-mono text-[10px] uppercase font-bold">
                     <th className="py-2.5 px-3">Nama Ruangan</th>
                     <th className="py-2.5 px-3">Daya Tampung</th>
                     <th className="py-2.5 px-3 text-right">Aksi</th>
@@ -200,7 +200,7 @@ export default function KelasTab({
                       <td className="py-3 px-3 text-right">
                         <button 
                           onClick={() => handleDeleteRuangan(r.id)}
-                          className="text-rose-605 hover:text-rose-850 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
+                          className="text-rose-600 hover:text-rose-800 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

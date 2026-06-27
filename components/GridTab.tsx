@@ -563,7 +563,7 @@ export default function GridTab({
           <select 
             value={filterId}
             onChange={(e) => setFilterId(e.target.value)}
-            className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-505/20 font-semibold"
+            className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 font-semibold"
           >
             {filterType === 'kelas' && kelas.map(c => (
               <option key={c.id} value={c.id}>Kelas {c.nama_kelas}</option>
@@ -704,7 +704,7 @@ export default function GridTab({
           {/* PRINT ONLY EMBELLISH HEADER */}
           <div className="hidden print:block text-slate-950 text-center space-y-1 pb-4 border-b border-slate-300 mb-6 font-sans">
             <h2 className="text-xl font-bold uppercase tracking-tight">SMA NEGERI 1 AI INDONESIA</h2>
-            <h3 className="text-md font-semibold text-slate-705">Rancangan Jadwal Mengajar Kurikulum Tahun Ajaran 2026/2027</h3>
+            <h3 className="text-md font-semibold text-slate-700">Rancangan Jadwal Mengajar Kurikulum Tahun Ajaran 2026/2027</h3>
             <p className="text-xs">
               Berdasarkan {filterType.toUpperCase()}: &nbsp;
               <b>
@@ -751,13 +751,13 @@ export default function GridTab({
           <table className="w-full border-collapse border border-slate-200 text-xs min-w-[700px] font-sans">
             <thead>
               <tr className="bg-slate-50 border border-slate-200 text-[10px] font-mono uppercase text-slate-500 font-bold">
-                <th className="border border-slate-200 p-3 w-28 text-center text-slate-705">Jam Ke / Waktu</th>
+                <th className="border border-slate-200 p-3 w-28 text-center text-slate-700">Jam Ke / Waktu</th>
                 {hariAktif.map((d) => (
                   <th key={d} className="border border-slate-200 p-3 text-center text-slate-800 font-sans text-xs font-bold">{d}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-705 bg-white pb-6">
+            <tbody className="divide-y divide-slate-100 text-slate-700 bg-white pb-6">
               {jamPelajaran.map((p) => {
                 return (
                   <tr key={p.id} className="hover:bg-slate-50/40">
@@ -852,7 +852,7 @@ export default function GridTab({
                                   </div>
 
                                   {/* Teacher */}
-                                  <div className="text-[10px] text-indigo-650 leading-none font-bold">
+                                  <div className="text-[10px] text-indigo-600 leading-none font-bold">
                                     👤 {mappedGuru ? mappedGuru.nama.split(',')[0] : 'Guru'}
                                   </div>
 
@@ -1330,7 +1330,7 @@ export default function GridTab({
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 md:p-6 z-50 overflow-y-auto print:hidden font-sans">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
             {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-650 to-indigo-850 p-5 text-white flex items-center justify-between shrink-0">
+            <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 p-5 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <Printer className="w-5 h-5 text-indigo-200" />
                 <div>
@@ -1513,7 +1513,7 @@ export default function GridTab({
               <button
                 type="button"
                 onClick={handleExecutePrint}
-                className="px-5 py-2 bg-indigo-650 hover:bg-indigo-750 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md hover:shadow-lg"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md hover:shadow-lg"
               >
                 <Printer className="w-4 h-4" />
                 Mulai Cetak / Simpan PDF
@@ -1531,7 +1531,7 @@ export default function GridTab({
             {/* Header */}
             <div className="bg-indigo-900 text-white p-5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-indigo-850 rounded-lg">
+                <div className="p-2 bg-indigo-800 rounded-lg">
                   <Calendar className="w-5 h-5 text-indigo-200" />
                 </div>
                 <div>
@@ -1541,7 +1541,7 @@ export default function GridTab({
               </div>
               <button 
                 onClick={() => setActiveEditCell(null)}
-                className="p-1.5 text-indigo-200 hover:text-white bg-indigo-850 hover:bg-indigo-800 rounded-lg transition cursor-pointer"
+                className="p-1.5 text-indigo-200 hover:text-white bg-indigo-800 hover:bg-indigo-850 rounded-lg transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1612,7 +1612,7 @@ export default function GridTab({
                           <p className="text-xs font-bold text-slate-800">Ubah Ruangan Saja</p>
                           <button 
                             onClick={() => setQuickRoomEdit(!quickRoomEdit)}
-                            className="text-[10px] font-bold text-indigo-650 hover:underline cursor-pointer"
+                            className="text-[10px] font-bold text-indigo-600 hover:underline cursor-pointer"
                           >
                             {quickRoomEdit ? 'Batal' : 'Ubah Ruangan'}
                           </button>

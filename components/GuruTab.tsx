@@ -85,6 +85,15 @@ export default function GuruTab({
     });
   };
 
+  const handleResetPreferences = () => {
+    setPrefDaysBlocked([]);
+    setPrefSlotsBlocked([]);
+    setPrefDaysFav([]);
+    setPrefSlotsFav([]);
+    setPrefMaxHours(6);
+    setPrefSpecificSlotsBlocked([]);
+  };
+
   const handleSavePreferences = () => {
     if (!preferensiModalGuruId) return;
     onSavePreferensi(preferensiModalGuruId, {
@@ -171,7 +180,7 @@ export default function GuruTab({
                 id="status_aktif"
                 checked={newGuru.status_aktif !== undefined ? newGuru.status_aktif : true}
                 onChange={(e) => setNewGuru({...newGuru, status_aktif: e.target.checked})}
-                className="accent-indigo-650"
+                className="accent-indigo-600"
               />
               <label htmlFor="status_aktif" className="text-slate-700 font-semibold selection:bg-transparent">Status Aktif Mengajar</label>
             </div>
@@ -192,7 +201,7 @@ export default function GuruTab({
           <div className="overflow-x-auto text-xs font-sans">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-550 font-mono text-[10px] uppercase font-bold">
+                <tr className="border-b border-slate-200 text-slate-500 font-mono text-[10px] uppercase font-bold">
                   <th className="py-2.5 px-3">Guru &amp; NIP</th>
                   <th className="py-2.5 px-3">Jenis Kelamin</th>
                   <th className="py-2.5 px-3">Status</th>
@@ -214,7 +223,7 @@ export default function GuruTab({
                     <tr key={g.id} className="hover:bg-slate-50/55 group">
                       <td className="py-3 px-3">
                         <div className="font-bold text-slate-800">{g.nama}</div>
-                        <div className="text-[10px] text-slate-450 font-mono mt-0.5 font-semibold">NIP {g.nip}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5 font-semibold">NIP {g.nip}</div>
                       </td>
                       <td className="py-3 px-3 text-slate-600 font-medium">{g.jenis_kelamin}</td>
                       <td className="py-3 px-3">
@@ -233,7 +242,7 @@ export default function GuruTab({
                       <td className="py-3 px-3 text-right">
                         <button 
                           onClick={() => handleDeleteGuru(g.id)}
-                          className="text-rose-605 hover:text-rose-850 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
+                          className="text-rose-600 hover:text-rose-800 p-1.5 rounded hover:bg-rose-50 transition cursor-pointer"
                           title="Hapus Guru"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -266,7 +275,7 @@ export default function GuruTab({
             <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-bold text-slate-900">Konstruksi Aturan Preferensi Guru</h4>
-                <p className="text-[11px] text-slate-500 mt-1">Mengatur jam kerja untuk: <span className="text-indigo-650 font-bold">{guru.find(g => g.id === preferensiModalGuruId)?.nama}</span></p>
+                <p className="text-[11px] text-slate-500 mt-1">Mengatur jam kerja untuk: <span className="text-indigo-600 font-bold">{guru.find(g => g.id === preferensiModalGuruId)?.nama}</span></p>
               </div>
               <button 
                 onClick={() => setPreferensiModalGuruId(null)}
@@ -437,15 +446,22 @@ export default function GuruTab({
 
             {/* ACTIONS BAR */}
             <div className="p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleResetPreferences}
+                className="mr-auto px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold rounded-lg text-xs transition cursor-pointer"
+              >
+                Reset Semua Preferensi
+              </button>
               <button 
                 onClick={() => setPreferensiModalGuruId(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-705 font-semibold rounded-lg transition cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition cursor-pointer"
               >
                 Batal
               </button>
               <button 
                 onClick={handleSavePreferences}
-                className="px-5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white font-bold rounded-lg transition cursor-pointer"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition cursor-pointer"
               >
                 Simpan Perubahan
               </button>
