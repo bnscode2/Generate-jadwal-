@@ -372,7 +372,12 @@ export default function AdministrativeDashboard() {
           setBackgroundSyncStatus('checking');
           console.log("Background checking and syncing latest from Supabase cloud...");
           
-          const res = await SupabaseSyncService.pullAll();
+          const res = await Promise.race([
+            SupabaseSyncService.pullAll(),
+            new Promise<any>((_, reject) => 
+              setTimeout(() => reject(new Error('Batas waktu sinkronisasi terlampaui')), 10000)
+            )
+          ]);
           if (res.success) {
             setLastSyncTime(new Date());
             setBackgroundSyncStatus('success');
@@ -430,11 +435,16 @@ export default function AdministrativeDashboard() {
         clearTimeout(syncTimeoutRef.current);
       }
       
-      setIsCloudSyncing(true);
       syncTimeoutRef.current = setTimeout(async () => {
+        setIsCloudSyncing(true);
         try {
           console.log("Auto-syncing changes to Supabase cloud...");
-          const res = await SupabaseSyncService.pushAll();
+          const res = await Promise.race([
+            SupabaseSyncService.pushAll(),
+            new Promise<any>((_, reject) => 
+              setTimeout(() => reject(new Error('Batas waktu sinkronisasi terlampaui (15 detik).')), 15000)
+            )
+          ]);
           if (res.success) {
             setLogMessages(prev => ["☁️ [Autosave] Perubahan otomatis diselaraskan ke database cloud Supabase!", ...prev]);
           } else {
@@ -442,10 +452,11 @@ export default function AdministrativeDashboard() {
           }
         } catch (syncErr: any) {
           console.error("Gagal melakukan auto-sync ke Supabase:", syncErr);
+          setLogMessages(prev => [`⚠️ [Autosave Gagal] ${syncErr.message || "Timeout jaringan"}`, ...prev]);
         } finally {
           setIsCloudSyncing(false);
         }
-      }, 1200); // Debounce of 1.2 seconds to batch successive changes!
+      }, 1500); // Debounce of 1.5 seconds to batch successive changes!
     }
   };
 
@@ -517,9 +528,23 @@ export default function AdministrativeDashboard() {
     if (isSupabaseModeActive()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.auth.signOut();
+        try {
+          // Memberikan batas waktu 3 detik untuk signOut agar tidak membuat UI tersangkut (stuck)
+          await Promise.race([
+            supabase.auth.signOut(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Sign out timeout')), 3000))
+          ]);
+        } catch (err) {
+          console.warn("Supabase signOut timeout/error diabaikan untuk melanjutkan pembersihan sesi lokal:", err);
+        }
       }
     }
+    // Selalu pastikan status loading cloud disetel ke false & bersihkan timer sync yang tertunda
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+    setIsCloudSyncing(false);
     LocalDB.logout();
     setCurrentUser(null);
     setLogMessages(prev => ['Anda telah berhasil keluar dari akun.', ...prev]);

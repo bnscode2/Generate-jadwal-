@@ -33,17 +33,37 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Kebijakan Keamanan (Policies) untuk profiles
-CREATE POLICY "Pengguna dapat membaca profil mereka sendiri" 
+CREATE POLICY "Pengguna dapat membaca profil mereka sendiri atau admin membaca semua" 
     ON public.profiles FOR SELECT 
-    USING (auth.uid() = id);
+    USING (
+        auth.uid() = id 
+        OR 
+        (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+        OR
+        (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'Administrator')
+    );
 
-CREATE POLICY "Pengguna dapat memperbarui profil mereka sendiri" 
+CREATE POLICY "Pengguna dapat memperbarui profil sendiri atau admin memperbarui semua" 
     ON public.profiles FOR UPDATE 
-    USING (auth.uid() = id);
+    USING (
+        auth.uid() = id 
+        OR 
+        (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+        OR
+        (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'Administrator')
+    );
 
 CREATE POLICY "Pengguna dapat memasukkan data profil baru saat register" 
     ON public.profiles FOR INSERT 
     WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Admin dapat menghapus profil" 
+    ON public.profiles FOR DELETE 
+    USING (
+        (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+        OR
+        (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'Administrator')
+    );
 
 
 -- =========================================================================

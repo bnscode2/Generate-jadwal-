@@ -211,65 +211,76 @@ export default function SchoolProfileTab({
         if (supabase) {
           addLogMessage('☁️ Menyiapkan unggahan logo ke Bucket Storage Supabase...');
           
-          // Ensure the bucket exists (try to create it if not present)
           try {
-            const { data: buckets } = await supabase.storage.listBuckets();
-            const hasBucket = buckets?.some((b: any) => b.name === 'school-logos');
-            if (!hasBucket) {
-              await supabase.storage.createBucket('school-logos', {
-                public: true,
-                fileSizeLimit: 1048576 // 1MB
-              });
-              addLogMessage('📦 Membuat Bucket baru "school-logos" di cloud.');
-            }
-          } catch (bucketErr) {
-            console.warn("Mungkin tidak memiliki hak akses untuk membuat bucket secara langsung. Melanjutkan unggahan...", bucketErr);
-          }
+            // Jalankan operasi storage dengan batas waktu (timeout) 10 detik
+            await Promise.race([
+              (async () => {
+                // Ensure the bucket exists (try to create it if not present)
+                try {
+                  const { data: buckets } = await supabase.storage.listBuckets();
+                  const hasBucket = buckets?.some((b: any) => b.name === 'school-logos');
+                  if (!hasBucket) {
+                    await supabase.storage.createBucket('school-logos', {
+                      public: true,
+                      fileSizeLimit: 1048576 // 1MB
+                    });
+                    addLogMessage('📦 Membuat Bucket baru "school-logos" di cloud.');
+                  }
+                } catch (bucketErr) {
+                  console.warn("Mungkin tidak memiliki hak akses untuk membuat bucket secara langsung. Melanjutkan unggahan...", bucketErr);
+                }
 
-          // Generate file path and name
-          const fileExt = pendingFile.name.split('.').pop();
-          const { data: { user } } = await supabase.auth.getUser();
-          const userId = user?.id || 'anonymous';
-          const fileName = `${userId}/logo-${Date.now()}.${fileExt}`;
+                // Generate file path and name
+                const fileExt = pendingFile.name.split('.').pop();
+                const { data: { user } } = await supabase.auth.getUser();
+                const userId = user?.id || 'anonymous';
+                const fileName = `${userId}/logo-${Date.now()}.${fileExt}`;
 
-          // BEFORE UPLOADING THE NEW FILE: Let's list and delete any old logo files in this user directory to prevent trash Accumulation
-          try {
-            const { data: files, error: listError } = await supabase.storage
-              .from('school-logos')
-              .list(userId);
+                // BEFORE UPLOADING THE NEW FILE: Let's list and delete any old logo files in this user directory to prevent trash Accumulation
+                try {
+                  const { data: files, error: listError } = await supabase.storage
+                    .from('school-logos')
+                    .list(userId);
 
-            if (!listError && files && files.length > 0) {
-              const filesToDelete = files.map((file: any) => `${userId}/${file.name}`);
-              await supabase.storage
-                .from('school-logos')
-                .remove(filesToDelete);
-              addLogMessage('🧹 Berhasil membersihkan file logo lama di Storage Bucket (bebas sampah).');
-            }
-          } catch (cleanErr) {
-            console.warn("Gagal membersihkan logo lama dari storage bucket:", cleanErr);
-          }
+                  if (!listError && files && files.length > 0) {
+                    const filesToDelete = files.map((file: any) => `${userId}/${file.name}`);
+                    await supabase.storage
+                      .from('school-logos')
+                      .remove(filesToDelete);
+                    addLogMessage('🧹 Berhasil membersihkan file logo lama di Storage Bucket (bebas sampah).');
+                  }
+                } catch (cleanErr) {
+                  console.warn("Gagal membersihkan logo lama dari storage bucket:", cleanErr);
+                }
 
-          // Upload the file
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('school-logos')
-            .upload(fileName, pendingFile, {
-              cacheControl: '3600',
-              upsert: true
-            });
+                // Upload the file
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                  .from('school-logos')
+                  .upload(fileName, pendingFile, {
+                    cacheControl: '3600',
+                    upsert: true
+                  });
 
-          if (uploadError) {
-            console.error("Gagal mengunggah logo ke bucket storage:", uploadError);
-            addLogMessage(`⚠️ Gagal unggah ke Bucket Storage: ${uploadError.message}. Menggunakan base64 lokal sebagai cadangan.`);
-          } else if (uploadData) {
-            // Get public URL
-            const { data: publicUrlData } = supabase.storage
-              .from('school-logos')
-              .getPublicUrl(fileName);
-            
-            if (publicUrlData?.publicUrl) {
-              activeLogoUrl = publicUrlData.publicUrl;
-              addLogMessage(`✅ Logo berhasil diunggah ke Bucket Storage Supabase!`);
-            }
+                if (uploadError) {
+                  console.error("Gagal mengunggah logo ke bucket storage:", uploadError);
+                  addLogMessage(`⚠️ Gagal unggah ke Bucket Storage: ${uploadError.message}. Menggunakan base64 lokal sebagai cadangan.`);
+                } else if (uploadData) {
+                  // Get public URL
+                  const { data: publicUrlData } = supabase.storage
+                    .from('school-logos')
+                    .getPublicUrl(fileName);
+                  
+                  if (publicUrlData?.publicUrl) {
+                    activeLogoUrl = publicUrlData.publicUrl;
+                    addLogMessage(`✅ Logo berhasil diunggah ke Bucket Storage Supabase!`);
+                  }
+                }
+              })(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Koneksi ke storage lambat, dilewati.')), 10000))
+            ]);
+          } catch (storageErr: any) {
+            console.error("Gagal mengunggah logo (timeout):", storageErr);
+            addLogMessage(`⚠️ Gagal unggah logo ke Cloud Storage karena batas waktu (timeout). Gambar disimpan secara lokal.`);
           }
         }
       }
@@ -298,31 +309,41 @@ export default function SchoolProfileTab({
       if (isSupabaseModeActive()) {
         const supabase = getSupabaseClient();
         if (supabase) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { error } = await supabase.from('profiles').upsert({
-              id: user.id,
-              nama_sekolah: finalProfile.nama_sekolah,
-              logo_sekolah: finalProfile.logo_sekolah,
-              nama_kepsek: finalProfile.nama_kepsek,
-              nip_kepsek: finalProfile.nip_kepsek,
-              nama_koordinator: finalProfile.nama_koordinator,
-              nip_koordinator: finalProfile.nip_koordinator,
-              kota_cetak: finalProfile.kota,
-              tahun_ajaran: finalProfile.tahun_ajaran,
-              email: user.email,
-              is_pro: !!currentUser?.is_pro,
-              serial_key: currentUser?.serial_key || null,
-              activated_at: currentUser?.activated_at || null,
-              role: currentUser?.role || 'user'
-            });
+          try {
+            await Promise.race([
+              (async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  const { error } = await supabase.from('profiles').upsert({
+                    id: user.id,
+                    nama_sekolah: finalProfile.nama_sekolah,
+                    logo_sekolah: finalProfile.logo_sekolah,
+                    nama_kepsek: finalProfile.nama_kepsek,
+                    nip_kepsek: finalProfile.nip_kepsek,
+                    nama_koordinator: finalProfile.nama_koordinator,
+                    nip_koordinator: finalProfile.nip_koordinator,
+                    kota_cetak: finalProfile.kota,
+                    tahun_ajaran: finalProfile.tahun_ajaran,
+                    email: user.email,
+                    is_pro: !!currentUser?.is_pro,
+                    serial_key: currentUser?.serial_key || null,
+                    activated_at: currentUser?.activated_at || null,
+                    role: currentUser?.role || 'user'
+                  });
 
-            if (error) {
-              console.error("Gagal menyimpan profil sekolah ke Supabase profiles:", error);
-              addLogMessage(`⚠️ Gagal sinkronisasi data profil sekolah: ${error.message}`);
-            } else {
-              addLogMessage('☁️ Profil sekolah berhasil disinkronkan ke tabel profiles Supabase.');
-            }
+                  if (error) {
+                    console.error("Gagal menyimpan profil sekolah ke Supabase profiles:", error);
+                    addLogMessage(`⚠️ Gagal sinkronisasi data profil sekolah: ${error.message}`);
+                  } else {
+                    addLogMessage('☁️ Profil sekolah berhasil disinkronkan ke tabel profiles Supabase.');
+                  }
+                }
+              })(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Koneksi ke profil cloud lambat, dilewati.')), 8000))
+            ]);
+          } catch (profileErr: any) {
+            console.error("Gagal menyimpan data profil ke cloud:", profileErr);
+            addLogMessage(`⚠️ Gagal sinkronisasi profil ke Cloud karena batas waktu (timeout). Data Anda tetap aman secara lokal.`);
           }
         }
       }
