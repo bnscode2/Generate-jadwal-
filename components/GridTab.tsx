@@ -1180,20 +1180,93 @@ export default function GridTab({
 
       {/* RENDER HELPER UNTUK HALAMAN CETAK PDF */}
       {(() => {
-        const renderPrintPageHeader = (title: string, subtitle?: string) => {
+        const renderPrintPageHeader = (title: string, subtitle?: string, badgeText?: string) => {
+          const actualBadge = badgeText || (title.includes('INDUK') ? 'JADWAL PELAJARAN INDUK (KOLEKTIF)' : `DOKUMEN JADWAL ${title.toUpperCase()}`);
           return (
-            <div className="text-center space-y-1.5 pb-3 border-b-2 border-slate-800 font-sans relative">
-              <h1 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">{printSchoolName}</h1>
-              <p className="text-[10px] text-slate-500 italic font-mono">Alamat: Jl. Raya Pendidikan No. 45, Kurikulum Berbasis AI Modern</p>
-              <div className="pt-1">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-900 bg-indigo-50/60 inline-block px-3 py-1 rounded border border-indigo-200">
-                  Jadwal Pelajaran &amp; Mengajar Guru - {printAcademicYear}
-                </h2>
+            <div className="relative w-full pb-4 mb-4 border-b border-slate-200 font-sans select-none min-h-[115px] overflow-hidden">
+              {/* SVG Background decoration in the top right */}
+              <div className="absolute -top-6 -right-10 w-[380px] h-[230px] pointer-events-none opacity-90 z-0 select-none">
+                <svg viewBox="0 0 420 260" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="printGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#17B3A3"/>
+                      <stop offset="100%" stopColor="#16355D"/>
+                    </linearGradient>
+                    <linearGradient id="printGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#16355D"/>
+                      <stop offset="100%" stopColor="#0F8E88"/>
+                    </linearGradient>
+                  </defs>
+                  <polygon points="250,0 420,0 420,170" fill="url(#printGrad1)" opacity="0.95"/>
+                  <polygon points="320,0 420,100 420,260 210,60" fill="url(#printGrad2)" opacity="0.9"/>
+                  <polygon points="180,0 280,0 420,140 420,200" fill="#1DB9A8" opacity="0.35"/>
+                </svg>
               </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-700 font-medium pt-2">
-                <span>Target: <strong className="text-slate-900">{title}</strong></span>
-                {subtitle && <span>{subtitle}</span>}
-                <span>Semester Ganjil / Genap</span>
+
+              {/* Header Content Wrapper */}
+              <div className="relative z-10 flex items-center justify-between w-full">
+                {/* Left: Logo & School Name */}
+                <div className="flex items-center gap-4">
+                  {/* Elegant Emblem/Logo */}
+                  <div className="w-14 h-14 bg-[#16355D] rounded-xl flex flex-col items-center justify-center text-white border border-indigo-950 p-1 shrink-0 relative shadow-xs">
+                    {/* Tiny star */}
+                    <div className="absolute top-0.5 text-[7px] text-yellow-300">★</div>
+                    {/* Shield representation inside SVG */}
+                    <svg className="w-7 h-7 text-white mt-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    {/* Open book inside logo */}
+                    <svg className="w-3.5 h-3.5 text-emerald-300 absolute bottom-2.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  
+                  {/* Vertical divider */}
+                  <div className="h-10 w-[1px] bg-slate-300"></div>
+
+                  <div>
+                    <h1 className="text-lg font-extrabold uppercase tracking-tight text-[#16355D] leading-none mb-0.5">
+                      {printSchoolName}
+                    </h1>
+                    <span className="text-[9px] text-slate-500 tracking-wider font-semibold uppercase block">
+                      INDONESIA
+                    </span>
+                  </div>
+                </div>
+
+                {/* Middle: Title & Subtitle */}
+                <div className="flex flex-col items-center justify-center text-center flex-1 px-4">
+                  <h2 className="text-base font-black uppercase tracking-wide text-[#16355D]">
+                    JADWAL PELAJARAN &amp; MENGAJAR GURU
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-bold text-[#17B3A3] uppercase tracking-wider">
+                      TAHUN AJARAN {printAcademicYear}
+                    </span>
+                    <span className="bg-[#16355D] text-white text-[8px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                      {actualBadge}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right spacing matching landscape style */}
+                <div className="w-[180px] shrink-0 h-1 pointer-events-none"></div>
+              </div>
+
+              {/* Info Bar (Address, Target, Semester) */}
+              <div className="relative z-10 grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-slate-100 text-[8.5px] text-slate-600 font-medium">
+                <div className="flex items-center gap-1">
+                  <span className="text-emerald-600 text-[10px]">📍</span>
+                  <span className="truncate">Jl. Raya Pendidikan No. 45, Kurikulum Berbasis AI Modern</span>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-indigo-600 text-[10px]">👤</span>
+                  <span>Sasaran: <strong className="text-slate-900 font-extrabold">{title}</strong> {subtitle ? `(${subtitle})` : ''}</span>
+                </div>
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-indigo-600 text-[10px]">📅</span>
+                  <span>Semester Ganjil / Genap</span>
+                </div>
               </div>
             </div>
           );
@@ -1271,72 +1344,125 @@ export default function GridTab({
 
         const renderMasterPrintTable = () => {
           return (
-            <table className="print-table w-full border-collapse">
-              <thead>
-                <tr>
-                  <th style={{ width: '8%' }} className="border border-slate-600 bg-slate-100 p-1.5 text-[9px] font-bold text-slate-800 text-center">Hari</th>
-                  <th style={{ width: '10%' }} className="border border-slate-600 bg-slate-100 p-1.5 text-[9px] font-bold text-slate-800 text-center">Waktu</th>
-                  {kelas.map(c => (
-                    <th key={c.id} className="border border-slate-600 bg-slate-100 p-1.5 text-[9px] font-bold text-slate-800 text-center">
-                      Kelas {c.nama_kelas}
+            <div className="rounded-xl border border-slate-300 overflow-hidden shadow-xs print:shadow-none">
+              <table className="print-table w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-300">
+                    <th 
+                      style={{ width: '8%', backgroundColor: '#16355D', color: '#ffffff' }} 
+                      className="p-2 text-[9px] font-black tracking-wider uppercase text-center border-r border-slate-300/40"
+                    >
+                      Hari
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {hariAktif.map(day => {
-                  return jamPelajaran.map((p, pIdx) => {
-                    return (
-                      <tr key={`${day}-${p.id}`}>
-                        {pIdx === 0 && (
-                          <td 
-                            rowSpan={jamPelajaran.length} 
-                            className="border border-slate-400 bg-slate-50 font-extrabold text-center text-[10px] text-slate-900 align-middle"
-                            style={{ verticalAlign: 'middle' }}
-                          >
-                            {day.toUpperCase()}
-                          </td>
-                        )}
-                        <td className="border border-slate-400 p-1 text-center bg-slate-50/80">
-                          <div className="font-bold text-[9px] text-indigo-950">Ke-{p.jam_ke}</div>
-                          <div className="text-[7.5px] text-slate-500 font-mono">{p.jam_mulai}-{p.jam_selesai}</div>
-                        </td>
-                        {kelas.map(c => {
-                          const slots = jadwal.filter(s => s.hari === day && s.jam_ke === p.jam_ke && s.kelas_id === c.id);
-                          return (
-                            <td key={c.id} className="border border-slate-400 p-1 text-center align-middle text-[9px] h-9">
-                              {slots.length === 0 ? (
-                                <span className="text-slate-300">-</span>
-                              ) : (
-                                slots.map(sc => {
-                                  const m = mapel.find(sub => sub.id === sc.mapel_id);
-                                  const g = guru.find(tea => tea.id === sc.guru_id);
-                                  const r = ruangan.find(rm => rm.id === sc.ruangan_id);
-                                  const subjLabel = m ? m.kode_mapel : 'Mapel';
-                                  const teacherLabel = g ? getInitialGuru(g.nama) : 'Guru';
-                                  const roomLabel = r ? r.nama_ruangan.replace('Kelas ', '') : '';
-                                  
-                                  return (
-                                    <div key={sc.id} className="leading-tight">
-                                      <span className="font-extrabold text-slate-950">{subjLabel}</span>
-                                      <span className="text-slate-400 mx-0.5">/</span>
-                                      <span className="font-bold text-indigo-700">{teacherLabel}</span>
-                                      {roomLabel && (
-                                        <div className="text-[7px] text-slate-500 font-mono">📍{roomLabel}</div>
-                                      )}
-                                    </div>
-                                  );
-                                })
-                              )}
+                    <th 
+                      style={{ width: '10%', backgroundColor: '#16355D', color: '#ffffff' }} 
+                      className="p-2 text-[9px] font-black tracking-wider uppercase text-center border-r border-slate-300/40"
+                    >
+                      Waktu
+                    </th>
+                    {kelas.map((c) => (
+                      <th 
+                        key={c.id} 
+                        style={{ backgroundColor: '#17B3A3', color: '#ffffff' }} 
+                        className="p-2 text-[9px] font-black tracking-wider uppercase text-center border-r last:border-r-0 border-slate-300/40"
+                      >
+                        Kelas {c.nama_kelas}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {hariAktif.map(day => {
+                    return jamPelajaran.map((p, pIdx) => {
+                      return (
+                        <tr key={`${day}-${p.id}`} className="border-b last:border-b-0 border-slate-200">
+                          {pIdx === 0 && (
+                            <td 
+                              rowSpan={jamPelajaran.length} 
+                              style={{ backgroundColor: '#16355D', color: '#ffffff' }} 
+                              className="font-extrabold text-center align-middle border-r border-slate-300/50 w-[8%] h-auto"
+                            >
+                              <div className="flex flex-col items-center justify-center text-center text-white py-4 space-y-3 h-full">
+                                {/* Circle with Calendar Icon */}
+                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center bg-white/10 shrink-0 shadow-xs">
+                                  <svg className="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                                {/* Day Name Stacked Vertically */}
+                                <div className="font-black text-[11px] tracking-widest uppercase leading-snug select-none">
+                                  {day.split('').map((char, charIdx) => (
+                                    <span key={charIdx} className="block">{char}</span>
+                                  ))}
+                                </div>
+                              </div>
                             </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  });
-                })}
-              </tbody>
-            </table>
+                          )}
+                          
+                          {/* Period Cell */}
+                          <td className="p-1 text-center bg-slate-50/50 border-r border-slate-200 w-[10%] align-middle">
+                            <div className="font-black text-[9px] text-[#16355D] leading-none mb-0.5">Ke-{p.jam_ke}</div>
+                            <div className="text-[7.5px] text-slate-500 font-mono font-semibold">{p.jam_mulai} - {p.jam_selesai}</div>
+                          </td>
+
+                          {/* Classes Cells */}
+                          {kelas.map(c => {
+                            const slots = jadwal.filter(s => s.hari === day && s.jam_ke === p.jam_ke && s.kelas_id === c.id);
+                            return (
+                              <td key={c.id} className="p-1.5 text-center align-middle text-[9px] h-10 border-r last:border-r-0 border-slate-200 min-w-[100px]">
+                                {slots.length === 0 ? (
+                                  <span className="text-slate-300 select-none">-</span>
+                                ) : (
+                                  <div className="flex flex-col gap-1 items-center justify-center h-full">
+                                    {slots.map(sc => {
+                                      const m = mapel.find(sub => sub.id === sc.mapel_id);
+                                      const g = guru.find(tea => tea.id === sc.guru_id);
+                                      const r = ruangan.find(rm => rm.id === sc.ruangan_id);
+                                      const subjLabel = m ? m.kode_mapel : 'Mapel';
+                                      const teacherLabel = g ? getInitialGuru(g.nama) : 'Guru';
+                                      const roomLabel = r ? r.nama_ruangan.replace('Kelas ', '') : '';
+                                      
+                                      return (
+                                        <div key={sc.id} className="w-full flex flex-col items-center leading-tight">
+                                          {/* Pill Badges Container */}
+                                          <div className="flex items-center gap-1 justify-center">
+                                            {/* Mapel Pill */}
+                                            <span 
+                                              style={{ backgroundColor: '#E2F8F5', color: '#0F8E88', borderColor: '#BCECE6' }}
+                                              className="px-1.5 py-0.5 rounded border font-extrabold text-[8px] tracking-tight shrink-0 select-none"
+                                            >
+                                              {subjLabel}
+                                            </span>
+                                            {/* Guru Pill */}
+                                            <span 
+                                              style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', borderColor: '#E0E7FF' }}
+                                              className="px-1.5 py-0.5 rounded border font-bold text-[8px] tracking-tight shrink-0 select-none"
+                                            >
+                                              {teacherLabel}
+                                            </span>
+                                          </div>
+                                          {/* Room Label */}
+                                          {roomLabel && (
+                                            <div className="text-[7.5px] text-rose-600 font-extrabold mt-1 flex items-center justify-center gap-0.5">
+                                              <span>📍</span>
+                                              <span>{roomLabel}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    });
+                  })}
+                </tbody>
+              </table>
+            </div>
           );
         };
 
@@ -1424,6 +1550,134 @@ export default function GridTab({
           );
         };
 
+        const renderMasterScheduleFooterCombined = () => {
+          return (
+            <div className="mt-4 pt-3 border-t border-slate-200 print:break-inside-avoid font-sans">
+              {/* Grid 3 Kolom Utama */}
+              <div className="grid grid-cols-12 gap-5 text-[8px] print:text-[7.5px] leading-relaxed">
+                
+                {/* Kolom 1: Legenda Kode (Span 5) */}
+                <div className="col-span-5 bg-slate-50/50 p-2.5 rounded-xl border border-slate-200/60">
+                  <h4 className="text-[9px] font-black uppercase tracking-wider text-[#16355D] mb-2 border-b border-slate-200 pb-1">
+                    LEGENDA KODE MATA PELAJARAN &amp; GURU PENGAJAR
+                  </h4>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Guru Legend */}
+                    <div>
+                      <span className="block font-bold text-slate-400 mb-1.5 uppercase tracking-wider text-[7px]">KODE GURU</span>
+                      <div className="space-y-1 max-h-[140px] overflow-y-auto pr-1">
+                        {guru.filter(g => g.status_aktif).map(g => (
+                          <div key={g.id} className="flex gap-1.5 items-center">
+                            <span 
+                              style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', borderColor: '#E0E7FF' }}
+                              className="font-mono font-extrabold px-1 rounded border min-w-[18px] text-center text-[7px]"
+                            >
+                              {getInitialGuru(g.nama)}
+                            </span>
+                            <span className="text-slate-700 font-semibold truncate max-w-[100px]" title={g.nama}>
+                              {g.nama.split(',')[0]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mapel Legend */}
+                    <div>
+                      <span className="block font-bold text-slate-400 mb-1.5 uppercase tracking-wider text-[7px]">KODE MAPEL</span>
+                      <div className="space-y-1 max-h-[140px] overflow-y-auto pr-1">
+                        {mapel.map(m => (
+                          <div key={m.id} className="flex gap-1.5 items-center">
+                            <span 
+                              style={{ backgroundColor: '#E2F8F5', color: '#0F8E88', borderColor: '#BCECE6' }}
+                              className="font-mono font-extrabold px-1 rounded border min-w-[24px] text-center text-[7px]"
+                            >
+                              {m.kode_mapel}
+                            </span>
+                            <span className="text-slate-700 font-semibold truncate max-w-[110px]" title={m.nama_mapel}>
+                              {m.nama_mapel}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kolom 2: Catatan Penyelenggara (Span 3) */}
+                <div className="col-span-3 bg-slate-50/50 p-2.5 rounded-xl border border-slate-200/60 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-[9px] font-black uppercase tracking-wider text-[#16355D] mb-2 border-b border-slate-200 pb-1">
+                      CATATAN PENYELENGGARA
+                    </h4>
+                    <div className="space-y-1.5 text-slate-600 text-[7.5px] leading-relaxed font-semibold">
+                      <p>1. Jadwal ini disusun secara otomatis menggunakan sistem algoritma anti-bentrok berbasis prioritas.</p>
+                      <p>2. Perubahan jadwal secara mandiri hanya diperkenankan atas persetujuan Waka Kurikulum.</p>
+                    </div>
+                  </div>
+                  
+                  {/* Decorative tiny slogan */}
+                  <div className="text-[6.5px] text-slate-400 italic mt-3 pt-1 border-t border-slate-100 font-semibold">
+                    Sistem Penjadwalan SMAN 1 AI
+                  </div>
+                </div>
+
+                {/* Kolom 3: Tanda Tangan & Pengesahan (Span 4) */}
+                <div className="col-span-4 flex flex-col justify-between py-1 text-center font-semibold">
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Left signature block */}
+                    <div className="flex flex-col justify-between h-28">
+                      <div>
+                        <span className="block text-slate-400 text-[7px] font-bold uppercase tracking-wider mb-0.5">Mengetahui,</span>
+                        <span className="block font-black text-slate-800 leading-tight">Kepala Sekolah</span>
+                        <span className="block font-bold text-[7px] text-[#16355D] uppercase">{printSchoolName}</span>
+                      </div>
+                      <div>
+                        <span className="block font-black text-slate-900 underline decoration-slate-400 decoration-1 underline-offset-2">{printPrincipalName}</span>
+                        <span className="block text-[6.5px] text-slate-500 font-mono mt-0.5">NIP. {printPrincipalNip}</span>
+                      </div>
+                    </div>
+
+                    {/* Right signature block */}
+                    <div className="flex flex-col justify-between h-28">
+                      <div>
+                        <span className="block text-slate-400 text-[7px] font-bold tracking-wider mb-0.5">{printCity}, {printDate}</span>
+                        <span className="block font-black text-slate-800 leading-tight">Waka Urusan Kurikulum</span>
+                        <span className="block font-bold text-[7px] text-transparent uppercase select-none">-</span>
+                      </div>
+                      <div>
+                        <span className="block font-black text-slate-900 underline decoration-slate-400 decoration-1 underline-offset-2">{printCoordinatorName}</span>
+                        <span className="block text-[6.5px] text-slate-500 font-mono mt-0.5">NIP. {printCoordinatorNip}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Bottom Decorative Banner */}
+              <div 
+                style={{ backgroundColor: '#16355D' }} 
+                className="mt-4 rounded-lg overflow-hidden flex items-center justify-between text-white p-2 relative shadow-xs"
+              >
+                {/* Left content with icon */}
+                <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest pl-1">
+                  <span className="text-emerald-400 text-xs">🌐</span>
+                  <span>Disiplin Waktu, Teratur Jadwal, Prestasi Gemilang</span>
+                </div>
+                
+                {/* Right slanted stripe */}
+                <div 
+                  className="absolute right-0 top-0 bottom-0 w-24 bg-[#17B3A3]"
+                  style={{ clipPath: 'polygon(20px 0, 100% 0, 100% 100%, 0 100%)' }}
+                ></div>
+              </div>
+
+            </div>
+          );
+        };
+
         return (
           <>
             {/* PRINT AREA (Hidden on screen, visible only on print) */}
@@ -1454,18 +1708,16 @@ export default function GridTab({
                     table-layout: fixed !important;
                   }
                   .print-table th {
-                    background-color: #f1f5f9 !important;
-                    color: #0f172a !important;
                     font-weight: bold !important;
-                    border: 1px solid #475569 !important;
-                    font-size: 10px !important;
-                    padding: 6px 4px !important;
-                  }
-                  .print-table td {
-                    border: 1px solid #94a3b8 !important;
+                    border: 1px solid #cbd5e1 !important;
                     font-size: 9px !important;
                     padding: 5px 3px !important;
-                    vertical-align: top !important;
+                  }
+                  .print-table td {
+                    border: 1px solid #e2e8f0 !important;
+                    font-size: 9px !important;
+                    padding: 4px 3px !important;
+                    vertical-align: middle !important;
                   }
                 }
               `}} />
@@ -1514,9 +1766,7 @@ export default function GridTab({
                   
                   {renderMasterPrintTable()}
                   
-                  {renderMasterScheduleLegend()}
-                  
-                  {renderPrintFooter()}
+                  {renderMasterScheduleFooterCombined()}
                 </div>
               )}
 
