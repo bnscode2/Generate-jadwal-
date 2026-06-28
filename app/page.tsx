@@ -1670,69 +1670,78 @@ export default function AdministrativeDashboard() {
             
             <button 
               onClick={() => handleSetActiveTab('dashboard')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'dashboard' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'dashboard' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <Home className={`w-4 h-4 ${activeTab === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`} /> Ringkasan Dashboard
+              <Home className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Ringkasan Dashboard</span>
             </button>
 
             <button 
               onClick={() => handleSetActiveTab('guru')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'guru' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'guru' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <Users className={`w-4 h-4 ${activeTab === 'guru' ? 'text-indigo-600' : 'text-slate-400'}`} /> Guru &amp; Preferensi
+              <Users className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'guru' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Guru &amp; Preferensi</span>
             </button>
 
             <button 
               onClick={() => handleSetActiveTab('mapel')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'mapel' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'mapel' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <BookOpen className={`w-4 h-4 ${activeTab === 'mapel' ? 'text-indigo-600' : 'text-slate-400'}`} /> Mata Pelajaran
+              <BookOpen className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'mapel' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Mata Pelajaran</span>
             </button>
 
             <button 
               onClick={() => handleSetActiveTab('kelas')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'kelas' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'kelas' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <Layers className={`w-4 h-4 ${activeTab === 'kelas' ? 'text-indigo-600' : 'text-slate-400'}`} /> Kelas &amp; Ruangan
+              <Layers className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'kelas' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Kelas &amp; Ruangan</span>
             </button>
 
             <button 
               onClick={() => handleSetActiveTab('pengampu')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'pengampu' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'pengampu' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <Clock className={`w-4 h-4 ${activeTab === 'pengampu' ? 'text-indigo-600' : 'text-slate-400'}`} /> Pengampu Pelajaran
+              <Clock className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'pengampu' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Pengampu Pelajaran</span>
             </button>
 
             <button 
               onClick={() => handleSetActiveTab('pengaturan_waktu')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'pengaturan_waktu' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'pengaturan_waktu' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <Settings className={`w-4 h-4 ${activeTab === 'pengaturan_waktu' ? 'text-indigo-600' : 'text-slate-400'}`} /> Pengaturan Kalender &amp; Jam
+              <Settings className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'pengaturan_waktu' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Pengaturan Kalender &amp; Jam</span>
             </button>
 
             <div className="text-slate-400 font-mono text-[10px] tracking-widest px-2 mt-4 mb-2 uppercase border-t border-slate-100 pt-4 font-bold">Penjadwalan</div>
 
             <button 
               onClick={() => handleSetActiveTab('generate')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'generate' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'generate' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'}`}
             >
-              <Play className={`w-4 h-4 ${activeTab === 'generate' ? 'text-white' : 'text-indigo-600'} animate-pulse`} /> Generator Otomatis
+              <Play className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'generate' ? 'text-white' : 'text-indigo-600'} animate-pulse`} />
+              <span className="text-left leading-tight">Generator Otomatis</span>
             </button>
 
             <button 
               onClick={() => handleSetActiveTab('grid')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'grid' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'grid' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <Calendar className={`w-4 h-4 ${activeTab === 'grid' ? 'text-indigo-600' : 'text-slate-400'}`} /> Grid Kalender Jadwal
+              <Calendar className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'grid' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Grid Kalender Jadwal</span>
             </button>
 
             <button 
               onClick={() => handleSetActiveTab('konflik')} 
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold relative cursor-pointer ${activeTab === 'konflik' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold relative cursor-pointer ${activeTab === 'konflik' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
-              <AlertTriangle className={`w-4 h-4 ${activeTab === 'konflik' ? 'text-amber-600' : 'text-slate-400'}`} /> Validasi Konflik
+              <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'konflik' ? 'text-amber-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight pr-6">Validasi Konflik</span>
               {conflicts.length > 0 && (
-                <span className="absolute right-3 top-3 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500 text-white font-mono">
+                <span className="absolute right-3 top-3.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500 text-white font-mono">
                   {conflicts.length}
                 </span>
               )}

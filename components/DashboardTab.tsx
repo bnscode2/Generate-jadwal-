@@ -222,57 +222,61 @@ export default function DashboardTab({
 
       {/* KPI STATS BAR */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[11px] font-mono text-slate-400 font-bold uppercase">Total Guru Aktif</span>
-            <h3 className="text-2xl font-bold mt-1 text-slate-900">{guru.filter(g => g.status_aktif).length}</h3>
+        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs min-w-0">
+          <div className="min-w-0 flex-1 pr-1.5">
+            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider block truncate" title="Total Guru Aktif">Total Guru Aktif</span>
+            <h3 className="text-2xl font-bold mt-1 text-slate-900 truncate">{guru.filter(g => g.status_aktif).length}</h3>
           </div>
-          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50">
+          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50 shrink-0">
             <Users className="w-5 h-5 text-indigo-600" />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[11px] font-mono text-slate-400 font-bold uppercase">Jumlah Kelas</span>
-            <h3 className="text-2xl font-bold mt-1 text-slate-900">{kelas.length}</h3>
+        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs min-w-0">
+          <div className="min-w-0 flex-1 pr-1.5">
+            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider block truncate" title="Jumlah Kelas">Jumlah Kelas</span>
+            <h3 className="text-2xl font-bold mt-1 text-slate-900 truncate">{kelas.length}</h3>
           </div>
-          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50">
+          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50 shrink-0">
             <Layers className="w-5 h-5 text-indigo-600" />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[11px] font-mono text-slate-400 font-bold uppercase">Mata Pelajaran</span>
-            <h3 className="text-2xl font-bold mt-1 text-slate-900">{mapel.length}</h3>
+        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs min-w-0">
+          <div className="min-w-0 flex-1 pr-1.5">
+            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider block truncate" title="Mata Pelajaran">Mata Pelajaran</span>
+            <h3 className="text-2xl font-bold mt-1 text-slate-900 truncate">{mapel.length}</h3>
           </div>
-          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50">
+          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50 shrink-0">
             <BookOpen className="w-5 h-5 text-indigo-600" />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[11px] font-mono text-slate-400 font-bold uppercase">Jam Terjadwal</span>
-            <h3 className="text-2xl font-bold mt-1 text-indigo-600">
+        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between shadow-xs min-w-0">
+          <div className="min-w-0 flex-1 pr-1.5">
+            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider block truncate" title="Jam Terjadwal">Jam Terjadwal</span>
+            <h3 className="text-2xl font-bold mt-1 text-indigo-600 truncate">
               {jadwal.length} <span className="text-xs text-slate-500 font-normal">slot</span>
             </h3>
           </div>
-          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50">
+          <div className="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100/50 shrink-0">
             <Calendar className="w-5 h-5 text-indigo-600" />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between col-span-2 lg:col-span-1 shadow-xs">
-          <div>
-            <span className="text-[11px] font-mono text-slate-400 font-bold uppercase">Deteksi Konflik</span>
-            <h3 className={`text-2xl font-bold mt-1 ${conflicts.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {conflicts.length === 0 ? '✓ Sempurna' : `${conflicts.length} Konflik`}
+        <div className="bg-white border border-slate-200 p-4 rounded-xl flex items-center justify-between col-span-2 lg:col-span-1 shadow-xs min-w-0">
+          <div className="min-w-0 flex-1 pr-1.5">
+            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider block truncate" title="Deteksi Konflik">Deteksi Konflik</span>
+            <h3 className={`text-xl font-bold mt-1.5 truncate ${conflicts.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`} title={conflicts.length === 0 ? 'Sempurna' : `${conflicts.length} Konflik`}>
+              {conflicts.length === 0 ? 'Sempurna' : `${conflicts.length} Konflik`}
             </h3>
           </div>
-          <div className={`p-2.5 rounded-lg border ${conflicts.length > 0 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
-            <AlertTriangle className="w-5 h-5" />
+          <div className={`p-2.5 rounded-lg border shrink-0 ${conflicts.length > 0 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+            {conflicts.length > 0 ? (
+              <AlertTriangle className="w-5 h-5" />
+            ) : (
+              <CheckCircle className="w-5 h-5" />
+            )}
           </div>
         </div>
       </div>
