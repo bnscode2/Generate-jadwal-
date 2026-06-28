@@ -156,7 +156,7 @@ export class SupabaseSyncService {
               .from(table)
               .delete()
               .eq('user_id', userId)
-              .not('id', 'in', `(${itemIds.join(',')})`);
+              .not('id', 'in', itemIds);
             
             if (deleteError) {
               console.warn(`Gagal membersihkan data lama di ${table}:`, deleteError.message);

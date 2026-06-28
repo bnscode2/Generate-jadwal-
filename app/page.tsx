@@ -354,7 +354,13 @@ export default function AdministrativeDashboard() {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [backgroundSyncStatus, setBackgroundSyncStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
 
-  // Efek Sinkronisasi Latar Belakang (Auto-Pull) periodik setiap 30 detik untuk sinkronisasi multi-device
+  // Keep a ref of isCloudSyncing so our background sync interval is stable and does not get reset constantly
+  const isCloudSyncingRef = useRef<boolean>(isCloudSyncing);
+  useEffect(() => {
+    isCloudSyncingRef.current = isCloudSyncing;
+  }, [isCloudSyncing]);
+
+  // Efek Sinkronisasi Latar Belakang (Auto-Pull) periodik setiap 10 detik untuk sinkronisasi multi-device
   useEffect(() => {
     if (!isSupabaseModeActive() || !currentUser?.isGoogle) return;
 
@@ -365,9 +371,9 @@ export default function AdministrativeDashboard() {
 
     const interval = setInterval(async () => {
       // Hanya lakukan pull otomatis jika:
-      // 1. Tidak sedang melakukan proses push autosave (isCloudSyncing === false)
+      // 1. Tidak sedang melakukan proses push autosave (isCloudSyncingRef.current === false)
       // 2. Tidak ada penundaan syncTimeoutRef (user tidak sedang mengetik atau aktif mengubah data)
-      if (!isCloudSyncing && !syncTimeoutRef.current) {
+      if (!isCloudSyncingRef.current && !syncTimeoutRef.current) {
         try {
           setBackgroundSyncStatus('checking');
           console.log("Background checking and syncing latest from Supabase cloud...");
@@ -397,11 +403,11 @@ export default function AdministrativeDashboard() {
           setTimeout(() => setBackgroundSyncStatus('idle'), 3000);
         }
       }
-    }, 30000); // 30 detik sekali
+    }, 10000); // 10 detik sekali (sangat responsif untuk sinkronisasi multi-device)
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isCloudSyncing]);
+  }, [currentUser]);
 
   // Terminate any running web worker on component unmount
   useEffect(() => {
@@ -441,6 +447,7 @@ export default function AdministrativeDashboard() {
       }
       
       syncTimeoutRef.current = setTimeout(async () => {
+        syncTimeoutRef.current = null; // Reset the timeout ref so it doesn't block background pull!
         setIsCloudSyncing(true);
         try {
           console.log("Auto-syncing changes to Supabase cloud...");
@@ -614,8 +621,29 @@ export default function AdministrativeDashboard() {
       
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
         console.log("OAuth Success Message Received from popup");
-        setAuthSuccess("Login Google Berhasil! Sedang sinkronisasi session...");
-        await checkSupabaseSession();
+        setAuthSuccess("Login Google Berhasil! Sedang menyinkronkan session...");
+        
+        // Explicity set the session in the parent's Supabase instance to sync immediately
+        const receivedSession = event.data?.session;
+        if (receivedSession) {
+          const supabase = getSupabaseClient();
+          if (supabase) {
+            try {
+              await supabase.auth.setSession({
+                access_token: receivedSession.access_token,
+                refresh_token: receivedSession.refresh_token
+              });
+              console.log("Session successfully set on parent window from popup payload!");
+            } catch (setSessErr) {
+              console.error("Error setting session on parent:", setSessErr);
+            }
+          }
+        }
+        
+        // Wait a tiny moment for local storage / state changes to finalize, then check session
+        setTimeout(async () => {
+          await checkSupabaseSession();
+        }, 150);
       }
     };
 
@@ -625,10 +653,30 @@ export default function AdministrativeDashboard() {
     if (typeof window !== 'undefined' && window.opener) {
       try {
         console.log("Detecting that this window is an OAuth popup callback. Posting message back to opener...");
-        window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
-        setTimeout(() => {
-          window.close();
-        }, 600);
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          supabase.auth.getSession().then((res: any) => {
+            const session = res?.data?.session;
+            window.opener.postMessage({ 
+              type: 'OAUTH_AUTH_SUCCESS',
+              session: session || null
+            }, '*');
+            setTimeout(() => {
+              window.close();
+            }, 600);
+          }).catch((err: any) => {
+            console.error("Error getting session in popup:", err);
+            window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+            setTimeout(() => {
+              window.close();
+            }, 600);
+          });
+        } else {
+          window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+          setTimeout(() => {
+            window.close();
+          }, 600);
+        }
       } catch (err) {
         console.error("Failed to notify opener:", err);
       }
