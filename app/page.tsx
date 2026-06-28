@@ -114,7 +114,7 @@ export default function AdministrativeDashboard() {
     isOpen: boolean;
     title: string;
     message: string;
-    type: 'reset_master' | 'clear_schedule';
+    type: 'reset_master' | 'clear_schedule' | 'logout';
   } | null>(null);
 
   // Auth States
@@ -421,7 +421,16 @@ export default function AdministrativeDashboard() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Konfirmasi Keluar Sesi',
+      message: 'Apakah Anda yakin ingin keluar dari aplikasi pembuat jadwal? Sesi login Anda saat ini akan diakhiri.',
+      type: 'logout'
+    });
+  };
+
+  const executeLogout = async () => {
     if (isSupabaseModeActive()) {
       const supabase = getSupabaseClient();
       if (supabase) {
@@ -430,7 +439,9 @@ export default function AdministrativeDashboard() {
     }
     LocalDB.logout();
     setCurrentUser(null);
-    setLogMessages(['Anda telah berhasil keluar dari akun.']);
+    setLogMessages(prev => ['Anda telah berhasil keluar dari akun.', ...prev]);
+    setSelectedCell(null);
+    setConfirmModal(null);
   };
 
   // Check auth state initially and handle popup redirect callback
@@ -1780,6 +1791,10 @@ export default function AdministrativeDashboard() {
                   <div className="bg-amber-50 p-2 rounded-full border border-amber-200 text-amber-600">
                     <RefreshCw className="w-5 h-5 animate-spin-slow" />
                   </div>
+                ) : confirmModal.type === 'logout' ? (
+                  <div className="bg-slate-50 p-2 rounded-full border border-slate-200 text-slate-600">
+                    <LogOut className="w-5 h-5" />
+                  </div>
                 ) : (
                   <div className="bg-rose-50 p-2 rounded-full border border-rose-200 text-rose-600">
                     <Trash2 className="w-5 h-5" />
@@ -1858,6 +1873,26 @@ export default function AdministrativeDashboard() {
                   className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-rose-200"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Kosongkan Jadwal
+                </button>
+              </div>
+            )}
+
+            {/* Actions for Logout */}
+            {confirmModal.type === 'logout' && (
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 font-bold rounded-lg transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="button"
+                  onClick={executeLogout}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-rose-200"
+                >
+                  <LogOut className="w-3.5 h-3.5" /> Ya, Keluar Sesi
                 </button>
               </div>
             )}
