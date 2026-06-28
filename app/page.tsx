@@ -1102,10 +1102,10 @@ export default function AdministrativeDashboard() {
             
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 text-white text-center">
-              <div className="inline-flex bg-white/10 backdrop-blur-md p-3 rounded-2xl font-mono font-black text-2xl mb-3 shadow-inner">
-                JP
+              <div className="inline-flex bg-white p-3 rounded-2xl mb-3 shadow-md w-16 h-16 items-center justify-center">
+                <img src="/logo.svg" alt="Jadwalify Logo" className="w-12 h-12 object-contain" />
               </div>
-              <h2 className="text-xl font-bold tracking-tight">Penjadwalan Sekolah Otomatis</h2>
+              <h2 className="text-xl font-bold tracking-tight">Jadwalify</h2>
               <p className="text-xs text-indigo-100/95 mt-1 font-medium">Asisten Cerdas Penjadwalan Bebas Bentrok</p>
             </div>
 
@@ -1479,12 +1479,12 @@ export default function AdministrativeDashboard() {
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-2 rounded-lg font-mono font-bold text-lg tracking-tight flex items-center justify-center shadow-md shadow-indigo-600/20">
-            JP
+          <div className="relative w-9 h-9 flex items-center justify-center overflow-hidden rounded-lg bg-indigo-50 p-1 border border-indigo-100 shadow-xs">
+            <img src="/logo.svg" alt="Jadwalify Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              Jadwal Pelajaran Sekolah Otomatis <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md font-bold font-sans">PRO</span>
+              Jadwalify <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md font-bold font-sans">PRO</span>
               {isSupabaseModeActive() && (
                 isCloudSyncing ? (
                   <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-md font-bold font-sans flex items-center gap-1.5 animate-pulse">

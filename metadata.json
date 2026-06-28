@@ -1,5 +1,5 @@
 {
-  "name": "Jadwal Pelajaran Sekolah Otomatis",
+  "name": "Jadwalify",
   "description": "Sistem penyusunan jadwal pelajaran sekolah otomatis menggunakan algoritma CSP, Backtracking, MRV, dan Forward Checking dengan visualisasi kelas, ruang, preferensi guru, serta deteksi konflik real-time.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
