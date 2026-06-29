@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Users, Key, Plus, Copy, Check, Trash2, ToggleLeft, ToggleRight, TrendingUp, BarChart2, CheckCircle, Search, HelpCircle } from 'lucide-react';
-import { LocalDB } from '../lib/db';
+import { ShieldAlert, Users, Key, Plus, Copy, Check, Trash2, ToggleLeft, ToggleRight, TrendingUp, BarChart2, CheckCircle, Search, HelpCircle, Settings } from 'lucide-react';
+import { LocalDB, SystemSettings } from '../lib/db';
 import { getSupabaseClient, isSupabaseModeActive } from '../lib/supabaseClient';
 
 interface AdminTabProps {
@@ -18,6 +18,14 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [keyFilter, setKeyFilter] = useState<'all' | 'available' | 'used'>('all');
   const [dbHasSerialKeysTable, setDbHasSerialKeysTable] = useState(true);
+  const [settings, setSettings] = useState<SystemSettings>({
+    harga_pro: 99000,
+    harga_coret: 199000,
+    teks_diskon: "Diskon 50% Terbatas!",
+    pakasir_api_key: "demo_api_key",
+    pakasir_project: "depodomain"
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Load data from LocalDB or Supabase
   const loadAdminData = async () => {
@@ -27,6 +35,26 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
     if (isSupabaseModeActive()) {
       const supabase = getSupabaseClient();
       if (supabase) {
+        // Load settings
+        try {
+          const { data: dbSettings, error: errS } = await supabase.from('system_settings').select('*');
+          if (!errS && dbSettings && dbSettings.length > 0) {
+            const parsed: any = {};
+            dbSettings.forEach((row: any) => {
+              parsed[row.key] = row.value;
+            });
+            setSettings(prev => ({
+              harga_pro: Number(parsed.harga_pro) || prev.harga_pro,
+              harga_coret: Number(parsed.harga_coret) || prev.harga_coret,
+              teks_diskon: parsed.teks_diskon || prev.teks_diskon,
+              pakasir_api_key: parsed.pakasir_api_key || prev.pakasir_api_key,
+              pakasir_project: parsed.pakasir_project || prev.pakasir_project,
+            }));
+          }
+        } catch (errSettings) {
+          console.warn("Gagal membaca system_settings di Supabase:", errSettings);
+        }
+
         try {
           const { data: profiles, error } = await supabase
             .from('profiles')
@@ -295,6 +323,38 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
     }
   };
 
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    try {
+      LocalDB.saveSystemSettings(settings);
+      
+      if (isSupabaseModeActive()) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const rows = [
+            { key: 'harga_pro', value: String(settings.harga_pro) },
+            { key: 'harga_coret', value: String(settings.harga_coret) },
+            { key: 'teks_diskon', value: settings.teks_diskon },
+            { key: 'pakasir_api_key', value: settings.pakasir_api_key },
+            { key: 'pakasir_project', value: settings.pakasir_project },
+          ];
+          const { error } = await supabase.from('system_settings').upsert(rows);
+          if (error) {
+            throw error;
+          }
+        }
+      }
+      
+      setLogMessages(prev => ["☁️ [Admin] Pengaturan harga platform & payment gateway berhasil disimpan!", ...prev]);
+      alert("Pengaturan harga platform & payment gateway berhasil disimpan!");
+    } catch (err: any) {
+      alert(`Gagal menyimpan pengaturan: ${err.message}`);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   // Metrics calculations
   const totalUsersCount = users.length;
   const proUsersCount = users.filter(u => u.is_pro).length;
@@ -442,6 +502,110 @@ CREATE POLICY "Users update key" ON public.serial_keys FOR UPDATE TO authenticat
             <div className="text-[9px] text-slate-400 font-semibold mt-0.5">Dari total {totalKeysCount} Kode</div>
           </div>
         </div>
+      </div>
+
+      {/* Pengaturan Harga & Gateway Pembayaran */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
+            <Settings className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900">Konfigurasi Harga Platform &amp; Gerbang Pembayaran Pakasir</h3>
+            <p className="text-[10px] text-slate-400 font-semibold">Atur harga promo, label diskon, dan API Key Pakasir untuk pembayaran QRIS otomatis.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveSettings} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                Harga PRO Promo (IDR)
+              </label>
+              <input
+                type="number"
+                value={settings.harga_pro}
+                onChange={(e) => setSettings({ ...settings, harga_pro: Number(e.target.value) || 0 })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                placeholder="99000"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                Harga Coret Sebelum Diskon (IDR)
+              </label>
+              <input
+                type="number"
+                value={settings.harga_coret}
+                onChange={(e) => setSettings({ ...settings, harga_coret: Number(e.target.value) || 0 })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                placeholder="199000"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                Teks Label Diskon / Promo
+              </label>
+              <input
+                type="text"
+                value={settings.teks_diskon}
+                onChange={(e) => setSettings({ ...settings, teks_diskon: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                placeholder="Diskon 50% Terbatas!"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                Pakasir API Key
+              </label>
+              <input
+                type="password"
+                value={settings.pakasir_api_key}
+                onChange={(e) => setSettings({ ...settings, pakasir_api_key: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 font-mono"
+                placeholder="Gunakan demo_api_key atau API Key Anda"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                Pakasir Project Name
+              </label>
+              <input
+                type="text"
+                value={settings.pakasir_project}
+                onChange={(e) => setSettings({ ...settings, pakasir_project: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                placeholder="depodomain"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={savingSettings}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-xs hover:shadow-md cursor-pointer flex items-center gap-1.5"
+            >
+              {savingSettings ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Menyimpan...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Simpan Konfigurasi Platform
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -359,5 +359,26 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- (auth.uid(), 6, '11:30:00', '12:15:00'),
 -- (auth.uid(), 7, '13:00:00', '13:45:00'),
 -- (auth.uid(), 8, '13:45:00', '14:30:00');
+
+
+-- =========================================================================
+-- 10. TABLE: system_settings (Pengaturan platform seperti harga dan payment gateway)
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.system_settings (
+    key VARCHAR(255) PRIMARY KEY,
+    value TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- RLS
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+
+-- Kebijakan RLS (Public Read, Admin Write)
+CREATE POLICY "Public read settings" ON public.system_settings FOR SELECT USING (true);
+CREATE POLICY "Admin full access settings" ON public.system_settings TO authenticated USING (
+    (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+) WITH CHECK (
+    (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+);
 `;
 

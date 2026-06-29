@@ -492,15 +492,18 @@ export class SupabaseSyncService {
         return { success: true, message: 'Data sudah up-to-date.', logs };
       }
 
-      // Tulis ulang seluruh data ke LocalDB
-      LocalDB.saveGuru(localTeachers);
-      LocalDB.saveMapel(localSubjects);
-      LocalDB.saveKelas(localClasses);
-      LocalDB.saveRuangan(localRooms);
-      LocalDB.saveJamPelajaran(localPeriods);
-      LocalDB.savePreferensi(localPreferences);
-      LocalDB.savePengampu(localAssignments);
-      LocalDB.saveJadwal(localSchedules);
+      // Tulis ulang seluruh data ke LocalDB secara langsung/senyap tanpa memicu redundant conflict recalculations
+      LocalDB.saveGuruDirect(localTeachers);
+      LocalDB.saveMapelDirect(localSubjects);
+      LocalDB.saveKelasDirect(localClasses);
+      LocalDB.saveRuanganDirect(localRooms);
+      LocalDB.saveJamPelajaranDirect(localPeriods);
+      LocalDB.savePreferensiDirect(localPreferences);
+      LocalDB.savePengampuDirect(localAssignments);
+      LocalDB.saveJadwal(localSchedules); // can keep saveJadwal or use a direct save then recalculate conflicts manually
+      
+      // Hitung konflik sekali saja di akhir untuk seluruh batch data
+      LocalDB.recalculateConflicts();
 
       logs.push('SINKRONISASI UNDUH BERHASIL! Data lokal Anda kini sama persis dengan data di Supabase cloud.');
       return { success: true, message: 'Seluruh data berhasil diunduh dari Supabase!', logs };

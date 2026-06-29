@@ -1,6 +1,14 @@
 import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal, Hari } from './types';
 import { MOCK_GURU, MOCK_MAPEL, MOCK_KELAS, MOCK_RUANGAN, MOCK_JAM_PELAJARAN, MOCK_PENGAMPU, MOCK_PREFERENSI } from './mock-db-data';
 
+export interface SystemSettings {
+  harga_pro: number;
+  harga_coret: number;
+  teks_diskon: string;
+  pakasir_api_key: string;
+  pakasir_project: string;
+}
+
 export class LocalDB {
   private static getUserPrefix(): string {
     if (typeof window === 'undefined') return '';
@@ -314,6 +322,42 @@ export class LocalDB {
   static saveJadwal(data: Jadwal[]) { this.setStored('sch_jadwal', data); this.recalculateConflicts(); }
   static saveHariAktif(data: Hari[]) { this.setStored('sch_hari_aktif', data); this.recalculateConflicts(); }
   static saveBatasJamHari(data: Record<Hari, number>) { this.setStored('sch_batas_jam_hari', data); this.recalculateConflicts(); }
+
+  // --- SAVE DIRECT (SILENT CACHE FOR SUPABASE SYNC) ---
+  static saveGuruDirect(data: Guru[]) { this.setStored('sch_guru', data); }
+  static saveMapelDirect(data: MataPelajaran[]) { this.setStored('sch_mapel', data); }
+  static saveKelasDirect(data: Kelas[]) { this.setStored('sch_kelas', data); }
+  static saveRuanganDirect(data: Ruangan[]) { this.setStored('sch_ruangan', data); }
+  static saveJamPelajaranDirect(data: JamPelajaran[]) { this.setStored('sch_jam_pelajaran', data); }
+  static savePengampuDirect(data: PengampuMataPelajaran[]) { this.setStored('sch_pengampu', data); }
+  static savePreferensiDirect(data: PreferensiGuru[]) { this.setStored('sch_preferensi', data); }
+
+  // --- GLOBAL PLATFORM SETTINGS ---
+  static getSystemSettings(): SystemSettings {
+    const defaultSettings: SystemSettings = {
+      harga_pro: 99000,
+      harga_coret: 199000,
+      teks_diskon: "Diskon 50% Terbatas!",
+      pakasir_api_key: "demo_api_key",
+      pakasir_project: "depodomain"
+    };
+    if (typeof window === 'undefined') return defaultSettings;
+    const item = localStorage.getItem('sch_system_settings');
+    if (!item) {
+      localStorage.setItem('sch_system_settings', JSON.stringify(defaultSettings));
+      return defaultSettings;
+    }
+    try {
+      return { ...defaultSettings, ...JSON.parse(item) };
+    } catch {
+      return defaultSettings;
+    }
+  }
+
+  static saveSystemSettings(settings: SystemSettings) {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('sch_system_settings', JSON.stringify(settings));
+  }
 
   // --- RESET TO DEFAULTS ---
   static resetToDefault() {

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Key, CheckCircle, AlertCircle, CreditCard, Lock, ShieldCheck, HelpCircle, Sparkles } from 'lucide-react';
-import { LocalDB } from '../lib/db';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, AlertCircle, CreditCard, ShieldCheck, HelpCircle, Sparkles, RefreshCw, Smartphone, ExternalLink } from 'lucide-react';
+import { LocalDB, SystemSettings } from '../lib/db';
 import { getSupabaseClient, isSupabaseModeActive } from '../lib/supabaseClient';
 
 interface ActivationTabProps {
@@ -12,178 +12,202 @@ interface ActivationTabProps {
 }
 
 export default function ActivationTab({ currentUser, setCurrentUser, setLogMessages }: ActivationTabProps) {
-  const [serialKeyInput, setSerialKeyInput] = useState('');
+  const [settings, setSettings] = useState<SystemSettings>({
+    harga_pro: 99000,
+    harga_coret: 199000,
+    teks_diskon: "Diskon 50% Terbatas!",
+    pakasir_api_key: "demo_api_key",
+    pakasir_project: "depodomain"
+  });
+
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [qrisData, setQrisData] = useState<any>(null);
+  const [pollingId, setPollingId] = useState<any>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'expired' | null>(null);
+  
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleActivate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+  // Format currency
+  const formatRupiah = (value: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0
+    }).format(value);
+  };
 
-    const keyString = serialKeyInput.trim();
-    if (!keyString) {
-      setErrorMsg('Masukkan kode serial terlebih dahulu.');
+  // Load platform settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoadingSettings(true);
+      let local = LocalDB.getSystemSettings();
+      
+      if (isSupabaseModeActive()) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          try {
+            const { data, error } = await supabase.from('system_settings').select('*');
+            if (!error && data && data.length > 0) {
+              const parsed: any = {};
+              data.forEach((row: any) => {
+                parsed[row.key] = row.value;
+              });
+              
+              const merged = {
+                harga_pro: Number(parsed.harga_pro) || local.harga_pro,
+                harga_coret: Number(parsed.harga_coret) || local.harga_coret,
+                teks_diskon: parsed.teks_diskon || local.teks_diskon,
+                pakasir_api_key: parsed.pakasir_api_key || local.pakasir_api_key,
+                pakasir_project: parsed.pakasir_project || local.pakasir_project,
+              };
+              setSettings(merged);
+              LocalDB.saveSystemSettings(merged);
+            }
+          } catch (err) {
+            console.warn("Membaca tabel system_settings dibatalkan atau tabel belum ada:", err);
+          }
+        }
+      } else {
+        setSettings(local);
+      }
+      setLoadingSettings(false);
+    };
+
+    fetchSettings();
+  }, []);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingId) {
+        clearInterval(pollingId);
+      }
+    };
+  }, [pollingId]);
+
+  // Initiate QRIS payment
+  const handleInitiatePayment = async () => {
+    if (!currentUser) {
+      setErrorMsg("Harap login terlebih dahulu untuk melakukan aktivasi lisensi sekolah.");
       return;
     }
-
-    setLoading(true);
-
-    if (isSupabaseModeActive()) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        try {
-          // Periksa apakah key ada di tabel serial_keys Supabase
-          const { data: keyData, error: fetchError } = await supabase
-            .from('serial_keys')
-            .select('*')
-            .eq('key', keyString.toUpperCase())
-            .single();
-
-          if (fetchError) {
-            console.error("Gagal memeriksa key di Supabase:", fetchError);
-            if (fetchError.code === 'PGRST116' || fetchError.message?.includes('does not exist')) {
-              // Jika tabel tidak ada atau baris tidak ditemukan, coba fallback ke LocalDB
-              const localKeys = LocalDB.getSerialKeys();
-              const hasLocal = localKeys.some(k => k.key.toUpperCase() === keyString.toUpperCase());
-              
-              if (hasLocal) {
-                const result = LocalDB.activateSerialKey(currentUser.username, keyString);
-                if (result.success) {
-                  // Sinkronkan status PRO ke profiles di Supabase jika profilnya ada
-                  const { data: { user } } = await supabase.auth.getUser();
-                  const profileTargetId = user?.id || currentUser.username;
-                  await supabase
-                    .from('profiles')
-                    .update({
-                      is_pro: true,
-                      serial_key: keyString.toUpperCase(),
-                      activated_at: new Date().toISOString()
-                    })
-                    .eq('id', profileTargetId);
-
-                  setSuccessMsg("Selamat! Akun Anda berhasil diaktivasi ke Jadwalify PRO.");
-                  const updatedUser = {
-                    ...currentUser,
-                    is_pro: true,
-                    serial_key: keyString.toUpperCase(),
-                    activated_at: new Date().toISOString()
-                  };
-                  localStorage.setItem('sch_current_user', JSON.stringify(updatedUser));
-                  setCurrentUser(updatedUser);
-                  setLogMessages(prev => [`Akun @${currentUser.username} berhasil diaktivasi secara lokal & disinkronkan ke cloud.`, ...prev]);
-                  setSerialKeyInput('');
-                } else {
-                  setErrorMsg(result.message);
-                }
-              } else {
-                setErrorMsg('Kode serial tidak valid atau tidak ditemukan di database.');
-              }
-            } else {
-              setErrorMsg(`Gagal memeriksa lisensi: ${fetchError.message}`);
-            }
-            setLoading(false);
-            return;
-          }
-
-          if (keyData) {
-            if (keyData.is_used) {
-              setErrorMsg(`Kode serial sudah digunakan oleh pengguna lain.`);
-              setLoading(false);
-              return;
-            }
-
-            // Klaim key di tabel serial_keys
-            const { error: keyUpdateError } = await supabase
-              .from('serial_keys')
-              .update({
-                is_used: true,
-                used_by: currentUser.username,
-                activated_at: new Date().toISOString()
-              })
-              .eq('key', keyString.toUpperCase());
-
-            if (keyUpdateError) {
-              setErrorMsg(`Gagal mengklaim lisensi: ${keyUpdateError.message}`);
-              setLoading(false);
-              return;
-            }
-
-            // Perbarui status PRO di profiles Supabase
-            const { data: { user } } = await supabase.auth.getUser();
-            const profileTargetId = user?.id || currentUser.username;
-            const { error: profileUpdateError } = await supabase
-              .from('profiles')
-              .update({
-                is_pro: true,
-                serial_key: keyString.toUpperCase(),
-                activated_at: new Date().toISOString()
-              })
-              .eq('id', profileTargetId);
-
-            if (profileUpdateError) {
-              setErrorMsg(`Gagal mengaktifkan profil PRO: ${profileUpdateError.message}`);
-              setLoading(false);
-              return;
-            }
-
-            // Berhasil! Perbarui local state & localStorage
-            const updatedUser = {
-              ...currentUser,
-              is_pro: true,
-              serial_key: keyString.toUpperCase(),
-              activated_at: new Date().toISOString()
-            };
-            localStorage.setItem('sch_current_user', JSON.stringify(updatedUser));
-            setCurrentUser(updatedUser);
-
-            // Selaraskan juga LocalDB agar tetap sinkron jika offline
-            LocalDB.updateUserProStatus(currentUser.username, true, keyString.toUpperCase());
-
-            setSuccessMsg("Selamat! Akun Anda berhasil diaktivasi ke Jadwalify PRO.");
-            setLogMessages(prev => [
-              `Akun @${currentUser.username} berhasil diaktivasi di Cloud menggunakan serial key ${keyString.toUpperCase()}.`,
-              ...prev
-            ]);
-            setSerialKeyInput('');
-          }
-        } catch (err: any) {
-          setErrorMsg(`Terjadi kesalahan sistem: ${err.message}`);
-        }
-        setLoading(false);
-        return;
-      }
+    
+    if (pollingId) {
+      clearInterval(pollingId);
+      setPollingId(null);
     }
 
-    // Standard offline mode activation
-    setTimeout(() => {
-      const result = LocalDB.activateSerialKey(currentUser.username, keyString);
-      setLoading(false);
+    setPaying(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setQrisData(null);
+    setPaymentStatus(null);
 
-      if (result.success) {
-        setSuccessMsg(result.message);
-        const updatedUser = LocalDB.getCurrentUser();
-        if (updatedUser) {
-          setCurrentUser(updatedUser);
-        }
-        setLogMessages(prev => [
-          `Akun @${currentUser.username} berhasil diaktivasi menggunakan serial key secara lokal.`,
-          ...prev
-        ]);
-        setSerialKeyInput('');
+    // Filter characters in username for safe order_id
+    const safeUsername = currentUser.username.replace(/[^a-zA-Z0-9]/g, '');
+    const orderId = `JADW_${safeUsername}_${Date.now()}`;
+
+    try {
+      console.log(`Menginisiasi transaksi Pakasir QRIS: ${orderId}`);
+      const response = await fetch("/api/pakasir/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          order_id: orderId,
+          amount: settings.harga_pro,
+          apiKey: settings.pakasir_api_key,
+          project: settings.pakasir_project
+        })
+      });
+
+      const resData = await response.json();
+
+      if (resData.status === "success" && resData.payment) {
+        const p = resData.payment;
+        setQrisData({
+          orderId: orderId,
+          qrString: p.payment_number,
+          total: p.total_payment,
+          fee: p.fee || 0,
+          expiredAt: p.expired_at
+        });
+        setPaymentStatus('pending');
+
+        // Start polling the server status API
+        const interval = setInterval(async () => {
+          try {
+            const checkRes = await fetch(`/api/pakasir/status?order_id=${orderId}`);
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              if (checkData.status === "PAID") {
+                clearInterval(interval);
+                setPollingId(null);
+                setPaymentStatus('success');
+
+                // Update status locally in client-side states
+                const updatedUser = {
+                  ...currentUser,
+                  is_pro: true,
+                  activated_at: new Date().toISOString()
+                };
+                localStorage.setItem('sch_current_user', JSON.stringify(updatedUser));
+                setCurrentUser(updatedUser);
+
+                // Update local storage DB status
+                LocalDB.updateUserProStatus(currentUser.username, true);
+
+                // Update Supabase profile directly if connected and authenticated
+                if (isSupabaseModeActive()) {
+                  const supabase = getSupabaseClient();
+                  if (supabase) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      await supabase
+                        .from('profiles')
+                        .update({
+                          is_pro: true,
+                          activated_at: new Date().toISOString()
+                        })
+                        .eq('id', user.id);
+                    }
+                  }
+                }
+
+                setSuccessMsg("Selamat! Pembayaran QRIS terverifikasi secara instan. Fitur Jadwalify PRO kini aktif sepenuhnya!");
+                setLogMessages(prev => [
+                  `🎉 [Sistem] Pembayaran QRIS ${orderId} berhasil diverifikasi! Lisensi PRO diaktifkan.`,
+                  ...prev
+                ]);
+                setQrisData(null);
+              }
+            }
+          } catch (pollErr) {
+            console.error("Gagal memeriksa status pembayaran di interval:", pollErr);
+          }
+        }, 3000);
+
+        setPollingId(interval);
       } else {
-        setErrorMsg(result.message);
+        setErrorMsg(resData.message || "Gagal membuat transaksi QRIS. Harap periksa koneksi internet atau gunakan opsi pembayaran WhatsApp.");
       }
-    }, 800);
+    } catch (err: any) {
+      console.error("Error creating payment:", err);
+      setErrorMsg(`Kesalahan jaringan: ${err.message || String(err)}`);
+    } finally {
+      setPaying(false);
+    }
   };
 
   const isPro = currentUser?.is_pro;
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans" id="activation-tab-container">
       {/* Header Panel */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4" id="header-panel">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             Status Lisensi &amp; Aktivasi
@@ -194,12 +218,12 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
         </div>
         <div className="flex items-center">
           {isPro ? (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold animate-pulse">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold" id="pro-badge">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 animate-pulse" />
               PROFESIONAL (PRO) AKTIF
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold" id="trial-badge">
               <AlertCircle className="w-4 h-4 text-amber-600" />
               VERSI TRIAL (TERBATAS)
             </div>
@@ -207,12 +231,12 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Input & Key Details */}
-        <div className="lg:col-span-7 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="activation-main-grid">
+        {/* Left Panel: Checkout QRIS or PRO Status Details */}
+        <div className="lg:col-span-7 space-y-6" id="left-action-panel">
           {isPro ? (
             // PRO ACTIVE LAYOUT
-            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 border border-indigo-950 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+            <div className="bg-gradient-to-br from-slate-900 to-indigo-950 border border-indigo-950 text-white rounded-2xl p-6 shadow-md relative overflow-hidden" id="pro-details-card">
               <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                 <Sparkles className="w-40 h-40" />
               </div>
@@ -222,7 +246,7 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
                   <ShieldCheck className="w-6 h-6 text-emerald-400" />
                 </div>
                 <div>
-                  <div className="text-[10px] text-indigo-300 font-bold tracking-widest uppercase font-mono">Lisenasi Premium Terverifikasi</div>
+                  <div className="text-[10px] text-indigo-300 font-bold tracking-widest uppercase font-mono">Lisensi Premium Terverifikasi</div>
                   <h3 className="text-lg font-black tracking-tight text-white">Jadwalify Professional</h3>
                 </div>
               </div>
@@ -230,108 +254,165 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
               <div className="space-y-4 bg-white/5 p-4 rounded-xl border border-white/5 backdrop-blur-xs font-mono text-xs">
                 <div className="flex justify-between border-b border-white/10 pb-2">
                   <span className="text-slate-300">Pemilik Akun</span>
-                  <span className="font-bold text-white">@{currentUser.username}</span>
+                  <span className="font-bold text-white">@{currentUser?.username || 'Guest'}</span>
                 </div>
                 <div className="flex justify-between border-b border-white/10 pb-2">
                   <span className="text-slate-300">Nama Sekolah</span>
-                  <span className="font-bold text-indigo-200 truncate max-w-[180px]" title={currentUser.nama_sekolah}>
-                    {currentUser.nama_sekolah}
+                  <span className="font-bold text-indigo-200 truncate max-w-[180px]" title={currentUser?.nama_sekolah}>
+                    {currentUser?.nama_sekolah || '-'}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-slate-300">Kunci Serial</span>
+                  <span className="text-slate-300">Metode Lisensi</span>
                   <span className="font-bold text-emerald-300">
-                    {currentUser.serial_key ? `${currentUser.serial_key.substring(0, 12)}****` : 'ADMIN-ACTIVATED'}
+                    Sistem Pembayaran Instan QRIS
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-300">Tanggal Aktivasi</span>
                   <span className="font-bold text-slate-200">
-                    {currentUser.activated_at ? new Date(currentUser.activated_at).toLocaleDateString('id-ID', {
+                    {currentUser?.activated_at ? new Date(currentUser.activated_at).toLocaleDateString('id-ID', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
-                    }) : '-'}
+                    }) : new Date().toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
                   </span>
                 </div>
               </div>
 
               <div className="mt-6 flex items-center gap-2 text-xs text-indigo-200 font-semibold bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/20">
                 <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
-                <span>Terima kasih! Dukungan Anda memungkinkan kami terus menyempurnakan algoritma penataan jadwal cerdas ini.</span>
+                <span>Terima kasih! Dukungan Anda memungkinkan kami terus menyempurnakan algoritma penataan jadwal sekolah otomatis ini.</span>
               </div>
             </div>
           ) : (
-            // TRIAL ACTIVATION FORM
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-100 text-indigo-600">
-                  <Key className="w-5 h-5" />
+            // TRIAL CHECKOUT & QRIS GENERATOR
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6" id="trial-checkout-card">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-100 text-indigo-600">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">Aktivasi Instan via QRIS</h3>
+                    <p className="text-[10px] text-slate-400 font-semibold">Aktifkan status PRO dalam hitungan detik secara otomatis.</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Aktivasi Kunci Serial</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold">Masukkan 16 karakter kunci serial untuk membuka akses PRO.</p>
-                </div>
+                
+                <span className="px-2 py-0.5 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md font-bold uppercase animate-pulse">
+                  Metode Otomatis
+                </span>
               </div>
 
-              <form onSubmit={handleActivate} className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase font-mono tracking-wider">
-                    Kode Serial (Serial Key)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="JADW-PRO-XXXX-XXXX"
-                      value={serialKeyInput}
-                      onChange={(e) => setSerialKeyInput(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition uppercase font-mono"
-                      maxLength={24}
-                      disabled={loading}
+              {/* Pricing Showcase */}
+              {!qrisData && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1 text-center md:text-left">
+                    <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest font-mono">Buka Lisensi Seumur Hidup (Lifetime)</div>
+                    <div className="flex items-baseline justify-center md:justify-start gap-2">
+                      <span className="text-2xl font-black text-indigo-600">{formatRupiah(settings.harga_pro)}</span>
+                      <span className="text-xs text-slate-400 line-through font-semibold">{formatRupiah(settings.harga_coret)}</span>
+                    </div>
+                    <div className="inline-flex px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-700 text-[8px] font-black uppercase font-mono tracking-wider">
+                      {settings.teks_diskon}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleInitiatePayment}
+                    disabled={paying || loadingSettings}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition shadow-xs hover:shadow-md disabled:opacity-75 flex items-center gap-2 cursor-pointer w-full md:w-auto justify-center"
+                    id="btn-generate-qris"
+                  >
+                    {paying ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Generating QRIS...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4" />
+                        Bayar Instan Sekarang (QRIS)
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* QRIS Display */}
+              {qrisData && (
+                <div className="bg-slate-50 border border-indigo-100 rounded-2xl p-6 text-center space-y-4 animate-fade-in" id="qris-display-panel">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider font-mono">Scan Kode QRIS di Bawah Ini</span>
+                    <h4 className="text-base font-black text-slate-900">{formatRupiah(qrisData.total)}</h4>
+                    <p className="text-[9px] text-slate-400 font-semibold">Sudah termasuk biaya admin {formatRupiah(qrisData.fee)}</p>
+                  </div>
+
+                  {/* QR Image */}
+                  <div className="mx-auto bg-white p-3 rounded-2xl border border-slate-200/80 w-52 h-52 flex items-center justify-center relative shadow-xs">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrisData.qrString)}`}
+                      alt="Pakasir QRIS Code"
+                      className="w-44 h-44 rounded-lg"
                     />
-                    <Key className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+                    {paymentStatus === 'success' && (
+                      <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center text-emerald-600 space-y-2 animate-fade-in">
+                        <CheckCircle className="w-12 h-12 text-emerald-500 animate-bounce" />
+                        <span className="text-xs font-black uppercase tracking-wider font-mono">Pembayaran Sukses!</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Live Status Indicator */}
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-bold">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping"></div>
+                      Menunggu Pembayaran (Otomatis Aktif)...
+                    </div>
+
+                    <div className="text-[10px] text-slate-400 font-semibold leading-relaxed">
+                      QRIS mendukung seluruh aplikasi pembayaran perbankan (M-Banking) &amp; e-Wallet seperti <strong>GoPay, OVO, Dana, LinkAja, ShopeePay, dsb</strong>.
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        if (pollingId) clearInterval(pollingId);
+                        setPollingId(null);
+                        setQrisData(null);
+                        setPaymentStatus(null);
+                      }}
+                      className="px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-100 transition text-[10px] font-bold cursor-pointer"
+                    >
+                      Batal / Cari Alternatif Lain
+                    </button>
                   </div>
                 </div>
+              )}
 
-                {errorMsg && (
-                  <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-xs font-semibold text-rose-700 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                    <span>{errorMsg}</span>
-                  </div>
-                )}
+              {errorMsg && (
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-xs font-semibold text-rose-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
 
-                {successMsg && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-semibold text-emerald-700 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>{successMsg}</span>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-sm hover:shadow-md disabled:opacity-75 flex items-center justify-center gap-2 cursor-pointer text-sm"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Memproses Aktivasi...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-4 h-4" />
-                      Aktivasi Sekarang
-                    </>
-                  )}
-                </button>
-              </form>
+              {successMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-semibold text-emerald-700 flex items-center gap-2 animate-fade-in">
+                  <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>{successMsg}</span>
+                </div>
+              )}
             </div>
           )}
 
           {/* Trial Limitations Card */}
           {!isPro && (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
-              <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider font-mono">Akses Terbatas Akun Trial</h4>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4" id="trial-limits-card">
+              <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider font-mono">Batasan Fitur Akun Trial (Uji Coba)</h4>
               <div className="space-y-2.5 text-xs text-slate-600 font-semibold leading-relaxed">
                 <p className="flex items-start gap-2">
                   <span className="text-rose-500 font-bold shrink-0">✕</span>
@@ -349,57 +430,40 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
             </div>
           )}
 
-          {/* WhatsApp Purchase CTA */}
+          {/* Secondary WhatsApp Support */}
           {!isPro && (
-            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-6 shadow-xs space-y-4" id="wa-purchase-card">
               <div className="flex items-start gap-3">
-                <div className="bg-emerald-500 text-white p-2.5 rounded-xl">
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.03-5.115-2.903-6.989-1.873-1.873-4.352-2.902-6.99-2.903-5.438 0-9.86 4.417-9.864 9.861-.001 1.777.464 3.513 1.348 5.044L1.815 21.75l5.068-1.32c1.55.845 3.238 1.286 4.894 1.286zm11.333-7.794c-.32-.16-1.89-.88-2.185-.987-.294-.107-.508-.16-.721.16-.213.32-.827.987-1.014 1.201-.187.213-.374.24-.694.08-.32-.16-1.352-.499-2.575-1.59-.95-.848-1.592-1.895-1.779-2.214-.187-.32-.02-.493.14-.653.144-.144.32-.374.48-.56.16-.188.213-.32.32-.534.107-.213.053-.4-.027-.56-.08-.16-.721-1.734-.987-2.375-.259-.624-.523-.54-.721-.55l-.614-.01c-.213 0-.56.08-.854.4-.294.32-1.121 1.095-1.121 2.67 0 1.575 1.148 3.1 1.308 3.313.16.213 2.259 3.45 5.474 4.84.764.33 1.36.527 1.824.674.767.244 1.467.21 2.02.127.618-.093 1.89-.773 2.158-1.48.267-.707.267-1.307.187-1.434-.08-.127-.294-.213-.614-.374z" />
-                  </svg>
+                <div className="bg-emerald-500 text-white p-2 rounded-xl shrink-0">
+                  <Smartphone className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900">Hubungi WhatsApp Resmi</h3>
-                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">Pesan Kode Serial Lisensi PRO secara mudah dan instan melalui nomor WhatsApp resmi kami.</p>
-                </div>
-              </div>
-
-              <div className="bg-white border border-emerald-100 rounded-xl p-4 space-y-2 shadow-xs">
-                <div className="text-[10px] text-emerald-700 font-extrabold uppercase tracking-wider font-mono">Draf Pesan Otomatis:</div>
-                <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-mono text-slate-600 leading-relaxed break-words whitespace-pre-wrap">
-{`Halo Admin Jadwalify 👋,
-
-Saya tertarik untuk membeli Lisensi PRO Resmi agar dapat menikmati fitur penuh Jadwalify.
-
-Berikut detail akun sekolah saya:
-• Username     : @${currentUser?.username || 'user'}
-• Nama Sekolah : ${currentUser?.nama_sekolah || '-'}
-
-Mohon informasi harga, prosedur pembayaran, serta pengiriman Kode Serial PRO. Terima kasih!`}
+                  <h3 className="text-xs font-bold text-slate-900">Beli Manual / Konfirmasi WhatsApp</h3>
+                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                    Apabila Anda memerlukan invoice penawaran formal untuk bendahara sekolah atau ingin bertransaksi secara manual melalui transfer bank konvensional.
+                  </p>
                 </div>
               </div>
 
               <a
                 href={`https://wa.me/6289522537711?text=${encodeURIComponent(
-                  `Halo Admin Jadwalify 👋,\n\nSaya tertarik untuk membeli Lisensi PRO Resmi agar dapat menikmati fitur penuh Jadwalify.\n\nBerikut detail akun sekolah saya:\n• Username     : @${currentUser?.username || 'user'}\n• Nama Sekolah : ${currentUser?.nama_sekolah || '-'}\n\nMohon informasi harga, prosedur pembayaran, serta pengiriman Kode Serial PRO. Terima kasih!`
+                  `Halo Admin Jadwalify 👋,\n\nSaya tertarik untuk membeli Lisensi PRO Resmi melalui konfirmasi manual.\n\nBerikut detail akun sekolah saya:\n• Username     : @${currentUser?.username || 'user'}\n• Nama Sekolah : ${currentUser?.nama_sekolah || '-'}\n\nMohon informasi prosedur pembayarannya. Terima kasih!`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-xs hover:shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm font-sans"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 text-xs font-bold rounded-xl transition shadow-xs cursor-pointer"
               >
-                <svg className="w-4.5 h-4.5 fill-current shrink-0" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.03-5.115-2.903-6.989-1.873-1.873-4.352-2.902-6.99-2.903-5.438 0-9.86 4.417-9.864 9.861-.001 1.777.464 3.513 1.348 5.044L1.815 21.75l5.068-1.32c1.55.845 3.238 1.286 4.894 1.286zm11.333-7.794c-.32-.16-1.89-.88-2.185-.987-.294-.107-.508-.16-.721.16-.213.32-.827.987-1.014 1.201-.187.213-.374.24-.694.08-.32-.16-1.352-.499-2.575-1.59-.95-.848-1.592-1.895-1.779-2.214-.187-.32-.02-.493.14-.653.144-.144.32-.374.48-.56.16-.188.213-.32.32-.534.107-.213.053-.4-.027-.56-.08-.16-.721-1.734-.987-2.375-.259-.624-.523-.54-.721-.55l-.614-.01c-.213 0-.56.08-.854.4-.294.32-1.121 1.095-1.121 2.67 0 1.575 1.148 3.1 1.308 3.313.16.213 2.259 3.45 5.474 4.84.764.33 1.36.527 1.824.674.767.244 1.467.21 2.02.127.618-.093 1.89-.773 2.158-1.48.267-.707.267-1.307.187-1.434-.08-.127-.294-.213-.614-.374z" />
-                </svg>
-                <span>Beli Lisensi Resmi via WhatsApp</span>
+                <span>Hubungi Layanan WhatsApp</span>
+                <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
           )}
         </div>
 
-        {/* Right: Benefits & FAQ */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* Right Panel: Benefits & FAQ */}
+        <div className="lg:col-span-5 space-y-6" id="right-info-panel">
           {/* Pro Benefits Panel */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5" id="pro-benefits-card">
             <h3 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-indigo-600" />
               Keunggulan Akun Profesional (PRO)
@@ -433,24 +497,24 @@ Mohon informasi harga, prosedur pembayaran, serta pengiriman Kode Serial PRO. Te
           </div>
 
           {/* Licensing FAQ */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4" id="licensing-faq-card">
             <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-slate-400" />
               Pertanyaan Umum (FAQ)
             </h3>
 
-            <div className="space-y-3 text-[11px] font-semibold text-slate-600">
+            <div className="space-y-3 text-[11px] font-semibold text-slate-600 leading-relaxed">
               <div className="border-b border-slate-50 pb-2.5">
-                <h4 className="font-bold text-slate-800 mb-0.5">Bagaimana cara mendapatkan Kode Serial?</h4>
-                <p className="text-slate-500 leading-relaxed">Anda dapat membelinya dengan menghubungi kami langsung melalui nomor WhatsApp resmi <strong>6289522537711</strong>. Kami siap memandu pembayaran dan mengirimkan Kode Serial PRO seketika.</p>
+                <h4 className="font-bold text-slate-800 mb-0.5">Apakah pembayaran QRIS aman?</h4>
+                <p className="text-slate-500 leading-relaxed">Ya, sangat aman. Kode QRIS di-generate secara unik untuk transaksi Anda secara real-time. Begitu terbayar, sistem mendeteksinya langsung dalam hitungan detik dan mengaktifkan akun Anda secara instan.</p>
               </div>
               <div className="border-b border-slate-50 pb-2.5">
                 <h4 className="font-bold text-slate-800 mb-0.5">Apakah Lisensi PRO berlaku selamanya?</h4>
-                <p className="text-slate-500 leading-relaxed">Ya, sekali diaktifkan, lisensi PRO terikat permanen dengan akun sekolah Anda tanpa masa kedaluwarsa.</p>
+                <p className="text-slate-500 leading-relaxed">Ya, sekali diaktifkan, lisensi PRO berlaku seumur hidup (lifetime) untuk akun sekolah Anda tanpa biaya bulanan atau tahunan tambahan.</p>
               </div>
               <div>
-                <h4 className="font-bold text-slate-800 mb-0.5">Dapatkah satu Kode Serial digunakan berkali-kali?</h4>
-                <p className="text-slate-500 leading-relaxed">Tidak. Demi keamanan data, satu kode serial hanya berlaku unik untuk satu aktivasi akun sekolah saja.</p>
+                <h4 className="font-bold text-slate-800 mb-0.5">Dapatkah satu Akun PRO dibuka di beberapa perangkat?</h4>
+                <p className="text-slate-500 leading-relaxed">Tentu saja. Dengan mengaktifkan Supabase cloud mode, data utama sekolah Anda tersimpan aman di cloud. Anda dapat mengakses, mengisi data, atau mengedit jadwal dari komputer mana saja secara instan.</p>
               </div>
             </div>
           </div>
