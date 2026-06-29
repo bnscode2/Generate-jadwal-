@@ -105,9 +105,9 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
     setQrisData(null);
     setPaymentStatus(null);
 
-    // Filter characters in username for safe order_id
-    const safeUsername = currentUser.username.replace(/[^a-zA-Z0-9]/g, '');
-    const orderId = `JADW_${safeUsername}_${Date.now()}`;
+    // Filter characters in username for safe order_id, or use user UUID if logged into Supabase
+    const userIdentifier = currentUser.id || currentUser.username.replace(/[^a-zA-Z0-9]/g, '');
+    const orderId = `JADW_${userIdentifier}_${Date.now()}`;
 
     try {
       console.log(`Menginisiasi transaksi Pakasir QRIS: ${orderId}`);

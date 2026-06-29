@@ -48,18 +48,55 @@ export async function POST(req: NextRequest) {
               const supabase = createClient(supabaseUrl, supabaseServiceKey);
               
               // Direct server-side admin upgrade bypassing RLS constraints
-              const { error } = await supabase
-                .from("profiles")
-                .update({
-                  is_pro: true,
-                  activated_at: new Date().toISOString()
-                })
-                .eq("id", userId);
+              const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
-              if (error) {
-                console.error(`Gagal mengupdate profile user ${userId} ke PRO di Supabase:`, error.message);
+              if (isUuid) {
+                const { error } = await supabase
+                  .from("profiles")
+                  .update({
+                    is_pro: true,
+                    activated_at: new Date().toISOString()
+                  })
+                  .eq("id", userId);
+
+                if (error) {
+                  console.error(`Gagal mengupdate profile user ${userId} ke PRO di Supabase:`, error.message);
+                } else {
+                  console.log(`SUKSES WEBHOOK: Akun user UUID ${userId} telah diperbarui ke status PRO!`);
+                }
               } else {
-                console.log(`SUKSES WEBHOOK: Akun user ${userId} telah diperbarui ke status PRO!`);
+                console.log(`Bukan UUID, mencari profile dengan mencocokkan email untuk: ${userId}`);
+                const { data: allProfiles, error: fetchError } = await supabase
+                  .from("profiles")
+                  .select("id, email");
+
+                if (fetchError) {
+                  console.error("Gagal mengambil data profiles untuk pencarian manual email:", fetchError.message);
+                } else if (allProfiles) {
+                  const matchedProfile = allProfiles.find(p => {
+                    if (!p.email) return false;
+                    const cleanEmail = p.email.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+                    return cleanEmail === userId.toLowerCase();
+                  });
+
+                  if (matchedProfile) {
+                    const { error: updateError } = await supabase
+                      .from("profiles")
+                      .update({
+                        is_pro: true,
+                        activated_at: new Date().toISOString()
+                      })
+                      .eq("id", matchedProfile.id);
+
+                    if (updateError) {
+                      console.error(`Gagal mengupdate profile hasil pencarian email ${matchedProfile.id}:`, updateError.message);
+                    } else {
+                      console.log(`SUKSES WEBHOOK: Akun user ${matchedProfile.id} (${matchedProfile.email}) berhasil diperbarui ke status PRO via pencocokan email!`);
+                    }
+                  } else {
+                    console.error(`Gagal menemukan profil yang cocok dengan username/email filtered: ${userId}`);
+                  }
+                }
               }
             } catch (sbErr) {
               console.error("Kesalahan koneksi Supabase server-side di webhook:", sbErr);

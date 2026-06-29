@@ -184,6 +184,7 @@ export default function AdministrativeDashboard() {
         
         // Mapped user in format LocalDB expects
         const mappedUser = {
+          id: sbUser.id,
           username: sbUser.email || sbUser.id,
           password: '', // Google auth / Supabase auth
           nama_sekolah: schoolName,
@@ -468,39 +469,6 @@ export default function AdministrativeDashboard() {
     const currUser = LocalDB.getCurrentUser();
     if (currUser) {
       setCurrentUser(currUser);
-    }
-
-    // Auto sync to cloud Supabase if active, not skipped, and we are logged in!
-    const isLoggedIntoSupabase = !!currUser;
-
-    if (isSupabaseModeActive() && !skipCloudSync && isLoggedIntoSupabase) {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-      
-      syncTimeoutRef.current = setTimeout(async () => {
-        syncTimeoutRef.current = null; // Reset the timeout ref so it doesn't block background pull!
-        setIsCloudSyncing(true);
-        try {
-          console.log("Auto-syncing changes to Supabase cloud...");
-          const res = await Promise.race([
-            SupabaseSyncService.pushAll(),
-            new Promise<any>((_, reject) => 
-              setTimeout(() => reject(new Error('Batas waktu sinkronisasi terlampaui (15 detik).')), 15000)
-            )
-          ]);
-          if (res.success) {
-            setLogMessages(prev => ["☁️ [Autosave] Perubahan otomatis diselaraskan ke database cloud Supabase!", ...prev]);
-          } else {
-            setLogMessages(prev => [`⚠️ [Autosave Gagal] ${res.message}`, ...prev]);
-          }
-        } catch (syncErr: any) {
-          console.error("Gagal melakukan auto-sync ke Supabase:", syncErr);
-          setLogMessages(prev => [`⚠️ [Autosave Gagal] ${syncErr.message || "Timeout jaringan"}`, ...prev]);
-        } finally {
-          setIsCloudSyncing(false);
-        }
-      }, 1500); // Debounce of 1.5 seconds to batch successive changes!
     }
   };
 
