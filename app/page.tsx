@@ -125,6 +125,7 @@ export default function AdministrativeDashboard() {
 
   // Auth States
   const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const isAdmin = currentUser?.username?.toLowerCase() === 'admin' || 
                   currentUser?.role?.toLowerCase() === 'admin' || 
                   currentUser?.role?.toLowerCase() === 'administrator' ||
@@ -384,54 +385,12 @@ export default function AdministrativeDashboard() {
     isCloudSyncingRef.current = isCloudSyncing;
   }, [isCloudSyncing]);
 
-  // Efek Sinkronisasi Latar Belakang (Auto-Pull) periodik setiap 10 detik untuk sinkronisasi multi-device
+  // Set initial sync time on load if Supabase mode is active
   useEffect(() => {
-    if (!isSupabaseModeActive() || !currentUser) return;
-
-    // Set initial sync time
-    if (!lastSyncTime) {
+    if (isSupabaseModeActive() && currentUser && !lastSyncTime) {
       setLastSyncTime(new Date());
     }
-
-    const interval = setInterval(async () => {
-      // Hanya lakukan pull otomatis jika:
-      // 1. Tidak sedang melakukan proses push autosave (isCloudSyncingRef.current === false)
-      // 2. Tidak ada penundaan syncTimeoutRef (user tidak sedang mengetik atau aktif mengubah data)
-      if (!isCloudSyncingRef.current && !syncTimeoutRef.current) {
-        try {
-          setBackgroundSyncStatus('checking');
-          console.log("Background checking and syncing latest from Supabase cloud...");
-          
-          const res = await Promise.race([
-            SupabaseSyncService.pullAll(),
-            new Promise<any>((_, reject) => 
-              setTimeout(() => reject(new Error('Batas waktu sinkronisasi terlampaui')), 10000)
-            )
-          ]);
-          if (res.success) {
-            setLastSyncTime(new Date());
-            setBackgroundSyncStatus('success');
-            
-            // Muat ulang state React agar tersinkronisasi tanpa reload halaman
-            loadDatabase(true); // skipCloudSync = true agar tidak memicu push balik!
-            console.log("Background sync pull successful.");
-          } else {
-            setBackgroundSyncStatus('failed');
-            console.warn("Background sync pull warning:", res.message);
-          }
-        } catch (err) {
-          setBackgroundSyncStatus('failed');
-          console.error("Error in background auto-pull:", err);
-        } finally {
-          // Kembalikan ke idle setelah beberapa detik agar indikator kembali normal
-          setTimeout(() => setBackgroundSyncStatus('idle'), 3000);
-        }
-      }
-    }, 10000); // 10 detik sekali (sangat responsif untuk sinkronisasi multi-device)
-
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  }, [currentUser, lastSyncTime]);
 
   const handleManualForceSync = async () => {
     if (!isSupabaseModeActive() || !currentUser) return;
@@ -462,6 +421,30 @@ export default function AdministrativeDashboard() {
       alert(`Error sinkronisasi manual: ${err.message || String(err)}`);
     } finally {
       setTimeout(() => setBackgroundSyncStatus('idle'), 3000);
+    }
+  };
+
+  const handlePushAllToCloud = async () => {
+    if (!isSupabaseModeActive() || !currentUser) return;
+    
+    setIsCloudSyncing(true);
+    setLogMessages(prev => ["🔄 Mengunggah seluruh data lokal Anda ke cloud...", ...prev]);
+    try {
+      const res = await SupabaseSyncService.pushAll();
+      if (res.success) {
+        setHasUnsavedChanges(false);
+        setLogMessages(prev => ["✅ Unggah seluruh data berhasil! Data cloud kini selaras dengan data browser Anda.", ...prev]);
+        alert("Penyimpanan berhasil! Seluruh data Master, Preferensi, dan Jadwal telah diselaraskan ke Supabase Cloud.");
+      } else {
+        setLogMessages(prev => [`⚠️ Gagal mengunggah data: ${res.message}`, ...prev]);
+        alert(`Gagal mengunggah data: ${res.message}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setLogMessages(prev => [`⚠️ Kesalahan saat mengunggah: ${err.message || err}`, ...prev]);
+      alert(`Kesalahan saat mengunggah data: ${err.message || err}`);
+    } finally {
+      setIsCloudSyncing(false);
     }
   };
 
@@ -811,25 +794,25 @@ export default function AdministrativeDashboard() {
       max_jam_per_hari: 6
     };
 
+    // Always save locally first!
+    const updated = [...guru, created];
+    LocalDB.saveGuru(updated);
+    LocalDB.savePreferensi([...preferensi, defaultPref]);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setNewGuru({ nama: '', nip: '', jenis_kelamin: 'Laki-laki', no_hp: '', status_aktif: true });
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         await SupabaseSyncService.syncTeacher(created, 'upsert');
         await SupabaseSyncService.syncPreference(defaultPref, 'upsert');
-        setLogMessages(prev => ["☁️ [Real-time] Guru dan Preferensi berhasil disimpan langsung ke Supabase Cloud!", ...prev]);
-        await SupabaseSyncService.pullAll();
+        setLogMessages(prev => ["☁️ [Real-time] Guru dan Preferensi berhasil diselaraskan ke Supabase Cloud!", ...prev]);
       } catch (err: any) {
-        console.error("Gagal sinkronisasi guru baru:", err);
-        alert(`Gagal menyimpan data ke Supabase: ${err.message}`);
-        return;
+        console.error("Gagal sinkronisasi guru baru ke cloud:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan guru baru ke Cloud (${err.message}). Data Anda aman di lokal browser, silakan klik tombol Simpan ke Cloud untuk mengunggah ulang.`, ...prev]);
       }
-    } else {
-      const updated = [...guru, created];
-      LocalDB.saveGuru(updated);
-      LocalDB.savePreferensi([...preferensi, defaultPref]);
     }
-
-    setNewGuru({ nama: '', nip: '', jenis_kelamin: 'Laki-laki', no_hp: '', status_aktif: true });
-    loadDatabase(true);
   };
 
   const handleDeleteGuru = (id: string) => {
@@ -841,54 +824,54 @@ export default function AdministrativeDashboard() {
       message: `Apakah Anda yakin ingin menghapus guru "${targetName}"? Seluruh data preferensi, tugas pengampu, dan jadwal terkait akan ikut dihapus secara permanen dari sistem.`,
       type: 'delete_guru',
       onConfirm: async () => {
+        // Always save locally first!
+        const filteredGuru = guru.filter(g => g.id !== id);
+        const filteredAssignment = pengampu.filter(a => a.guru_id !== id);
+        const filteredPref = preferensi.filter(p => p.guru_id !== id);
+        const filteredSched = jadwal.filter(s => s.guru_id !== id);
+        
+        LocalDB.saveGuru(filteredGuru);
+        LocalDB.savePengampu(filteredAssignment);
+        LocalDB.savePreferensi(filteredPref);
+        LocalDB.saveJadwal(filteredSched);
+        setHasUnsavedChanges(true);
+        loadDatabase(true);
+
+        setLogMessages(prev => [`Data guru "${targetName}" beserta relasi terkait berhasil dihapus dari browser.`, ...prev]);
+        setSelectedCell(null);
+        setConfirmModal(null);
+
         if (isSupabaseModeActive() && currentUser && target) {
           try {
             await SupabaseSyncService.syncTeacher(target, 'delete');
-            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Guru "${targetName}" langsung dari cloud!`, ...prev]);
-            await SupabaseSyncService.pullAll();
+            setLogMessages(prev => [`☁️ [Real-time] Penghapusan Guru "${targetName}" berhasil diselaraskan di cloud!`, ...prev]);
           } catch (err: any) {
             console.error("Gagal sinkronisasi hapus guru:", err);
-            alert(`Gagal menghapus data dari Supabase: ${err.message}`);
-            return;
+            setLogMessages(prev => [`⚠️ Peringatan: Gagal menghapus guru di Cloud (${err.message}). Silakan lakukan klik Simpan ke Cloud nanti untuk merapikan cloud database Anda.`, ...prev]);
           }
-        } else {
-          const filteredGuru = guru.filter(g => g.id !== id);
-          const filteredAssignment = pengampu.filter(a => a.guru_id !== id);
-          const filteredPref = preferensi.filter(p => p.guru_id !== id);
-          const filteredSched = jadwal.filter(s => s.guru_id !== id);
-          
-          LocalDB.saveGuru(filteredGuru);
-          LocalDB.savePengampu(filteredAssignment);
-          LocalDB.savePreferensi(filteredPref);
-          LocalDB.saveJadwal(filteredSched);
         }
-
-        loadDatabase(true);
-        setLogMessages(prev => [`Data guru "${targetName}" beserta relasi terkait berhasil dihapus.`, ...prev]);
-        setSelectedCell(null);
-        setConfirmModal(null);
       }
     });
   };
 
   const handleUpdateGuru = async (updatedGuru: Guru) => {
+    // Always save locally first!
+    const updated = guru.map(g => g.id === updatedGuru.id ? updatedGuru : g);
+    LocalDB.saveGuru(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setLogMessages(prev => [`Biodata guru ${updatedGuru.nama} berhasil diperbarui di browser.`, ...prev]);
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         await SupabaseSyncService.syncTeacher(updatedGuru, 'upsert');
-        setLogMessages(prev => [`☁️ [Real-time] Biodata guru ${updatedGuru.nama} berhasil diperbarui di cloud!`, ...prev]);
-        await SupabaseSyncService.pullAll();
+        setLogMessages(prev => [`☁️ [Real-time] Pembaruan biodata guru ${updatedGuru.nama} diselaraskan ke cloud!`, ...prev]);
       } catch (err: any) {
         console.error("Gagal sinkronisasi update guru:", err);
-        alert(`Gagal memperbarui data di Supabase: ${err.message}`);
-        return;
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal memperbarui guru di Cloud (${err.message}). Klik Simpan ke Cloud nanti untuk menyelaraskan.`, ...prev]);
       }
-    } else {
-      const updated = guru.map(g => g.id === updatedGuru.id ? updatedGuru : g);
-      LocalDB.saveGuru(updated);
     }
-
-    loadDatabase(true);
-    setLogMessages(prev => [`Biodata guru ${updatedGuru.nama} berhasil diperbarui.`, ...prev]);
   };
 
   // --- CRUD MAPEL ---
@@ -905,22 +888,23 @@ export default function AdministrativeDashboard() {
       jumlah_jam_per_minggu: Number(newMapel.jumlah_jam_per_minggu) || 4,
     };
 
+    // Always save locally first!
+    const updated = [...mapel, created];
+    LocalDB.saveMapel(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setNewMapel({ kode_mapel: '', nama_mapel: '', jumlah_jam_per_minggu: 4 });
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         await SupabaseSyncService.syncSubject(created, 'upsert');
-        setLogMessages(prev => [`☁️ [Real-time] Mata pelajaran "${created.nama_mapel}" berhasil ditambahkan langsung ke cloud!`, ...prev]);
-        await SupabaseSyncService.pullAll();
+        setLogMessages(prev => [`☁️ [Real-time] Mata pelajaran "${created.nama_mapel}" diselaraskan ke Supabase Cloud!`, ...prev]);
       } catch (err: any) {
-        console.error("Gagal sinkronisasi mapel:", err);
-        alert(`Gagal menyimpan data ke Supabase: ${err.message}`);
-        return;
+        console.error("Gagal sinkronisasi mapel ke cloud:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan mapel ke Cloud (${err.message}). Data disimpan lokal, silakan simpan manual nanti.`, ...prev]);
       }
-    } else {
-      LocalDB.saveMapel([...mapel, created]);
     }
-
-    setNewMapel({ kode_mapel: '', nama_mapel: '', jumlah_jam_per_minggu: 4 });
-    loadDatabase(true);
   };
 
   const handleDeleteMapel = (id: string) => {
@@ -932,26 +916,26 @@ export default function AdministrativeDashboard() {
       message: `Apakah Anda yakin ingin menghapus mata pelajaran "${targetName}"? Pengampu dan slot jadwal pelajaran terkait akan dilepaskan secara permanen.`,
       type: 'delete_mapel',
       onConfirm: async () => {
+        // Always save locally first!
+        LocalDB.saveMapel(mapel.filter(m => m.id !== id));
+        LocalDB.savePengampu(pengampu.filter(a => a.mapel_id !== id));
+        LocalDB.saveJadwal(jadwal.filter(s => s.mapel_id !== id));
+        setHasUnsavedChanges(true);
+        loadDatabase(true);
+
+        setLogMessages(prev => [`Mata pelajaran "${targetName}" beserta relasi terkait berhasil dihapus dari browser.`, ...prev]);
+        setSelectedCell(null);
+        setConfirmModal(null);
+
         if (isSupabaseModeActive() && currentUser && target) {
           try {
             await SupabaseSyncService.syncSubject(target, 'delete');
-            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Mapel "${targetName}" langsung dari cloud!`, ...prev]);
-            await SupabaseSyncService.pullAll();
+            setLogMessages(prev => [`☁️ [Real-time] Penghapusan Mapel "${targetName}" diselaraskan di cloud!`, ...prev]);
           } catch (err: any) {
             console.error("Gagal sinkronisasi hapus mapel:", err);
-            alert(`Gagal menghapus data dari Supabase: ${err.message}`);
-            return;
+            setLogMessages(prev => [`⚠️ Peringatan: Gagal menghapus mapel di Cloud (${err.message}). Silakan lakukan klik Simpan ke Cloud nanti.`, ...prev]);
           }
-        } else {
-          LocalDB.saveMapel(mapel.filter(m => m.id !== id));
-          LocalDB.savePengampu(pengampu.filter(a => a.mapel_id !== id));
-          LocalDB.saveJadwal(jadwal.filter(s => s.mapel_id !== id));
         }
-
-        loadDatabase(true);
-        setLogMessages(prev => [`Mata pelajaran "${targetName}" beserta relasi jadwal berhasil dihapus.`, ...prev]);
-        setSelectedCell(null);
-        setConfirmModal(null);
       }
     });
   };
@@ -970,22 +954,23 @@ export default function AdministrativeDashboard() {
       wali_kelas: newKelas.wali_kelas || '',
     };
 
+    // Always save locally first!
+    const updated = [...kelas, created];
+    LocalDB.saveKelas(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setNewKelas({ nama_kelas: '', tingkat: 'VII', wali_kelas: '' });
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         await SupabaseSyncService.syncClass(created, 'upsert');
-        setLogMessages(prev => [`☁️ [Real-time] Kelas "${created.nama_kelas}" berhasil ditambahkan langsung ke cloud!`, ...prev]);
-        await SupabaseSyncService.pullAll();
+        setLogMessages(prev => [`☁️ [Real-time] Kelas "${created.nama_kelas}" diselaraskan ke Supabase Cloud!`, ...prev]);
       } catch (err: any) {
-        console.error("Gagal sinkronisasi kelas:", err);
-        alert(`Gagal menyimpan data ke Supabase: ${err.message}`);
-        return;
+        console.error("Gagal sinkronisasi kelas ke cloud:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan kelas ke Cloud (${err.message}). Data disimpan lokal, silakan simpan manual nanti.`, ...prev]);
       }
-    } else {
-      LocalDB.saveKelas([...kelas, created]);
     }
-
-    setNewKelas({ nama_kelas: '', tingkat: 'VII', wali_kelas: '' });
-    loadDatabase(true);
   };
 
   const handleDeleteKelas = (id: string) => {
@@ -997,26 +982,26 @@ export default function AdministrativeDashboard() {
       message: `Apakah Anda yakin ingin menghapus kelas "${targetName}"? Pengampu dan rancangan jadwal untuk kelas ini akan ikut dihapus.`,
       type: 'delete_kelas',
       onConfirm: async () => {
+        // Always save locally first!
+        LocalDB.saveKelas(kelas.filter(c => c.id !== id));
+        LocalDB.savePengampu(pengampu.filter(a => a.kelas_id !== id));
+        LocalDB.saveJadwal(jadwal.filter(s => s.kelas_id !== id));
+        setHasUnsavedChanges(true);
+        loadDatabase(true);
+
+        setLogMessages(prev => [`Data kelas "${targetName}" berhasil dihapus dari browser.`, ...prev]);
+        setSelectedCell(null);
+        setConfirmModal(null);
+
         if (isSupabaseModeActive() && currentUser && target) {
           try {
             await SupabaseSyncService.syncClass(target, 'delete');
-            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Kelas "${targetName}" langsung dari cloud!`, ...prev]);
-            await SupabaseSyncService.pullAll();
+            setLogMessages(prev => [`☁️ [Real-time] Penghapusan Kelas "${targetName}" diselaraskan di cloud!`, ...prev]);
           } catch (err: any) {
             console.error("Gagal sinkronisasi hapus kelas:", err);
-            alert(`Gagal menghapus data dari Supabase: ${err.message}`);
-            return;
+            setLogMessages(prev => [`⚠️ Peringatan: Gagal menghapus kelas di Cloud (${err.message}). Silakan lakukan klik Simpan ke Cloud nanti.`, ...prev]);
           }
-        } else {
-          LocalDB.saveKelas(kelas.filter(c => c.id !== id));
-          LocalDB.savePengampu(pengampu.filter(a => a.kelas_id !== id));
-          LocalDB.saveJadwal(jadwal.filter(s => s.kelas_id !== id));
         }
-
-        loadDatabase(true);
-        setLogMessages(prev => [`Data kelas "${targetName}" berhasil dihapus dari sistem.`, ...prev]);
-        setSelectedCell(null);
-        setConfirmModal(null);
       }
     });
   };
@@ -1033,22 +1018,23 @@ export default function AdministrativeDashboard() {
       kapasitas: Number(newRuangan.kapasitas) || 32,
     };
 
+    // Always save locally first!
+    const updated = [...ruangan, created];
+    LocalDB.saveRuangan(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setNewRuangan({ nama_ruangan: '', kapasitas: 32 });
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         await SupabaseSyncService.syncRoom(created, 'upsert');
-        setLogMessages(prev => [`☁️ [Real-time] Ruangan "${created.nama_ruangan}" berhasil ditambahkan langsung ke cloud!`, ...prev]);
-        await SupabaseSyncService.pullAll();
+        setLogMessages(prev => [`☁️ [Real-time] Ruangan "${created.nama_ruangan}" diselaraskan ke Supabase Cloud!`, ...prev]);
       } catch (err: any) {
-        console.error("Gagal sinkronisasi ruangan:", err);
-        alert(`Gagal menyimpan data ke Supabase: ${err.message}`);
-        return;
+        console.error("Gagal sinkronisasi ruangan ke cloud:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan ruangan ke Cloud (${err.message}). Data disimpan lokal, silakan simpan manual nanti.`, ...prev]);
       }
-    } else {
-      LocalDB.saveRuangan([...ruangan, created]);
     }
-
-    setNewRuangan({ nama_ruangan: '', kapasitas: 32 });
-    loadDatabase(true);
   };
 
   const handleDeleteRuangan = (id: string) => {
@@ -1060,25 +1046,25 @@ export default function AdministrativeDashboard() {
       message: `Apakah Anda yakin ingin menghapus ruangan "${targetName}"? Alokasi ruangan pada jadwal akan dibersihkan.`,
       type: 'delete_ruangan',
       onConfirm: async () => {
+        // Always save locally first!
+        LocalDB.saveRuangan(ruangan.filter(r => r.id !== id));
+        LocalDB.saveJadwal(jadwal.filter(s => s.ruangan_id !== id));
+        setHasUnsavedChanges(true);
+        loadDatabase(true);
+
+        setLogMessages(prev => [`Data ruangan "${targetName}" berhasil dihapus dari browser.`, ...prev]);
+        setSelectedCell(null);
+        setConfirmModal(null);
+
         if (isSupabaseModeActive() && currentUser && target) {
           try {
             await SupabaseSyncService.syncRoom(target, 'delete');
-            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Ruangan "${targetName}" langsung dari cloud!`, ...prev]);
-            await SupabaseSyncService.pullAll();
+            setLogMessages(prev => [`☁️ [Real-time] Penghapusan Ruangan "${targetName}" diselaraskan di cloud!`, ...prev]);
           } catch (err: any) {
             console.error("Gagal sinkronisasi hapus ruangan:", err);
-            alert(`Gagal menghapus data dari Supabase: ${err.message}`);
-            return;
+            setLogMessages(prev => [`⚠️ Peringatan: Gagal menghapus ruangan di Cloud (${err.message}). Silakan lakukan klik Simpan ke Cloud nanti.`, ...prev]);
           }
-        } else {
-          LocalDB.saveRuangan(ruangan.filter(r => r.id !== id));
-          LocalDB.saveJadwal(jadwal.filter(s => s.ruangan_id !== id));
         }
-
-        loadDatabase(true);
-        setLogMessages(prev => [`Data ruangan "${targetName}" berhasil dihapus.`, ...prev]);
-        setSelectedCell(null);
-        setConfirmModal(null);
       }
     });
   };
@@ -1098,22 +1084,23 @@ export default function AdministrativeDashboard() {
       jumlah_jam: Number(newPengampu.jumlah_jam) || 4,
     };
 
+    // Always save locally first!
+    const updated = [...pengampu, created];
+    LocalDB.savePengampu(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setNewPengampu({ guru_id: '', mapel_id: '', kelas_id: '', jumlah_jam: 4 });
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         await SupabaseSyncService.syncAssignment(created, 'upsert');
-        setLogMessages(prev => [`☁️ [Real-time] Tugas pengampu berhasil ditambahkan langsung ke cloud!`, ...prev]);
-        await SupabaseSyncService.pullAll();
+        setLogMessages(prev => [`☁️ [Real-time] Tugas pengampu berhasil diselaraskan ke Supabase Cloud!`, ...prev]);
       } catch (err: any) {
-        console.error("Gagal sinkronisasi pengampu:", err);
-        alert(`Gagal menyimpan data ke Supabase: ${err.message}`);
-        return;
+        console.error("Gagal sinkronisasi pengampu ke cloud:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan tugas pengampu ke Cloud (${err.message}). Data disimpan lokal, silakan simpan manual nanti.`, ...prev]);
       }
-    } else {
-      LocalDB.savePengampu([...pengampu, created]);
     }
-
-    setNewPengampu({ guru_id: '', mapel_id: '', kelas_id: '', jumlah_jam: 4 });
-    loadDatabase(true);
   };
 
   const handleDeletePengampu = (id: string) => {
@@ -1128,25 +1115,25 @@ export default function AdministrativeDashboard() {
       message: `Apakah Anda yakin ingin menghapus tugas mengajar "${desc}"? Slot jadwal terkait akan otomatis dikosongkan.`,
       type: 'delete_pengampu',
       onConfirm: async () => {
+        // Always save locally first!
+        LocalDB.savePengampu(pengampu.filter(a => a.id !== id));
+        LocalDB.saveJadwal(jadwal.filter(s => s.assignment_id !== id));
+        setHasUnsavedChanges(true);
+        loadDatabase(true);
+
+        setLogMessages(prev => [`Tugas mengajar "${desc}" berhasil dihapus dari browser.`, ...prev]);
+        setSelectedCell(null);
+        setConfirmModal(null);
+
         if (isSupabaseModeActive() && currentUser && target) {
           try {
             await SupabaseSyncService.syncAssignment(target, 'delete');
-            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Tugas Pengampu langsung dari cloud!`, ...prev]);
-            await SupabaseSyncService.pullAll();
+            setLogMessages(prev => [`☁️ [Real-time] Penghapusan Tugas Pengampu diselaraskan di cloud!`, ...prev]);
           } catch (err: any) {
             console.error("Gagal sinkronisasi hapus pengampu:", err);
-            alert(`Gagal menghapus data dari Supabase: ${err.message}`);
-            return;
+            setLogMessages(prev => [`⚠️ Peringatan: Gagal menghapus pengampu di Cloud (${err.message}). Silakan lakukan klik Simpan ke Cloud nanti.`, ...prev]);
           }
-        } else {
-          LocalDB.savePengampu(pengampu.filter(a => a.id !== id));
-          LocalDB.saveJadwal(jadwal.filter(s => s.assignment_id !== id));
         }
-
-        loadDatabase(true);
-        setLogMessages(prev => [`Tugas mengajar "${desc}" berhasil dihapus.`, ...prev]);
-        setSelectedCell(null);
-        setConfirmModal(null);
       }
     });
   };
@@ -1172,28 +1159,28 @@ export default function AdministrativeDashboard() {
       slot_tidak_bersedia: updatedPref.slot_tidak_bersedia
     };
 
+    // Always save locally first!
+    let newPrefList = [...preferensi];
+    if (existingIdx !== -1) {
+      newPrefList[existingIdx] = updated;
+    } else {
+      newPrefList.push(updated);
+    }
+    LocalDB.savePreferensi(newPrefList);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setLogMessages(prev => [`Preferensi guru ${guru.find(g => g.id === guruId)?.nama} berhasil disimpan dan dievaluasi lokal.`, ...prev]);
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         await SupabaseSyncService.syncPreference(updated, 'upsert');
         setLogMessages(prev => [`☁️ [Real-time] Preferensi guru berhasil diselaraskan langsung ke cloud!`, ...prev]);
-        await SupabaseSyncService.pullAll();
       } catch (err: any) {
         console.error("Gagal sinkronisasi preferensi:", err);
-        alert(`Gagal menyimpan preferensi ke Supabase: ${err.message}`);
-        return;
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal menyimpan preferensi ke Cloud (${err.message}). Klik Simpan ke Cloud nanti untuk menyelaraskan.`, ...prev]);
       }
-    } else {
-      let newPrefList = [...preferensi];
-      if (existingIdx !== -1) {
-        newPrefList[existingIdx] = updated;
-      } else {
-        newPrefList.push(updated);
-      }
-      LocalDB.savePreferensi(newPrefList);
     }
-
-    loadDatabase(true);
-    setLogMessages(prev => [`Preferensi guru ${guru.find(g => g.id === guruId)?.nama} berhasil disimpan dan dievaluasi.`, ...prev]);
   };
 
   const handleUpdateBatasJamHari = (updatedBatas: Record<Hari, number>) => {
@@ -1928,6 +1915,22 @@ export default function AdministrativeDashboard() {
                     </span>
                   )}
                   
+                  {hasUnsavedChanges && (
+                    <button 
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        if (isCloudSyncing) return;
+                        await handlePushAllToCloud();
+                      }}
+                      disabled={isCloudSyncing}
+                      className="text-[10px] px-2.5 py-0.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-200 rounded-md font-bold font-sans flex items-center gap-1.5 transition cursor-pointer select-none"
+                      title="Ada perubahan data baru di browser Anda yang belum disimpan ke Cloud. Klik di sini untuk mengunggah & menyinkronkan seluruh data sekarang."
+                    >
+                      <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping" />
+                      ⚠️ Ada Data Belum Disimpan ke Cloud (Klik untuk Simpan)
+                    </button>
+                  )}
+                  
                   <button
                     onClick={async (e) => {
                       e.preventDefault();
@@ -2264,7 +2267,11 @@ export default function AdministrativeDashboard() {
           )}
 
           {activeTab === 'supabase' && (
-            <SupabaseTab setLogMessages={setLogMessages} />
+            <SupabaseTab 
+              setLogMessages={setLogMessages} 
+              hasUnsavedChanges={hasUnsavedChanges}
+              setHasUnsavedChanges={setHasUnsavedChanges}
+            />
           )}
 
           {activeTab === 'activation' && (

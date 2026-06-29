@@ -11,9 +11,11 @@ import { SupabaseSyncService } from '../lib/supabaseSync';
 
 interface SupabaseTabProps {
   setLogMessages: React.Dispatch<React.SetStateAction<string[]>>;
+  hasUnsavedChanges?: boolean;
+  setHasUnsavedChanges?: (val: boolean) => void;
 }
 
-export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
+export default function SupabaseTab({ setLogMessages, hasUnsavedChanges, setHasUnsavedChanges }: SupabaseTabProps) {
   const [supabaseUrl, setSupabaseUrl] = useState(() => {
     const config = getSupabaseConfig();
     return config.supabaseUrl || '';
@@ -90,6 +92,7 @@ export default function SupabaseTab({ setLogMessages }: SupabaseTabProps) {
     }
 
     if (result.success) {
+      setHasUnsavedChanges?.(false);
       setLogMessages(prev => ['Berhasil mensinkronisasikan dan mengunggah data ke Supabase cloud!', ...prev]);
       alert('Unggah data ke Supabase berhasil!');
     } else {
