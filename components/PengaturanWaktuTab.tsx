@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Calendar, Clock, Plus, Trash2, AlertTriangle, Check, RefreshCw } from 'lucide-react';
 import { Hari, JamPelajaran } from '../lib/types';
 import { LocalDB } from '../lib/db';
+import { isSupabaseModeActive } from '../lib/supabaseClient';
+import { SupabaseSyncService } from '../lib/supabaseSync';
 
 interface PengaturanWaktuTabProps {
   hariAktif: Hari[];
@@ -12,7 +14,7 @@ interface PengaturanWaktuTabProps {
   onUpdateHariAktif: (hari: Hari[]) => void;
   onUpdateJamPelajaran: (jam: JamPelajaran[]) => void;
   onUpdateBatasJamHari: (batas: Record<Hari, number>) => void;
-  loadDatabase: () => void;
+  loadDatabase: (skipCloudSync?: boolean) => void;
   setLogMessages: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
@@ -72,7 +74,7 @@ export default function PengaturanWaktuTab({
     ]);
   };
 
-  const handleAddPeriod = (e: React.FormEvent) => {
+  const handleAddPeriod = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (jamPelajaran.some(p => p.jam_ke === newJamKe)) {
@@ -90,7 +92,18 @@ export default function PengaturanWaktuTab({
     const updated = [...jamPelajaran, newPeriod].sort((a, b) => a.jam_ke - b.jam_ke);
     onUpdateJamPelajaran(updated);
     LocalDB.saveJamPelajaran(updated);
-    loadDatabase();
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive()) {
+      try {
+        await SupabaseSyncService.syncPeriod(newPeriod, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Berhasil menambahkan Jam Pelajaran Ke-${newJamKe} langsung ke cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi jam pelajaran baru:", err);
+      }
+    }
+
+    loadDatabase(true);
 
     // Setup defaults for next entry
     setNewJamKe(updated.length + 1);
@@ -105,11 +118,23 @@ export default function PengaturanWaktuTab({
     setPendingDeleteId(id);
   };
 
-  const confirmDeletePeriod = (id: string, jamKe: number) => {
+  const confirmDeletePeriod = async (id: string, jamKe: number) => {
+    const target = jamPelajaran.find(p => p.id === id);
     const updated = jamPelajaran.filter(p => p.id !== id);
     onUpdateJamPelajaran(updated);
     LocalDB.saveJamPelajaran(updated);
-    loadDatabase();
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && target) {
+      try {
+        await SupabaseSyncService.syncPeriod(target, 'delete');
+        setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Jam Pelajaran Ke-${jamKe} langsung dari cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi hapus jam pelajaran:", err);
+      }
+    }
+
+    loadDatabase(true);
     setPendingDeleteId(null);
     
     setLogMessages(prev => [
@@ -124,21 +149,34 @@ export default function PengaturanWaktuTab({
     setEditJamSelesai(p.jam_selesai);
   };
 
-  const handleSaveEditPeriod = (id: string) => {
+  const handleSaveEditPeriod = async (id: string) => {
+    let editedPeriod: JamPelajaran | null = null;
     const updated = jamPelajaran.map(p => {
       if (p.id === id) {
-        return {
+        editedPeriod = {
           ...p,
           jam_mulai: editJamMulai,
           jam_selesai: editJamSelesai
         };
+        return editedPeriod;
       }
       return p;
     });
 
     onUpdateJamPelajaran(updated);
     LocalDB.saveJamPelajaran(updated);
-    loadDatabase();
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && editedPeriod) {
+      try {
+        await SupabaseSyncService.syncPeriod(editedPeriod, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Berhasil memperbarui Jam Pelajaran Ke-${(editedPeriod as JamPelajaran).jam_ke} langsung di cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi edit jam pelajaran:", err);
+      }
+    }
+
+    loadDatabase(true);
     setEditPeriodId(null);
     setLogMessages(prev => [
       `📝 Jam Pelajaran diperbarui.`,

@@ -762,7 +762,7 @@ export default function AdministrativeDashboard() {
   };
 
   // --- CRUD GURU ---
-  const handleAddGuru = (e: React.FormEvent) => {
+  const handleAddGuru = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGuru.nama || !newGuru.nip) {
       alert('Nama dan NIP wajib diisi.');
@@ -791,8 +791,19 @@ export default function AdministrativeDashboard() {
     };
     LocalDB.savePreferensi([...preferensi, defaultPref]);
 
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && currentUser?.isGoogle) {
+      try {
+        await SupabaseSyncService.syncTeacher(created, 'upsert');
+        await SupabaseSyncService.syncPreference(defaultPref, 'upsert');
+        setLogMessages(prev => ["☁️ [Real-time] Berhasil menambahkan Guru dan Preferensi langsung ke cloud!", ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi guru baru:", err);
+      }
+    }
+
     setNewGuru({ nama: '', nip: '', jenis_kelamin: 'Laki-laki', no_hp: '', status_aktif: true });
-    loadDatabase();
+    loadDatabase(true);
   };
 
   const handleDeleteGuru = (id: string) => {
@@ -803,7 +814,7 @@ export default function AdministrativeDashboard() {
       title: 'Hapus Data Guru',
       message: `Apakah Anda yakin ingin menghapus guru "${targetName}"? Seluruh data preferensi, tugas pengampu, dan jadwal terkait akan ikut dihapus secara permanen dari sistem.`,
       type: 'delete_guru',
-      onConfirm: () => {
+      onConfirm: async () => {
         const filteredGuru = guru.filter(g => g.id !== id);
         const filteredAssignment = pengampu.filter(a => a.guru_id !== id);
         const filteredPref = preferensi.filter(p => p.guru_id !== id);
@@ -813,7 +824,18 @@ export default function AdministrativeDashboard() {
         LocalDB.savePengampu(filteredAssignment);
         LocalDB.savePreferensi(filteredPref);
         LocalDB.saveJadwal(filteredSched);
-        loadDatabase();
+
+        // REAL-TIME DIRECT SUPABASE SYNC
+        if (isSupabaseModeActive() && currentUser?.isGoogle && target) {
+          try {
+            await SupabaseSyncService.syncTeacher(target, 'delete');
+            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Guru "${targetName}" langsung dari cloud!`, ...prev]);
+          } catch (err: any) {
+            console.error("Gagal sinkronisasi hapus guru:", err);
+          }
+        }
+
+        loadDatabase(true);
         setLogMessages(prev => [`Data guru "${targetName}" beserta relasi terkait berhasil dihapus.`, ...prev]);
         setSelectedCell(null);
         setConfirmModal(null);
@@ -821,15 +843,26 @@ export default function AdministrativeDashboard() {
     });
   };
 
-  const handleUpdateGuru = (updatedGuru: Guru) => {
+  const handleUpdateGuru = async (updatedGuru: Guru) => {
     const updated = guru.map(g => g.id === updatedGuru.id ? updatedGuru : g);
     LocalDB.saveGuru(updated);
-    loadDatabase();
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && currentUser?.isGoogle) {
+      try {
+        await SupabaseSyncService.syncTeacher(updatedGuru, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Biodata guru ${updatedGuru.nama} berhasil diperbarui di cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi update guru:", err);
+      }
+    }
+
+    loadDatabase(true);
     setLogMessages(prev => [`Biodata guru ${updatedGuru.nama} berhasil diperbarui.`, ...prev]);
   };
 
   // --- CRUD MAPEL ---
-  const handleAddMapel = (e: React.FormEvent) => {
+  const handleAddMapel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMapel.nama_mapel || !newMapel.kode_mapel) {
       alert('Nama mapel dan kode mapel wajib diisi.');
@@ -842,23 +875,45 @@ export default function AdministrativeDashboard() {
       jumlah_jam_per_minggu: Number(newMapel.jumlah_jam_per_minggu) || 4,
     };
     LocalDB.saveMapel([...mapel, created]);
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && currentUser?.isGoogle) {
+      try {
+        await SupabaseSyncService.syncSubject(created, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Mata pelajaran "${created.nama_mapel}" berhasil ditambahkan ke cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi mapel:", err);
+      }
+    }
+
     setNewMapel({ kode_mapel: '', nama_mapel: '', jumlah_jam_per_minggu: 4 });
-    loadDatabase();
+    loadDatabase(true);
   };
 
   const handleDeleteMapel = (id: string) => {
-    const target = mapel.find(m => m.id !== id);
+    const target = mapel.find(m => m.id === id);
     const targetName = target ? target.nama_mapel : 'Mata Pelajaran';
     setConfirmModal({
       isOpen: true,
       title: 'Hapus Mata Pelajaran',
       message: `Apakah Anda yakin ingin menghapus mata pelajaran "${targetName}"? Pengampu dan slot jadwal pelajaran terkait akan dilepaskan secara permanen.`,
       type: 'delete_mapel',
-      onConfirm: () => {
+      onConfirm: async () => {
         LocalDB.saveMapel(mapel.filter(m => m.id !== id));
         LocalDB.savePengampu(pengampu.filter(a => a.mapel_id !== id));
         LocalDB.saveJadwal(jadwal.filter(s => s.mapel_id !== id));
-        loadDatabase();
+
+        // REAL-TIME DIRECT SUPABASE SYNC
+        if (isSupabaseModeActive() && currentUser?.isGoogle && target) {
+          try {
+            await SupabaseSyncService.syncSubject(target, 'delete');
+            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Mapel "${targetName}" langsung dari cloud!`, ...prev]);
+          } catch (err: any) {
+            console.error("Gagal sinkronisasi hapus mapel:", err);
+          }
+        }
+
+        loadDatabase(true);
         setLogMessages(prev => [`Mata pelajaran "${targetName}" beserta relasi jadwal berhasil dihapus.`, ...prev]);
         setSelectedCell(null);
         setConfirmModal(null);
@@ -867,7 +922,7 @@ export default function AdministrativeDashboard() {
   };
 
   // --- CRUD KELAS & RUANGAN ---
-  const handleAddKelas = (e: React.FormEvent) => {
+  const handleAddKelas = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newKelas.nama_kelas) {
       alert('Nama kelas wajib diisi.');
@@ -880,8 +935,19 @@ export default function AdministrativeDashboard() {
       wali_kelas: newKelas.wali_kelas || '',
     };
     LocalDB.saveKelas([...kelas, created]);
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && currentUser?.isGoogle) {
+      try {
+        await SupabaseSyncService.syncClass(created, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Kelas "${created.nama_kelas}" berhasil ditambahkan ke cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi kelas:", err);
+      }
+    }
+
     setNewKelas({ nama_kelas: '', tingkat: 'VII', wali_kelas: '' });
-    loadDatabase();
+    loadDatabase(true);
   };
 
   const handleDeleteKelas = (id: string) => {
@@ -892,11 +958,22 @@ export default function AdministrativeDashboard() {
       title: 'Hapus Data Kelas',
       message: `Apakah Anda yakin ingin menghapus kelas "${targetName}"? Pengampu dan rancangan jadwal untuk kelas ini akan ikut dihapus.`,
       type: 'delete_kelas',
-      onConfirm: () => {
+      onConfirm: async () => {
         LocalDB.saveKelas(kelas.filter(c => c.id !== id));
         LocalDB.savePengampu(pengampu.filter(a => a.kelas_id !== id));
         LocalDB.saveJadwal(jadwal.filter(s => s.kelas_id !== id));
-        loadDatabase();
+
+        // REAL-TIME DIRECT SUPABASE SYNC
+        if (isSupabaseModeActive() && currentUser?.isGoogle && target) {
+          try {
+            await SupabaseSyncService.syncClass(target, 'delete');
+            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Kelas "${targetName}" langsung dari cloud!`, ...prev]);
+          } catch (err: any) {
+            console.error("Gagal sinkronisasi hapus kelas:", err);
+          }
+        }
+
+        loadDatabase(true);
         setLogMessages(prev => [`Data kelas "${targetName}" berhasil dihapus dari sistem.`, ...prev]);
         setSelectedCell(null);
         setConfirmModal(null);
@@ -904,7 +981,7 @@ export default function AdministrativeDashboard() {
     });
   };
 
-  const handleAddRuangan = (e: React.FormEvent) => {
+  const handleAddRuangan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRuangan.nama_ruangan) {
       alert('Nama ruangan wajib diisi.');
@@ -916,8 +993,19 @@ export default function AdministrativeDashboard() {
       kapasitas: Number(newRuangan.kapasitas) || 32,
     };
     LocalDB.saveRuangan([...ruangan, created]);
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && currentUser?.isGoogle) {
+      try {
+        await SupabaseSyncService.syncRoom(created, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Ruangan "${created.nama_ruangan}" berhasil ditambahkan ke cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi ruangan:", err);
+      }
+    }
+
     setNewRuangan({ nama_ruangan: '', kapasitas: 32 });
-    loadDatabase();
+    loadDatabase(true);
   };
 
   const handleDeleteRuangan = (id: string) => {
@@ -928,10 +1016,21 @@ export default function AdministrativeDashboard() {
       title: 'Hapus Data Ruangan',
       message: `Apakah Anda yakin ingin menghapus ruangan "${targetName}"? Alokasi ruangan pada jadwal akan dibersihkan.`,
       type: 'delete_ruangan',
-      onConfirm: () => {
+      onConfirm: async () => {
         LocalDB.saveRuangan(ruangan.filter(r => r.id !== id));
         LocalDB.saveJadwal(jadwal.filter(s => s.ruangan_id !== id));
-        loadDatabase();
+
+        // REAL-TIME DIRECT SUPABASE SYNC
+        if (isSupabaseModeActive() && currentUser?.isGoogle && target) {
+          try {
+            await SupabaseSyncService.syncRoom(target, 'delete');
+            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Ruangan "${targetName}" langsung dari cloud!`, ...prev]);
+          } catch (err: any) {
+            console.error("Gagal sinkronisasi hapus ruangan:", err);
+          }
+        }
+
+        loadDatabase(true);
         setLogMessages(prev => [`Data ruangan "${targetName}" berhasil dihapus.`, ...prev]);
         setSelectedCell(null);
         setConfirmModal(null);
@@ -940,7 +1039,7 @@ export default function AdministrativeDashboard() {
   };
 
   // --- CRUD ASSIGNMENTS (PENGAMPU) ---
-  const handleAddPengampu = (e: React.FormEvent) => {
+  const handleAddPengampu = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPengampu.guru_id || !newPengampu.mapel_id || !newPengampu.kelas_id) {
       alert('Harap pilih Guru, Mata Pelajaran, dan Kelas penerima.');
@@ -954,8 +1053,19 @@ export default function AdministrativeDashboard() {
       jumlah_jam: Number(newPengampu.jumlah_jam) || 4,
     };
     LocalDB.savePengampu([...pengampu, created]);
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && currentUser?.isGoogle) {
+      try {
+        await SupabaseSyncService.syncAssignment(created, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Tugas pengampu berhasil ditambahkan ke cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi pengampu:", err);
+      }
+    }
+
     setNewPengampu({ guru_id: '', mapel_id: '', kelas_id: '', jumlah_jam: 4 });
-    loadDatabase();
+    loadDatabase(true);
   };
 
   const handleDeletePengampu = (id: string) => {
@@ -969,10 +1079,21 @@ export default function AdministrativeDashboard() {
       title: 'Hapus Tugas Mengajar (Pengampu)',
       message: `Apakah Anda yakin ingin menghapus tugas mengajar "${desc}"? Slot jadwal terkait akan otomatis dikosongkan.`,
       type: 'delete_pengampu',
-      onConfirm: () => {
+      onConfirm: async () => {
         LocalDB.savePengampu(pengampu.filter(a => a.id !== id));
         LocalDB.saveJadwal(jadwal.filter(s => s.assignment_id !== id));
-        loadDatabase();
+
+        // REAL-TIME DIRECT SUPABASE SYNC
+        if (isSupabaseModeActive() && currentUser?.isGoogle && target) {
+          try {
+            await SupabaseSyncService.syncAssignment(target, 'delete');
+            setLogMessages(prev => [`☁️ [Real-time] Berhasil menghapus Tugas Pengampu langsung dari cloud!`, ...prev]);
+          } catch (err: any) {
+            console.error("Gagal sinkronisasi hapus pengampu:", err);
+          }
+        }
+
+        loadDatabase(true);
         setLogMessages(prev => [`Tugas mengajar "${desc}" berhasil dihapus.`, ...prev]);
         setSelectedCell(null);
         setConfirmModal(null);
@@ -981,7 +1102,7 @@ export default function AdministrativeDashboard() {
   };
 
   // --- PREFERENCES SAVE CALLBACK ---
-  const handleSavePreferensi = (guruId: string, updatedPref: {
+  const handleSavePreferensi = async (guruId: string, updatedPref: {
     hari_tidak_bersedia: Hari[];
     jam_tidak_bersedia: number[];
     hari_favorit: Hari[];
@@ -1009,7 +1130,18 @@ export default function AdministrativeDashboard() {
     }
 
     LocalDB.savePreferensi(newPrefList);
-    loadDatabase();
+
+    // REAL-TIME DIRECT SUPABASE SYNC
+    if (isSupabaseModeActive() && currentUser?.isGoogle) {
+      try {
+        await SupabaseSyncService.syncPreference(updated, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Preferensi guru berhasil diselaraskan ke cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi preferensi:", err);
+      }
+    }
+
+    loadDatabase(true);
     setLogMessages(prev => [`Preferensi guru ${guru.find(g => g.id === guruId)?.nama} berhasil disimpan dan dievaluasi.`, ...prev]);
   };
 

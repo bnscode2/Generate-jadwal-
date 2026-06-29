@@ -523,7 +523,7 @@ export class SupabaseSyncService {
       const userId = user?.id || null;
       if (!userId) return; // Prevent unauthenticated writes!
       
-      const payload = {
+      const payload = action === 'delete' ? itemPayload : {
         ...itemPayload,
         user_id: userId
       };
@@ -536,5 +536,81 @@ export class SupabaseSyncService {
     } catch (err) {
       console.error(`Gagal melakukan sync single item ke tabel ${table}:`, err);
     }
+  }
+
+  // 5. Synchronous real-time single item pushes for vital tables
+  static async syncTeacher(t: Guru, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: IDMapper.getUUID(t.id) } : {
+      id: IDMapper.getUUID(t.id),
+      nip: t.nip,
+      nama: t.nama,
+      jenis_kelamin: t.jenis_kelamin,
+      no_hp: t.no_hp || '',
+      status_aktif: t.status_aktif
+    };
+    await this.syncSingleItem('teachers', action, payload);
+  }
+
+  static async syncSubject(s: MataPelajaran, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: IDMapper.getUUID(s.id) } : {
+      id: IDMapper.getUUID(s.id),
+      kode_mapel: s.kode_mapel,
+      nama_mapel: s.nama_mapel,
+      jumlah_jam_per_minggu: s.jumlah_jam_per_minggu
+    };
+    await this.syncSingleItem('subjects', action, payload);
+  }
+
+  static async syncClass(c: Kelas, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: IDMapper.getUUID(c.id) } : {
+      id: IDMapper.getUUID(c.id),
+      nama_kelas: c.nama_kelas,
+      tingkat: c.tingkat,
+      wali_kelas: c.wali_kelas || ''
+    };
+    await this.syncSingleItem('classes', action, payload);
+  }
+
+  static async syncRoom(r: Ruangan, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: IDMapper.getUUID(r.id) } : {
+      id: IDMapper.getUUID(r.id),
+      nama_ruangan: r.nama_ruangan,
+      kapasitas: r.kapasitas
+    };
+    await this.syncSingleItem('rooms', action, payload);
+  }
+
+  static async syncPeriod(p: JamPelajaran, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: IDMapper.getUUID(p.id) } : {
+      id: IDMapper.getUUID(p.id),
+      jam_ke: p.jam_ke,
+      jam_mulai: p.jam_mulai.includes(':') ? p.jam_mulai : `${p.jam_mulai}:00`,
+      jam_selesai: p.jam_selesai.includes(':') ? p.jam_selesai : `${p.jam_selesai}:00`
+    };
+    await this.syncSingleItem('periods', action, payload);
+  }
+
+  static async syncPreference(p: PreferensiGuru, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: IDMapper.getUUID(p.id) } : {
+      id: IDMapper.getUUID(p.id),
+      guru_id: IDMapper.getUUID(p.guru_id),
+      hari_tidak_bersedia: p.hari_tidak_bersedia,
+      jam_tidak_bersedia: p.jam_tidak_bersedia,
+      hari_favorit: p.hari_favorit || [],
+      jam_favorit: p.jam_favorit || [],
+      max_jam_per_hari: p.max_jam_per_hari
+    };
+    await this.syncSingleItem('teacher_preferences', action, payload);
+  }
+
+  static async syncAssignment(a: PengampuMataPelajaran, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: IDMapper.getUUID(a.id) } : {
+      id: IDMapper.getUUID(a.id),
+      guru_id: IDMapper.getUUID(a.guru_id),
+      mapel_id: IDMapper.getUUID(a.mapel_id),
+      kelas_id: IDMapper.getUUID(a.kelas_id),
+      jumlah_jam: a.jumlah_jam
+    };
+    await this.syncSingleItem('teaching_assignments', action, payload);
   }
 }
