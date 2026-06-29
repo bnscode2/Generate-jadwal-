@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const targetProject = project || "depodomain";
-    const targetApiKey = apiKey || "demo_api_key";
+    const targetProject = process.env.PAKASIR_PROJECT || project || "depodomain";
+    const targetApiKey = process.env.PAKASIR_API_KEY || apiKey || "demo_api_key";
 
     console.log(`Menghubungi Pakasir QRIS API untuk order_id: ${order_id}, amount: ${amount}`);
 
