@@ -26,7 +26,8 @@ import {
   Info,
   X,
   ShieldCheck,
-  School
+  School,
+  CloudUpload
 } from 'lucide-react';
 
 import { 
@@ -119,9 +120,11 @@ export default function AdministrativeDashboard() {
     isOpen: boolean;
     title: string;
     message: string;
-    type: 'reset_master' | 'clear_schedule' | 'logout' | 'delete_guru' | 'delete_mapel' | 'delete_kelas' | 'delete_ruangan' | 'delete_pengampu' | 'delete_schedule';
+    type: 'reset_master' | 'clear_schedule' | 'logout' | 'delete_guru' | 'delete_mapel' | 'delete_kelas' | 'delete_ruangan' | 'delete_pengampu' | 'delete_schedule' | 'save_pending_tab';
     onConfirm?: () => void;
   } | null>(null);
+
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
 
   // Auth States
   const [currentUser, setCurrentUser] = useState<any | null>(null);
@@ -471,17 +474,77 @@ export default function AdministrativeDashboard() {
     setHariAktif(LocalDB.getHariAktif());
     setBatasJamHari(LocalDB.getBatasJamHari());
 
-    // Sync currentUser state in React with the local storage
+    // Sync currentUser state in React with the local storage if changed
     const currUser = LocalDB.getCurrentUser();
     if (currUser) {
-      setCurrentUser(currUser);
+      const hasChanged = !currentUser ||
+        currentUser.id !== currUser.id ||
+        currentUser.username !== currUser.username ||
+        currentUser.role !== currUser.role ||
+        currentUser.is_pro !== currUser.is_pro ||
+        currentUser.nama_sekolah !== currUser.nama_sekolah;
+      if (hasChanged) {
+        setCurrentUser(currUser);
+      }
+    }
+  };
+
+  const handleSaveAndNavigate = async () => {
+    if (!pendingTab) return;
+    setConfirmModal(null);
+    setIsCloudSyncing(true);
+    setLogMessages(prev => [`🔄 Menyimpan seluruh data ke cloud sebelum berpindah ke halaman ${pendingTab}...`, ...prev]);
+    try {
+      const res = await SupabaseSyncService.pushAll();
+      if (res.success) {
+        setHasUnsavedChanges(false);
+        setLogMessages(prev => ["✅ Penyimpanan sukses sebelum berpindah halaman!", ...prev]);
+        const target = pendingTab;
+        setPendingTab(null);
+        setActiveTab(target);
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          setSidebarOpen(false);
+        }
+      } else {
+        setLogMessages(prev => [`⚠️ Gagal mengunggah data: ${res.message}`, ...prev]);
+        alert(`Gagal mengunggah data: ${res.message}. Perpindahan halaman dibatalkan.`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setLogMessages(prev => [`⚠️ Kesalahan saat mengunggah: ${err.message || err}`, ...prev]);
+      alert(`Kesalahan saat mengunggah data: ${err.message || err}. Perpindahan halaman dibatalkan.`);
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  const handleDiscardAndNavigate = () => {
+    if (!pendingTab) return;
+    const target = pendingTab;
+    setPendingTab(null);
+    setConfirmModal(null);
+    setActiveTab(target);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
     }
   };
 
   const handleSetActiveTab = (tab: string) => {
-    setActiveTab(tab);
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(false);
+    if (tab === activeTab) return;
+
+    if (isSupabaseModeActive() && currentUser && hasUnsavedChanges) {
+      setPendingTab(tab);
+      setConfirmModal({
+        isOpen: true,
+        title: 'Ada Perubahan Belum Disimpan',
+        message: `Anda memiliki perubahan data terbaru di browser Anda yang belum disimpan ke Supabase Cloud. Apakah Anda ingin mengunggah seluruh data ke Cloud terlebih dahulu sebelum berpindah ke halaman "${tab}"?`,
+        type: 'save_pending_tab'
+      });
+    } else {
+      setActiveTab(tab);
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      }
     }
   };
 
@@ -1915,21 +1978,7 @@ export default function AdministrativeDashboard() {
                     </span>
                   )}
                   
-                  {hasUnsavedChanges && (
-                    <button 
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        if (isCloudSyncing) return;
-                        await handlePushAllToCloud();
-                      }}
-                      disabled={isCloudSyncing}
-                      className="text-[10px] px-2.5 py-0.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-200 rounded-md font-bold font-sans flex items-center gap-1.5 transition cursor-pointer select-none"
-                      title="Ada perubahan data baru di browser Anda yang belum disimpan ke Cloud. Klik di sini untuk mengunggah & menyinkronkan seluruh data sekarang."
-                    >
-                      <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping" />
-                      ⚠️ Ada Data Belum Disimpan ke Cloud (Klik untuk Simpan)
-                    </button>
-                  )}
+
                   
                   <button
                     onClick={async (e) => {
@@ -2130,6 +2179,42 @@ export default function AdministrativeDashboard() {
 
         {/* MAIN PANEL CONTENT WINDOW */}
         <main className="flex-1 bg-slate-50/50 p-6 overflow-y-auto print:p-0 print:bg-white">
+          {isSupabaseModeActive() && currentUser && hasUnsavedChanges && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-fade-in print:hidden">
+              <div className="flex items-start gap-3">
+                <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping shrink-0 mt-1" />
+                <div>
+                  <h5 className="font-bold text-amber-900 text-xs flex items-center gap-1.5">
+                    ⚠️ Perubahan Data Belum Disimpan ke Cloud
+                  </h5>
+                  <p className="text-[10px] text-amber-700 font-medium leading-relaxed">
+                    Anda telah melakukan penambahan atau modifikasi data di browser Anda. Klik tombol di samping kanan untuk menyelaraskannya dengan Supabase Cloud agar data Anda aman dan sinkron.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (isCloudSyncing) return;
+                  await handlePushAllToCloud();
+                }}
+                disabled={isCloudSyncing}
+                className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg shadow-sm shadow-indigo-200 transition-all flex items-center justify-center gap-2 cursor-pointer select-none shrink-0"
+              >
+                {isCloudSyncing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <CloudUpload className="w-3.5 h-3.5" />
+                    Simpan ke Cloud Sekarang
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <DashboardTab 
               guru={guru}
@@ -2307,6 +2392,10 @@ export default function AdministrativeDashboard() {
                   <div className="bg-slate-50 p-2 rounded-full border border-slate-200 text-slate-600">
                     <LogOut className="w-5 h-5" />
                   </div>
+                ) : confirmModal.type === 'save_pending_tab' ? (
+                  <div className="bg-indigo-50 p-2 rounded-full border border-indigo-200 text-indigo-600 animate-bounce-slow">
+                    <CloudUpload className="w-5 h-5" />
+                  </div>
                 ) : (
                   <div className="bg-rose-50 p-2 rounded-full border border-rose-200 text-rose-600">
                     <Trash2 className="w-5 h-5" />
@@ -2364,6 +2453,48 @@ export default function AdministrativeDashboard() {
                     className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 font-bold rounded-lg transition cursor-pointer"
                   >
                     Batalkan
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Actions for Unsaved Changes Navigation Callback */}
+            {confirmModal.type === 'save_pending_tab' && (
+              <div className="flex flex-col gap-2 pt-2">
+                <button 
+                  type="button"
+                  onClick={handleSaveAndNavigate}
+                  className="w-full py-3 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-left font-bold transition flex items-center justify-between cursor-pointer shadow-sm shadow-indigo-100"
+                >
+                  <div>
+                    <span className="block text-white">💾 Ya, Simpan ke Cloud &amp; Pindah Halaman</span>
+                    <span className="block text-[10px] text-indigo-100 font-medium mt-0.5 normal-case">Unggah data terbaru Anda ke cloud, lalu selaraskan secara instan</span>
+                  </div>
+                  <CloudUpload className="w-4 h-4 text-white shrink-0" />
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleDiscardAndNavigate}
+                  className="w-full py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-xl text-left font-bold transition flex items-center justify-between cursor-pointer"
+                >
+                  <div>
+                    <span className="block text-rose-800">⚠️ Lewati Penyimpanan &amp; Pindah</span>
+                    <span className="block text-[10px] text-rose-600/80 font-medium mt-0.5 normal-case">Lanjutkan berpindah halaman tanpa menyimpan data terbaru ke cloud</span>
+                  </div>
+                  <X className="w-4 h-4 text-rose-500 shrink-0" />
+                </button>
+
+                <div className="flex justify-end pt-2 border-t border-slate-100">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setConfirmModal(null);
+                      setPendingTab(null);
+                    }}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 font-bold rounded-lg transition cursor-pointer"
+                  >
+                    Batal
                   </button>
                 </div>
               </div>
