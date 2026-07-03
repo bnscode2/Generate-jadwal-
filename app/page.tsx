@@ -27,7 +27,8 @@ import {
   X,
   ShieldCheck,
   School,
-  CloudUpload
+  CloudUpload,
+  Check
 } from 'lucide-react';
 
 import { 
@@ -125,6 +126,10 @@ export default function AdministrativeDashboard() {
   } | null>(null);
 
   const [pendingTab, setPendingTab] = useState<string | null>(null);
+
+  // Logout Loader States
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+  const [logoutStatus, setLogoutStatus] = useState<'loading' | 'success'>('loading');
 
   // Auth States
   const [currentUser, setCurrentUser] = useState<any | null>(null);
@@ -606,6 +611,16 @@ export default function AdministrativeDashboard() {
   };
 
   const executeLogout = async () => {
+    setConfirmModal(null);
+    setSelectedCell(null);
+    
+    // Aktifkan loader state logout yang profesional
+    setIsLoggingOut(true);
+    setLogoutStatus('loading');
+
+    // Berikan jeda waktu sejenak agar transisi visual terasa memuaskan dan stabil
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
     if (isSupabaseModeActive()) {
       const supabase = getSupabaseClient();
       if (supabase) {
@@ -627,10 +642,21 @@ export default function AdministrativeDashboard() {
     }
     setIsCloudSyncing(false);
     LocalDB.logout();
-    setCurrentUser(null);
-    setLogMessages(prev => ['Anda telah berhasil keluar dari akun.', ...prev]);
-    setSelectedCell(null);
-    setConfirmModal(null);
+    
+    // Ubah status ke sukses untuk memberikan feedback checklist visual yang intuitif
+    setLogoutStatus('success');
+    
+    // Berikan kesempatan kepada user untuk melihat konfirmasi sukses sebelum reload
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Lakukan pembersihan total (hard reset) state React di memori browser dengan memicu reload halaman secara bersih.
+    // Ini merupakan standar praktik terbaik aplikasi profesional untuk mencegah sisa-sisa cache di React memory saling bertabrakan/tersangkut saat berganti akun.
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    } else {
+      setCurrentUser(null);
+      setIsLoggingOut(false);
+    }
   };
 
   // Check auth state initially and handle popup redirect callback
@@ -2562,6 +2588,39 @@ export default function AdministrativeDashboard() {
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* PROFESSIONAL LOGOUT LOADER OVERLAY */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md text-white font-sans text-xs animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-sm w-full mx-4 shadow-2xl flex flex-col items-center text-center space-y-5">
+            {logoutStatus === 'loading' ? (
+              <>
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <LogOut className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <h4 className="text-sm font-bold text-slate-100">Sedang Keluar Sesi</h4>
+                  <p className="text-[11px] text-slate-400 font-medium">Membersihkan sesi aktif dan cache lokal secara aman...</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <Check className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-1.5">
+                  <h4 className="text-sm font-bold text-emerald-400">Berhasil Keluar Sesi</h4>
+                  <p className="text-[11px] text-slate-300 font-medium font-sans">Sesi Anda telah diakhiri dengan sukses.</p>
+                  <p className="text-[10px] text-indigo-400 font-mono mt-1 font-bold">Mengalihkan ke halaman masuk...</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
