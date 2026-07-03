@@ -122,22 +122,25 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
       });
 
       const resData = await response.json();
+      console.log("Response QRIS di Client:", resData);
 
-      if (resData.status === "success" && resData.payment) {
-        const p = resData.payment;
+      const hasPayment = resData.payment || resData.payment_number || resData.total_payment;
+
+      if ((resData.status === "success" || hasPayment) && (resData.payment || resData)) {
+        const p = resData.payment || resData;
         setQrisData({
           orderId: orderId,
-          qrString: p.payment_number,
-          total: p.total_payment,
-          fee: p.fee || 0,
-          expiredAt: p.expired_at
+          qrString: p.payment_number || resData.payment_number || "",
+          total: p.total_payment || resData.total_payment || p.amount || settings.harga_pro,
+          fee: p.fee !== undefined ? p.fee : (resData.fee !== undefined ? resData.fee : 0),
+          expiredAt: p.expired_at || resData.expired_at || ""
         });
         setPaymentStatus('pending');
 
-        // Start polling the server status API
+        // Start polling the server status API (with direct polling parameters as fallback)
         const interval = setInterval(async () => {
           try {
-            const checkRes = await fetch(`/api/pakasir/status?order_id=${orderId}`);
+            const checkRes = await fetch(`/api/pakasir/status?order_id=${orderId}&amount=${settings.harga_pro}&project=${settings.pakasir_project}`);
             if (checkRes.ok) {
               const checkData = await checkRes.json();
               if (checkData.status === "PAID") {

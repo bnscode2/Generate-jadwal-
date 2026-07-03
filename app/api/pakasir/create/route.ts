@@ -39,7 +39,23 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    console.log("Response dari Pakasir API:", JSON.stringify(data));
+
+    // Normalisasi respons agar status: "success" dan objek payment selalu tersedia bagi frontend
+    const normalizedPayment = data.payment || {
+      order_id: data.order_id || order_id,
+      amount: data.amount || amount,
+      payment_number: data.payment_number,
+      total_payment: data.total_payment || data.amount || amount,
+      fee: data.fee || 0,
+      expired_at: data.expired_at || "",
+      payment_url: data.payment_url || ""
+    };
+
+    return NextResponse.json({
+      status: "success",
+      payment: normalizedPayment
+    });
   } catch (err: any) {
     console.error("Gagal membuat transaksi Pakasir QRIS:", err);
     return NextResponse.json(
