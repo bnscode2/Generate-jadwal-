@@ -12,12 +12,8 @@ interface ActivationTabProps {
 }
 
 export default function ActivationTab({ currentUser, setCurrentUser, setLogMessages }: ActivationTabProps) {
-  const [settings, setSettings] = useState<SystemSettings>({
-    harga_pro: 99000,
-    harga_coret: 199000,
-    teks_diskon: "Diskon 50% Terbatas!",
-    pakasir_api_key: "demo_api_key",
-    pakasir_project: "depodomain"
+  const [settings, setSettings] = useState<SystemSettings>(() => {
+    return LocalDB.getSystemSettings();
   });
 
   const [loadingSettings, setLoadingSettings] = useState(true);
@@ -44,6 +40,9 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
       setLoadingSettings(true);
       let local = LocalDB.getSystemSettings();
       
+      // Always pre-set local settings first as offline fallback
+      setSettings(local);
+      
       if (isSupabaseModeActive()) {
         const supabase = getSupabaseClient();
         if (supabase) {
@@ -56,11 +55,11 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
               });
               
               const merged = {
-                harga_pro: Number(parsed.harga_pro) || local.harga_pro,
-                harga_coret: Number(parsed.harga_coret) || local.harga_coret,
-                teks_diskon: parsed.teks_diskon || local.teks_diskon,
-                pakasir_api_key: parsed.pakasir_api_key || local.pakasir_api_key,
-                pakasir_project: parsed.pakasir_project || local.pakasir_project,
+                harga_pro: parsed.harga_pro !== undefined && !isNaN(Number(parsed.harga_pro)) ? Number(parsed.harga_pro) : local.harga_pro,
+                harga_coret: parsed.harga_coret !== undefined && !isNaN(Number(parsed.harga_coret)) ? Number(parsed.harga_coret) : local.harga_coret,
+                teks_diskon: parsed.teks_diskon !== undefined ? parsed.teks_diskon : local.teks_diskon,
+                pakasir_api_key: parsed.pakasir_api_key !== undefined ? parsed.pakasir_api_key : local.pakasir_api_key,
+                pakasir_project: parsed.pakasir_project !== undefined ? parsed.pakasir_project : local.pakasir_project,
               };
               setSettings(merged);
               LocalDB.saveSystemSettings(merged);
@@ -69,8 +68,6 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
             console.warn("Membaca tabel system_settings dibatalkan atau tabel belum ada:", err);
           }
         }
-      } else {
-        setSettings(local);
       }
       setLoadingSettings(false);
     };

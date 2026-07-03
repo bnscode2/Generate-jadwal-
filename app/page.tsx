@@ -28,7 +28,8 @@ import {
   ShieldCheck,
   School,
   CloudUpload,
-  Check
+  Check,
+  Briefcase
 } from 'lucide-react';
 
 import { 
@@ -62,6 +63,7 @@ import PengaturanWaktuTab from '../components/PengaturanWaktuTab';
 import ActivationTab from '../components/ActivationTab';
 import AdminTab from '../components/AdminTab';
 import SchoolProfileTab from '../components/SchoolProfileTab';
+import BebanKerjaTab from '../components/BebanKerjaTab';
 
 export default function AdministrativeDashboard() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -2144,6 +2146,14 @@ export default function AdministrativeDashboard() {
               )}
             </button>
 
+            <button 
+              onClick={() => handleSetActiveTab('beban_kerja')} 
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold relative cursor-pointer ${activeTab === 'beban_kerja' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+            >
+              <Briefcase className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'beban_kerja' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Laporan Beban Kerja</span>
+            </button>
+
             <div className="text-slate-400 font-mono text-[10px] tracking-widest px-2 mt-4 mb-2 uppercase border-t border-slate-100 pt-4 font-bold">Lisensi &amp; Aktivasi</div>
 
             <button 
@@ -2375,6 +2385,14 @@ export default function AdministrativeDashboard() {
 
           {activeTab === 'konflik' && (
             <KonflikTab conflicts={conflicts} />
+          )}
+
+          {activeTab === 'beban_kerja' && (
+            <BebanKerjaTab 
+              guru={guru}
+              pengampu={pengampu}
+              jadwal={jadwal}
+            />
           )}
 
           {activeTab === 'supabase' && (

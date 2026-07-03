@@ -48,10 +48,14 @@ CREATE POLICY "Pengguna dapat memperbarui profil sendiri atau admin memperbarui 
     USING (
         auth.uid() = id 
         OR 
+        public.get_user_role(auth.uid()) = 'admin'
+        OR 
         (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
     )
     WITH CHECK (
         auth.uid() = id 
+        OR 
+        public.get_user_role(auth.uid()) = 'admin'
         OR 
         (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
     );
@@ -61,12 +65,16 @@ CREATE POLICY "Pengguna dapat memasukkan data profil baru saat register"
     WITH CHECK (
         auth.uid() = id
         OR
+        public.get_user_role(auth.uid()) = 'admin'
+        OR
         (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
     );
 
 CREATE POLICY "Admin dapat menghapus profil" 
     ON public.profiles FOR DELETE 
     USING (
+        public.get_user_role(auth.uid()) = 'admin'
+        OR
         (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
     );
 
@@ -91,10 +99,10 @@ CREATE POLICY "Admin has full access to serial_keys"
     ON public.serial_keys
     TO authenticated
     USING (
-        (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+        public.get_user_role(auth.uid()) = 'admin' OR (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
     )
     WITH CHECK (
-        (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+        public.get_user_role(auth.uid()) = 'admin' OR (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
     );
 
 CREATE POLICY "Users can read serial_keys to validate"
@@ -376,9 +384,9 @@ ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 -- Kebijakan RLS (Public Read, Admin Write)
 CREATE POLICY "Public read settings" ON public.system_settings FOR SELECT USING (true);
 CREATE POLICY "Admin full access settings" ON public.system_settings TO authenticated USING (
-    (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+    public.get_user_role(auth.uid()) = 'admin' OR (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
 ) WITH CHECK (
-    (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
+    public.get_user_role(auth.uid()) = 'admin' OR (auth.jwt() ->> 'email') = 'balkhi05@gmail.com'
 );
 `;
 

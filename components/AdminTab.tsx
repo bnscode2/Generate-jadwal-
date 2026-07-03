@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Users, Key, Plus, Copy, Check, Trash2, ToggleLeft, ToggleRight, TrendingUp, BarChart2, CheckCircle, Search, HelpCircle, Settings } from 'lucide-react';
+import { ShieldAlert, Users, Key, Plus, Copy, Check, Trash2, ToggleLeft, ToggleRight, TrendingUp, BarChart2, CheckCircle, Search, HelpCircle, Settings, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import { LocalDB, SystemSettings } from '../lib/db';
 import { getSupabaseClient, isSupabaseModeActive } from '../lib/supabaseClient';
 
@@ -18,41 +18,56 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [keyFilter, setKeyFilter] = useState<'all' | 'available' | 'used'>('all');
   const [dbHasSerialKeysTable, setDbHasSerialKeysTable] = useState(true);
-  const [settings, setSettings] = useState<SystemSettings>({
-    harga_pro: 99000,
-    harga_coret: 199000,
-    teks_diskon: "Diskon 50% Terbatas!",
-    pakasir_api_key: "demo_api_key",
-    pakasir_project: "depodomain"
+  const [settings, setSettings] = useState<SystemSettings>(() => {
+    return LocalDB.getSystemSettings();
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [showSaveAlert, setShowSaveAlert] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Track if settings are currently being edited (dirty state)
+  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
+  const isSettingsDirtyRef = React.useRef(false);
+
+  const setSettingsDirtyState = (dirty: boolean) => {
+    setIsSettingsDirty(dirty);
+    isSettingsDirtyRef.current = dirty;
+  };
 
   // Load data from LocalDB or Supabase
-  const loadAdminData = async () => {
+  const loadAdminData = async (includeSettings = false) => {
     let supabaseProfilesLoaded = false;
     let supabaseKeysLoaded = false;
 
     if (isSupabaseModeActive()) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        // Load settings
-        try {
-          const { data: dbSettings, error: errS } = await supabase.from('system_settings').select('*');
-          if (!errS && dbSettings && dbSettings.length > 0) {
-            const parsed: any = {};
-            dbSettings.forEach((row: any) => {
-              parsed[row.key] = row.value;
-            });
-            setSettings(prev => ({
-              harga_pro: Number(parsed.harga_pro) || prev.harga_pro,
-              harga_coret: Number(parsed.harga_coret) || prev.harga_coret,
-              teks_diskon: parsed.teks_diskon || prev.teks_diskon,
-              pakasir_api_key: parsed.pakasir_api_key || prev.pakasir_api_key,
-              pakasir_project: parsed.pakasir_project || prev.pakasir_project,
-            }));
+        // Load settings only on explicit request (e.g., initial mount) to avoid overwriting typed input
+        if (includeSettings && !isSettingsDirtyRef.current) {
+          try {
+            const { data: dbSettings, error: errS } = await supabase.from('system_settings').select('*');
+            if (!errS && dbSettings && dbSettings.length > 0) {
+              const parsed: any = {};
+              dbSettings.forEach((row: any) => {
+                parsed[row.key] = row.value;
+              });
+              const loadedSettings = {
+                harga_pro: parsed.harga_pro !== undefined && !isNaN(Number(parsed.harga_pro)) ? Number(parsed.harga_pro) : 99000,
+                harga_coret: parsed.harga_coret !== undefined && !isNaN(Number(parsed.harga_coret)) ? Number(parsed.harga_coret) : 199000,
+                teks_diskon: parsed.teks_diskon || "Diskon 50% Terbatas!",
+                pakasir_api_key: parsed.pakasir_api_key || "demo_api_key",
+                pakasir_project: parsed.pakasir_project || "depodomain",
+              };
+              setSettings(loadedSettings);
+              LocalDB.saveSystemSettings(loadedSettings);
+            } else {
+              // Fallback to LocalDB if table is empty
+              setSettings(LocalDB.getSystemSettings());
+            }
+          } catch (errSettings) {
+            console.warn("Gagal membaca system_settings di Supabase, fallback ke LocalDB:", errSettings);
+            setSettings(LocalDB.getSystemSettings());
           }
-        } catch (errSettings) {
-          console.warn("Gagal membaca system_settings di Supabase:", errSettings);
         }
 
         try {
@@ -101,6 +116,10 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
           setDbHasSerialKeysTable(false);
         }
       }
+    } else {
+      if (includeSettings && !isSettingsDirtyRef.current) {
+        setSettings(LocalDB.getSystemSettings());
+      }
     }
 
     if (!supabaseProfilesLoaded) {
@@ -114,12 +133,12 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
   useEffect(() => {
     // Jalankan asinkron untuk mencegah warning ESLint set-state-in-effect
     const timer = setTimeout(() => {
-      loadAdminData();
+      loadAdminData(true);
     }, 0);
 
-    // Auto-refresh data admin dari Supabase setiap 5 detik untuk multi-device real-time
+    // Auto-refresh data admin dari Supabase setiap 5 detik untuk multi-device real-time (tanpa system_settings)
     const interval = setInterval(() => {
-      loadAdminData();
+      loadAdminData(false);
     }, 5000);
 
     return () => {
@@ -326,6 +345,8 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingSettings(true);
+    setSaveError(null);
+    setShowSaveAlert(false);
     try {
       LocalDB.saveSystemSettings(settings);
       
@@ -347,12 +368,32 @@ export default function AdminTab({ currentUser, setLogMessages }: AdminTabProps)
       }
       
       setLogMessages(prev => ["☁️ [Admin] Pengaturan harga platform & payment gateway berhasil disimpan!", ...prev]);
-      alert("Pengaturan harga platform & payment gateway berhasil disimpan!");
+      setShowSaveAlert(true);
+      setSettingsDirtyState(false);
+      // Sembunyikan setelah 4 detik secara halus
+      setTimeout(() => setShowSaveAlert(false), 4000);
     } catch (err: any) {
-      alert(`Gagal menyimpan pengaturan: ${err.message}`);
+      console.error("Gagal menyimpan pengaturan:", err);
+      setSaveError(err.message || "Terjadi kesalahan yang tidak diketahui.");
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  const handleResetSettings = () => {
+    const confirmReset = window.confirm("Apakah Anda yakin ingin mengembalikan semua konfigurasi harga, diskon, dan API ke default bawaan?");
+    if (!confirmReset) return;
+    
+    const defaults = {
+      harga_pro: 99000,
+      harga_coret: 199000,
+      teks_diskon: "Diskon 50% Terbatas!",
+      pakasir_api_key: "demo_api_key",
+      pakasir_project: "depodomain"
+    };
+    setSettings(defaults);
+    setSettingsDirtyState(true);
+    setLogMessages(prev => ["[Admin] Berhasil memulihkan konfigurasi default.", ...prev]);
   };
 
   // Metrics calculations
@@ -505,107 +546,230 @@ CREATE POLICY "Users update key" ON public.serial_keys FOR UPDATE TO authenticat
       </div>
 
       {/* Pengaturan Harga & Gateway Pembayaran */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
-            <Settings className="w-5 h-5" />
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
+              <Settings className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900">Konfigurasi Harga Platform &amp; Gerbang Pembayaran Pakasir</h3>
+              <p className="text-[10px] text-slate-400 font-semibold">Atur harga promo, label diskon, dan API Key Pakasir untuk pembayaran QRIS otomatis.</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-extrabold text-slate-900">Konfigurasi Harga Platform &amp; Gerbang Pembayaran Pakasir</h3>
-            <p className="text-[10px] text-slate-400 font-semibold">Atur harga promo, label diskon, dan API Key Pakasir untuk pembayaran QRIS otomatis.</p>
-          </div>
+          
+          <button
+            type="button"
+            onClick={handleResetSettings}
+            className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 font-bold rounded-lg text-[10px] transition cursor-pointer flex items-center gap-1"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Pulihkan Default
+          </button>
         </div>
 
-        <form onSubmit={handleSaveSettings} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
-                Harga PRO Promo (IDR)
-              </label>
-              <input
-                type="number"
-                value={settings.harga_pro}
-                onChange={(e) => setSettings({ ...settings, harga_pro: Number(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
-                placeholder="99000"
-              />
+        {/* FEEDBACK NOTIFICATION BANNERS */}
+        {showSaveAlert && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 text-xs flex items-center gap-2.5 animate-fade-in font-medium">
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Berhasil! Konfigurasi harga platform &amp; API Gateway telah disimpan secara aman ke database.</span>
+          </div>
+        )}
+
+        {saveError && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-3 text-xs flex items-center gap-2.5 animate-fade-in font-medium">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>Gagal menyimpan: {saveError}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* INPUT FORM (Col-span-8) */}
+          <form onSubmit={handleSaveSettings} className="lg:col-span-8 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                  Harga PRO Promo (IDR)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-400">Rp</span>
+                  <input
+                    type="number"
+                    value={settings.harga_pro}
+                    onChange={(e) => {
+                      setSettings({ ...settings, harga_pro: Number(e.target.value) || 0 });
+                      setSettingsDirtyState(true);
+                    }}
+                    className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                    placeholder="99000"
+                  />
+                </div>
+                <p className="text-[9px] text-slate-400 mt-1">Harga final yang harus dibayar pengguna.</p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                  Harga Coret Sebelum Diskon (IDR)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-400">Rp</span>
+                  <input
+                    type="number"
+                    value={settings.harga_coret}
+                    onChange={(e) => {
+                      setSettings({ ...settings, harga_coret: Number(e.target.value) || 0 });
+                      setSettingsDirtyState(true);
+                    }}
+                    className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                    placeholder="199000"
+                  />
+                </div>
+                <p className="text-[9px] text-slate-400 mt-1">Harga acuan sebelum potongan.</p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                  Teks Label Diskon / Promo
+                </label>
+                <input
+                  type="text"
+                  value={settings.teks_diskon}
+                  onChange={(e) => {
+                    setSettings({ ...settings, teks_diskon: e.target.value });
+                    setSettingsDirtyState(true);
+                  }}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                  placeholder="Diskon 50% Terbatas!"
+                />
+                <p className="text-[9px] text-slate-400 mt-1">Draf label promo menarik di atas kartu.</p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
-                Harga Coret Sebelum Diskon (IDR)
-              </label>
-              <input
-                type="number"
-                value={settings.harga_coret}
-                onChange={(e) => setSettings({ ...settings, harga_coret: Number(e.target.value) || 0 })}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
-                placeholder="199000"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+              <div>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                  Pakasir API Key
+                </label>
+                <input
+                  type="password"
+                  value={settings.pakasir_api_key}
+                  onChange={(e) => {
+                    setSettings({ ...settings, pakasir_api_key: e.target.value });
+                    setSettingsDirtyState(true);
+                  }}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 font-mono"
+                  placeholder="Gunakan demo_api_key atau API Key Anda"
+                />
+                <p className="text-[9px] text-slate-400 mt-1">API Key utama dari dashboard Pakasir Anda.</p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
+                  Pakasir Project Name
+                </label>
+                <input
+                  type="text"
+                  value={settings.pakasir_project}
+                  onChange={(e) => {
+                    setSettings({ ...settings, pakasir_project: e.target.value });
+                    setSettingsDirtyState(true);
+                  }}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
+                  placeholder="depodomain"
+                />
+                <p className="text-[9px] text-slate-400 mt-1">Nama project aktif di dalam akun Pakasir.</p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
-                Teks Label Diskon / Promo
-              </label>
-              <input
-                type="text"
-                value={settings.teks_diskon}
-                onChange={(e) => setSettings({ ...settings, teks_diskon: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
-                placeholder="Diskon 50% Terbatas!"
-              />
+            <div className="flex items-center justify-between pt-2">
+              <div>
+                {isSettingsDirty && (
+                  <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1.5 font-bold animate-pulse inline-flex items-center gap-1">
+                    ⚠️ Perubahan Belum Disimpan
+                  </span>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className={`px-5 py-2.5 text-white font-bold rounded-xl text-xs transition shadow-sm hover:shadow-md cursor-pointer flex items-center gap-1.5 ${
+                  isSettingsDirty 
+                    ? 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-500/10' 
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                {savingSettings ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Simpan Konfigurasi Platform
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* REAL-TIME INTERACTIVE CARD PREVIEW (Col-span-4) */}
+          <div className="lg:col-span-4 bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl pointer-events-none" />
+            
+            <div className="space-y-3 relative">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-black tracking-wider uppercase text-indigo-600 bg-indigo-100/60 px-2 py-0.5 rounded-full">
+                  Live Pratinjau
+                </span>
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+              </div>
+
+              {/* SIMULATED CARD */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs relative overflow-hidden space-y-2.5">
+                {settings.teks_diskon && (
+                  <div className="inline-block px-2 py-0.5 bg-rose-500 text-white text-[9px] font-black rounded-lg">
+                    {settings.teks_diskon}
+                  </div>
+                )}
+
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-extrabold text-slate-800">Paket Aktivasi PRO</h4>
+                  <p className="text-[10px] text-slate-400 font-medium">Sekali bayar untuk selamanya tanpa batas</p>
+                </div>
+
+                <div className="pt-1.5 border-t border-slate-100 flex items-baseline gap-2">
+                  <span className="text-lg font-black text-slate-900">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(settings.harga_pro)}
+                  </span>
+                  
+                  {settings.harga_coret > settings.harga_pro && (
+                    <span className="text-[10px] text-slate-400 line-through">
+                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(settings.harga_coret)}
+                    </span>
+                  )}
+                </div>
+
+                {settings.harga_coret > settings.harga_pro && (
+                  <div className="text-[9px] text-rose-500 font-extrabold font-mono bg-rose-50 border border-rose-100 rounded-md px-1.5 py-0.5 inline-block">
+                    Hemat {Math.round(((settings.harga_coret - settings.harga_pro) / settings.harga_coret) * 100)}% dari harga normal!
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-200 text-[9px] text-slate-400 font-semibold space-y-1.5">
+              <div className="flex justify-between items-center">
+                <span>Rute API Gateway:</span>
+                <span className="font-mono text-slate-600 text-[8px] bg-slate-200/50 px-1 py-0.2 rounded font-bold">/api/pakasir/*</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Project Name:</span>
+                <span className="font-mono text-indigo-600 font-bold truncate max-w-[100px]">{settings.pakasir_project || 'kosong'}</span>
+              </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-50 pt-4">
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
-                Pakasir API Key
-              </label>
-              <input
-                type="password"
-                value={settings.pakasir_api_key}
-                onChange={(e) => setSettings({ ...settings, pakasir_api_key: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 font-mono"
-                placeholder="Gunakan demo_api_key atau API Key Anda"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase font-mono tracking-wider mb-1.5">
-                Pakasir Project Name
-              </label>
-              <input
-                type="text"
-                value={settings.pakasir_project}
-                onChange={(e) => setSettings({ ...settings, pakasir_project: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600"
-                placeholder="depodomain"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={savingSettings}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-xs hover:shadow-md cursor-pointer flex items-center gap-1.5"
-            >
-              {savingSettings ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Menyimpan...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Simpan Konfigurasi Platform
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
