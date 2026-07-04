@@ -1,6 +1,6 @@
 # Log Pembaruan Sistem - Jadwalify
 
-## [03 Juli 2026 - Demo & Real Mode Integration Refinement v2]
+## [03 Juli 2026 - Demo & Real Mode Integration Refinement v3]
 ### Perubahan Database & Backend:
 - Menambahkan sistem status multi-mode di `lib/db.ts` dengan mendefinisikan metode `isDemoMode()` dan `setDemoMode(isDemo)`.
 - Mengonfigurasi *data fallback* getter data master untuk mengembalikan array kosong `[]` saat berada di **Mode Asli (Real Mode)** agar database bersih total.
@@ -11,6 +11,8 @@
 ### Perubahan Frontend:
 - Menghapus Sticky Demo Mode Banner dari bagian atas header utama untuk mencegah kekacauan visual.
 - Menambahkan **Interactive Mode Selector Widget** di bagian bawah menu navigasi sidebar (di atas tombol Aksi Sistem) yang menampilkan status sistem saat ini (Sandbox vs Mode Asli) dengan tombol transisi yang responsif.
+- **Header Navbar Adaptif (Sandbox Mode)**: Menyempurnakan header navbar utama. Saat berada di **Mode Sandbox**, label sinkronisasi cloud "Cloud Aktif" otomatis berubah menjadi label informatif **Mode Sandbox** (dengan aksen kuning/oranye dinamis yang indah).
+- **Pembersihan Tombol Sinkronisasi**: Tombol sinkronisasi manual cloud dan indikator sync cloud disembunyikan seluruhnya dari navbar utama ketika Mode Sandbox sedang aktif untuk mencegah kebingungan pengguna dan menjaga antarmuka tetap bersih. Tombol dan indikator cloud ini akan kembali muncul secara otomatis saat pengguna beralih ke Mode Asli (Real Mode).
 - **Transisi Dengan Pemuat Profesional**: Menambahkan overlay transisi professional dengan status pemuatan bertahap dinamis ("Mengosongkan cache simulasi lokal...", "Menghubungkan ke cloud database dan mengunduh data riil...", "Memvalidasi integritas basis data...").
 - **Sinkronisasi Otomatis Pasca Transisi**: Mengintegrasikan `SupabaseSyncService.pullAll()` saat beralih dari Mode Sandbox ke Mode Asli (Real Mode). Jika pengguna sudah login, data riil sekolah mereka akan ditarik secara otomatis dari cloud dan dipulihkan secara instan tanpa mengacaukan atau menduplikasi database lokal.
 

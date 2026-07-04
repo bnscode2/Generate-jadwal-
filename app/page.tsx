@@ -2059,43 +2059,52 @@ export default function AdministrativeDashboard() {
               ) : (
                 <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-md font-bold font-sans">TRIAL</span>
               )}
-              {isSupabaseModeActive() && (
-                <span className="inline-flex items-center gap-1.5">
-                  {isCloudSyncing ? (
-                    <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-md font-bold font-sans flex items-center gap-1.5 animate-pulse" title="Sedang mengunggah perubahan otomatis ke Supabase Cloud">
-                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-                      Menyimpan ke Cloud...
-                    </span>
-                  ) : backgroundSyncStatus === 'checking' ? (
-                    <span className="text-[10px] px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-100 rounded-md font-bold font-sans flex items-center gap-1.5 animate-pulse" title="Sedang memeriksa pembaruan data di cloud">
-                      <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-ping" />
-                      Memeriksa Cloud...
-                    </span>
-                  ) : (
-                    <span 
-                      className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-md font-bold font-sans flex items-center gap-1 cursor-help" 
-                      title={lastSyncTime ? `Sinkron otomatis aktif. Terakhir diperiksa: ${lastSyncTime.toLocaleTimeString()}` : "Terhubung secara aman ke Supabase Cloud"}
-                    >
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      Cloud Aktif {lastSyncTime && `• ${lastSyncTime.toLocaleTimeString()}`}
-                    </span>
-                  )}
-                  
-
-                  
-                  <button
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      if (isCloudSyncing || backgroundSyncStatus === 'checking') return;
-                      await handleManualForceSync();
-                    }}
-                    disabled={isCloudSyncing || backgroundSyncStatus === 'checking'}
-                    className="p-1 hover:bg-slate-100 active:bg-slate-200 text-slate-500 hover:text-indigo-600 rounded-md border border-slate-200 transition cursor-pointer flex items-center justify-center shrink-0"
-                    title="Paksa Sinkronisasi Penuh Sekarang (Sinergikan lokal & cloud)"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${isCloudSyncing || backgroundSyncStatus === 'checking' ? 'animate-spin' : ''}`} />
-                  </button>
+              {isDemoMode ? (
+                <span className="inline-flex items-center">
+                  <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md font-bold font-sans flex items-center gap-1.5" title="Sistem terisi data sekolah simulasi SMAN 1 AI">
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                    Mode Sandbox
+                  </span>
                 </span>
+              ) : (
+                isSupabaseModeActive() && (
+                  <span className="inline-flex items-center gap-1.5">
+                    {isCloudSyncing ? (
+                      <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-md font-bold font-sans flex items-center gap-1.5 animate-pulse" title="Sedang mengunggah perubahan otomatis ke Supabase Cloud">
+                        <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                        Menyimpan ke Cloud...
+                      </span>
+                    ) : backgroundSyncStatus === 'checking' ? (
+                      <span className="text-[10px] px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-100 rounded-md font-bold font-sans flex items-center gap-1.5 animate-pulse" title="Sedang memeriksa pembaruan data di cloud">
+                        <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-ping" />
+                        Memeriksa Cloud...
+                      </span>
+                    ) : (
+                      <span 
+                        className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-md font-bold font-sans flex items-center gap-1 cursor-help" 
+                        title={lastSyncTime ? `Sinkron otomatis aktif. Terakhir diperiksa: ${lastSyncTime.toLocaleTimeString()}` : "Terhubung secara aman ke Supabase Cloud"}
+                      >
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                        Cloud Aktif {lastSyncTime && `• ${lastSyncTime.toLocaleTimeString()}`}
+                      </span>
+                    )}
+                    
+
+                    
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        if (isCloudSyncing || backgroundSyncStatus === 'checking') return;
+                        await handleManualForceSync();
+                      }}
+                      disabled={isCloudSyncing || backgroundSyncStatus === 'checking'}
+                      className="p-1 hover:bg-slate-100 active:bg-slate-200 text-slate-500 hover:text-indigo-600 rounded-md border border-slate-200 transition cursor-pointer flex items-center justify-center shrink-0"
+                      title="Paksa Sinkronisasi Penuh Sekarang (Sinergikan lokal & cloud)"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isCloudSyncing || backgroundSyncStatus === 'checking' ? 'animate-spin' : ''}`} />
+                    </button>
+                  </span>
+                )
               )}
             </h1>
             <p className="text-[11px] text-slate-400 font-medium">Penyusunan Jadwal Tanpa Bentrok • {currentUser?.nama_sekolah || (typeof window !== 'undefined' ? LocalDB.getSchoolProfile()?.nama_sekolah : '') || 'SMAN 1 AI'} (Akun: @{currentUser?.username})</p>
