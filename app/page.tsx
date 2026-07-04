@@ -108,6 +108,9 @@ export default function AdministrativeDashboard() {
   const [filterType, setFilterType] = useState<'kelas' | 'guru' | 'ruangan'>('kelas');
   const [filterId, setFilterId] = useState<string>('');
 
+  // Demo Mode State
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+
   // Forms Input State
   const [newGuru, setNewGuru] = useState<Partial<Guru>>({ nama: '', nip: '', jenis_kelamin: 'Laki-laki', no_hp: '', status_aktif: true });
   const [newMapel, setNewMapel] = useState<Partial<MataPelajaran>>({ kode_mapel: '', nama_mapel: '', jumlah_jam_per_minggu: 4 });
@@ -123,7 +126,7 @@ export default function AdministrativeDashboard() {
     isOpen: boolean;
     title: string;
     message: string;
-    type: 'reset_master' | 'clear_schedule' | 'logout' | 'delete_guru' | 'delete_mapel' | 'delete_kelas' | 'delete_ruangan' | 'delete_pengampu' | 'delete_schedule' | 'save_pending_tab';
+    type: 'reset_master' | 'clear_schedule' | 'logout' | 'delete_guru' | 'delete_mapel' | 'delete_kelas' | 'delete_ruangan' | 'delete_pengampu' | 'delete_schedule' | 'save_pending_tab' | 'switch_to_real' | 'switch_to_demo';
     onConfirm?: () => void;
   } | null>(null);
 
@@ -469,6 +472,7 @@ export default function AdministrativeDashboard() {
 
   // Load and refresh state
   const loadDatabase = (skipCloudSync = false) => {
+    setIsDemoMode(LocalDB.isDemoMode());
     setGuru(LocalDB.getGuru());
     setMapel(LocalDB.getMapel());
     setKelas(LocalDB.getKelas());
@@ -836,16 +840,44 @@ export default function AdministrativeDashboard() {
     setConfirmModal(null);
   };
 
+  const handleSwitchToRealMode = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Beralih ke Mode Asli (Mulai Bersih)',
+      message: 'Apakah Anda yakin ingin menyelesaikan masa uji coba dan beralih ke Mode Asli? Seluruh data contoh/simulasi saat ini (guru, kelas, mapel, jadwal) akan dihapus secara total untuk memberikan Anda lembar kosong yang bersih guna menginput data riil sekolah Anda. Tindakan ini tidak akan merusak struktur data asli, melainkan menyiapkannya dari nol secara profesional. Tindakan ini tidak dapat dibatalkan.',
+      type: 'switch_to_real'
+    });
+  };
+
+  const handleSwitchToDemoMode = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Aktifkan Mode Demo (Data Simulasi)',
+      message: 'Apakah Anda yakin ingin beralih kembali ke Mode Demo? Tindakan ini akan mengisi ulang database lokal Anda saat ini dengan data contoh/simulasi sekolah agar Anda dapat melakukan eksperimen dan uji coba fitur secara instan.',
+      type: 'switch_to_demo'
+    });
+  };
+
+  const executeSwitchToRealMode = () => {
+    LocalDB.setDemoMode(false);
+    loadDatabase(true);
+    setLogMessages(prev => ['Sistem berhasil beralih ke Mode Asli. Seluruh data cache/simulasi telah dikosongkan secara profesional!', ...prev]);
+    setSelectedCell(null);
+    setConfirmModal(null);
+  };
+
+  const executeSwitchToDemoMode = () => {
+    LocalDB.setDemoMode(true);
+    loadDatabase(true);
+    setLogMessages(prev => ['Sistem berhasil beralih ke Mode Demo dengan data simulasi sekolah SMAN AI.', ...prev]);
+    setSelectedCell(null);
+    setConfirmModal(null);
+  };
+
   const executeClearAllMaster = () => {
-    LocalDB.saveGuru([]);
-    LocalDB.saveMapel([]);
-    LocalDB.saveKelas([]);
-    LocalDB.saveRuangan([]);
-    LocalDB.savePengampu([]);
-    LocalDB.savePreferensi([]);
-    LocalDB.saveJadwal([]);
-    loadDatabase();
-    setLogMessages(prev => ['Seluruh data master (Guru, Mapel, Kelas, Ruangan, Pengampu, Preferensi) & Jadwal berhasil dibersihkan.', ...prev]);
+    LocalDB.setDemoMode(false);
+    loadDatabase(true);
+    setLogMessages(prev => ['Seluruh data master (Guru, Mapel, Kelas, Ruangan, Pengampu, Preferensi) & Jadwal berhasil dibersihkan. Sistem kini aktif dalam Mode Asli.', ...prev]);
     setSelectedCell(null);
     setConfirmModal(null);
   };
@@ -1962,6 +1994,24 @@ export default function AdministrativeDashboard() {
   return (
     <div className="min-h-screen bg-slate-100/60 text-slate-800 flex flex-col font-sans selection:bg-indigo-600 selection:text-white" id="main-root">
       
+      {/* STICKY DEMO MODE BANNER */}
+      {isDemoMode && (
+        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white px-6 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-semibold shadow-md print:hidden z-50">
+          <div className="flex items-center gap-2">
+            <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider text-white">Mode Demo</span>
+            <span>Anda sedang berada dalam <strong>Mode Uji Coba</strong> dengan data sekolah simulasi SMAN 1 AI. Selesai uji coba?</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleSwitchToRealMode}
+              className="bg-white hover:bg-slate-50 text-amber-900 active:scale-95 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
+            >
+              🚀 Mulai Menyusun Jadwal Sekolah Saya (Mode Asli)
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HEADER SECTION */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-45 px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs print:hidden">
         <div className="flex items-center gap-3">
@@ -2468,12 +2518,16 @@ export default function AdministrativeDashboard() {
               <div className="flex flex-col gap-2 pt-2">
                 <button 
                   type="button"
-                  onClick={executeResetDemo}
+                  onClick={isDemoMode ? executeResetDemo : () => { setConfirmModal(null); handleSwitchToDemoMode(); }}
                   className="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-850 border border-amber-220 rounded-xl text-left font-bold transition flex items-center justify-between cursor-pointer"
                 >
                   <div>
-                    <span className="block">1. Atur Ulang ke Data Demo SMAN AI</span>
-                    <span className="block text-[10px] text-amber-600/80 font-medium mt-0.5 normal-case">Mengisi ulang sistem dengan data contoh guru, kelas & mapel</span>
+                    <span className="block">{isDemoMode ? "1. Atur Ulang ke Data Demo SMAN AI" : "1. Aktifkan Mode Demo (Uji Coba)"}</span>
+                    <span className="block text-[10px] text-amber-600/80 font-medium mt-0.5 normal-case">
+                      {isDemoMode 
+                        ? "Mengisi ulang sistem dengan data contoh guru, kelas & mapel" 
+                        : "Beralih kembali ke Mode Demo dengan data simulasi lengkap untuk dicoba"}
+                    </span>
                   </div>
                   <RefreshCw className="w-4 h-4 text-amber-500 shrink-0" />
                 </button>
@@ -2484,8 +2538,8 @@ export default function AdministrativeDashboard() {
                   className="w-full py-2.5 px-3 bg-rose-50 hover:bg-rose-105 text-rose-850 border border-rose-220 rounded-xl text-left font-bold transition flex items-center justify-between cursor-pointer"
                 >
                   <div>
-                    <span className="block">2. Kosongkan Semua Data Master (Mulai dari Nol)</span>
-                    <span className="block text-[10px] text-rose-600/80 font-medium mt-0.5 normal-case">Hapus total semua biodata guru, mapel, kelas & jadwal</span>
+                    <span className="block">2. Kosongkan Semua Data Master (Mode Asli / Mulai dari Nol)</span>
+                    <span className="block text-[10px] text-rose-600/80 font-medium mt-0.5 normal-case">Hapus total semua biodata guru, mapel, kelas & jadwal serta setel ke Mode Asli</span>
                   </div>
                   <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
                 </button>
@@ -2584,8 +2638,48 @@ export default function AdministrativeDashboard() {
               </div>
             )}
 
+            {/* Actions for Switch to Real Mode */}
+            {confirmModal.type === 'switch_to_real' && (
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 font-bold rounded-lg transition cursor-pointer"
+                >
+                  Kembali Uji Coba
+                </button>
+                <button 
+                  type="button"
+                  onClick={executeSwitchToRealMode}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-indigo-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Ya, Bersihkan &amp; Masuk Mode Asli
+                </button>
+              </div>
+            )}
+
+            {/* Actions for Switch to Demo Mode */}
+            {confirmModal.type === 'switch_to_demo' && (
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 font-bold rounded-lg transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="button"
+                  onClick={executeSwitchToDemoMode}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-amber-200"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Ya, Muat Data Demo
+                </button>
+              </div>
+            )}
+
             {/* Actions for Generic Deletions */}
-            {confirmModal.type !== 'reset_master' && confirmModal.type !== 'clear_schedule' && confirmModal.type !== 'logout' && confirmModal.onConfirm && (
+            {confirmModal.type !== 'reset_master' && confirmModal.type !== 'clear_schedule' && confirmModal.type !== 'logout' && confirmModal.type !== 'switch_to_real' && confirmModal.type !== 'switch_to_demo' && confirmModal.onConfirm && (
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button 
                   type="button"

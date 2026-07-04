@@ -1,5 +1,20 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [03 Juli 2026 - Demo & Real Mode Integration]
+### Perubahan Database & Backend:
+- Menambahkan sistem status multi-mode di `lib/db.ts` dengan mendefinisikan metode `isDemoMode()` dan `setDemoMode(isDemo)`.
+- Mengonfigurasi *data fallback* getter data master (`getGuru`, `getMapel`, `getKelas`, `getRuangan`, `getPengampu`, `getPreferensi`) untuk mengembalikan array kosong `[]` saat berada di **Mode Asli (Real Mode)** agar pengguna baru mendapatkan basis data yang bersih sejak awal pendaftaran.
+- Mengonfigurasi fallback untuk tetap menggunakan data simulasi (`MOCK_*`) saat berada di **Mode Demo (Demo Mode)** guna memberikan akses coba-coba instan bagi pengguna baru.
+
+### Perubahan Frontend:
+- Menambahkan **Sticky Demo Mode Banner** yang modern dan elegan di bagian atas layar utama `/app/page.tsx` ketika Mode Demo aktif, lengkap dengan tombol ajakan bertindak profesional untuk beralih langsung ke Mode Asli.
+- Mengintegrasikan dialog konfirmasi transisi interaktif di modal `'switch_to_real'` dan `'switch_to_demo'`.
+- Menyinkronkan fungsionalitas tombol "Kosongkan Semua Data Master" untuk secara otomatis mematikan Mode Demo dan beralih ke Mode Asli (Mulai dari Nol) demi efisiensi navigasi sistem.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [03 Juli 2026 - Tambahan]
 ### Perubahan Database & Backend:
 - Memperbaiki bug isolasi multi-user di `lib/supabaseSync.ts` pada fungsi `pullAll` dengan menambahkan filter `.eq('id', user.id)` pada query tabel `profiles`. Hal ini mencegah kegagalan sinkronisasi (error `PGRST116: multiple rows returned`) saat terdapat lebih dari satu pengguna yang terdaftar di database cloud Supabase.

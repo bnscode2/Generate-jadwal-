@@ -225,6 +225,37 @@ export class LocalDB {
     }
   }
 
+  // --- DEMO MODE SERVICES ---
+  static isDemoMode(): boolean {
+    if (typeof window === 'undefined') return true;
+    const prefix = this.getUserPrefix();
+    const item = localStorage.getItem(prefix + 'sch_is_demo_mode');
+    // Default to true for brand new users to give them an instant populated playground
+    if (item === null) return true;
+    return item === 'true';
+  }
+
+  static setDemoMode(isDemo: boolean) {
+    if (typeof window === 'undefined') return;
+    const prefix = this.getUserPrefix();
+    localStorage.setItem(prefix + 'sch_is_demo_mode', isDemo ? 'true' : 'false');
+    
+    if (!isDemo) {
+      // Clear all mock data for clean slate Real Mode
+      this.saveGuruDirect([]);
+      this.saveMapelDirect([]);
+      this.saveKelasDirect([]);
+      this.saveRuanganDirect([]);
+      this.savePengampuDirect([]);
+      this.savePreferensiDirect([]);
+      this.saveJadwal([]);
+      this.recalculateConflicts();
+    } else {
+      // Re-populate mock data for Demo Mode
+      this.resetToDefault();
+    }
+  }
+
   // --- SCHOOL PROFILE AND SIGNATURE DETAILS ---
   static getSchoolProfile(): {
     nama_sekolah: string;
@@ -273,25 +304,25 @@ export class LocalDB {
 
   // --- GET ALL ---
   static getGuru(): Guru[] {
-    return this.getStored<Guru[]>('sch_guru', MOCK_GURU);
+    return this.getStored<Guru[]>('sch_guru', this.isDemoMode() ? MOCK_GURU : []);
   }
   static getMapel(): MataPelajaran[] {
-    return this.getStored<MataPelajaran[]>('sch_mapel', MOCK_MAPEL);
+    return this.getStored<MataPelajaran[]>('sch_mapel', this.isDemoMode() ? MOCK_MAPEL : []);
   }
   static getKelas(): Kelas[] {
-    return this.getStored<Kelas[]>('sch_kelas', MOCK_KELAS);
+    return this.getStored<Kelas[]>('sch_kelas', this.isDemoMode() ? MOCK_KELAS : []);
   }
   static getRuangan(): Ruangan[] {
-    return this.getStored<Ruangan[]>('sch_ruangan', MOCK_RUANGAN);
+    return this.getStored<Ruangan[]>('sch_ruangan', this.isDemoMode() ? MOCK_RUANGAN : []);
   }
   static getJamPelajaran(): JamPelajaran[] {
     return this.getStored<JamPelajaran[]>('sch_jam_pelajaran', MOCK_JAM_PELAJARAN);
   }
   static getPengampu(): PengampuMataPelajaran[] {
-    return this.getStored<PengampuMataPelajaran[]>('sch_pengampu', MOCK_PENGAMPU);
+    return this.getStored<PengampuMataPelajaran[]>('sch_pengampu', this.isDemoMode() ? MOCK_PENGAMPU : []);
   }
   static getPreferensi(): PreferensiGuru[] {
-    return this.getStored<PreferensiGuru[]>('sch_preferensi', MOCK_PREFERENSI);
+    return this.getStored<PreferensiGuru[]>('sch_preferensi', this.isDemoMode() ? MOCK_PREFERENSI : []);
   }
   static getJadwal(): Jadwal[] {
     return this.getStored<Jadwal[]>('sch_jadwal', []);
