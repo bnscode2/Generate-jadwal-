@@ -1177,7 +1177,7 @@ export default function AdministrativeDashboard() {
     setHasUnsavedChanges(true);
     loadDatabase(true);
 
-    setNewKelas({ nama_kelas: '', tingkat: 'VII', wali_kelas: '' });
+    setNewKelas({ nama_kelas: '', tingkat: newKelas.tingkat || 'VII', wali_kelas: '' });
 
     if (isSupabaseModeActive() && currentUser) {
       try {
@@ -2472,6 +2472,7 @@ export default function AdministrativeDashboard() {
 
           {activeTab === 'kelas' && (
             <KelasTab 
+              key={LocalDB.getActiveUnit() || 'standalone'}
               kelas={kelas}
               ruangan={ruangan}
               newKelas={newKelas}

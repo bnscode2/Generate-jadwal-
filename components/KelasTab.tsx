@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Kelas, Ruangan } from '../lib/types';
+import { LocalDB } from '../lib/db';
 
 interface KelasTabProps {
   kelas: Kelas[];
@@ -29,6 +30,38 @@ export default function KelasTab({
   handleAddRuangan,
   handleDeleteRuangan
 }: KelasTabProps) {
+  const [selectedJenjang, setSelectedJenjang] = useState<'SD' | 'SMP' | 'SMA'>(() => {
+    if (typeof window === 'undefined') return 'SMP';
+    const activeUnit = LocalDB.getActiveUnit();
+    const profile = LocalDB.getSchoolProfile();
+    const nameToCheck = (activeUnit || profile?.nama_sekolah || '').toUpperCase();
+
+    if (nameToCheck.includes('SD') || nameToCheck.includes('MI') || nameToCheck.includes('IBTIDAIYAH') || nameToCheck.includes('DASAR')) {
+      return 'SD';
+    } else if (nameToCheck.includes('SMA') || nameToCheck.includes('SMK') || nameToCheck.includes('MA') || nameToCheck.includes('ALIYAH') || nameToCheck.includes('KEJURUAN')) {
+      return 'SMA';
+    }
+    return 'SMP';
+  });
+
+  // Synchronize default tingkat based on initial selectedJenjang once on mount
+  useEffect(() => {
+    if (selectedJenjang === 'SD') {
+      if (!newKelas.tingkat || !['I', 'II', 'III', 'IV', 'V', 'VI'].includes(newKelas.tingkat)) {
+        setNewKelas(prev => ({ ...prev, tingkat: 'I' }));
+      }
+    } else if (selectedJenjang === 'SMA') {
+      if (!newKelas.tingkat || !['X', 'XI', 'XII'].includes(newKelas.tingkat)) {
+        setNewKelas(prev => ({ ...prev, tingkat: 'X' }));
+      }
+    } else {
+      if (!newKelas.tingkat || !['VII', 'VIII', 'IX'].includes(newKelas.tingkat)) {
+        setNewKelas(prev => ({ ...prev, tingkat: 'VII' }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
+
   return (
     <div className="space-y-6">
       <div>
@@ -48,6 +81,43 @@ export default function KelasTab({
             </h3>
 
             <form onSubmit={handleAddKelas} className="space-y-3.5 text-xs">
+              {/* Segmented Jenjang Selector */}
+              <div>
+                <label className="block text-slate-400 font-bold mb-1 uppercase text-[9px] tracking-wider font-mono">Jenjang Kurikulum</label>
+                <div className="flex gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200/50">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedJenjang('SD');
+                      setNewKelas(prev => ({ ...prev, tingkat: 'I' }));
+                    }}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md transition duration-150 cursor-pointer select-none ${selectedJenjang === 'SD' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-500 hover:bg-slate-200/60'}`}
+                  >
+                    SD / MI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedJenjang('SMP');
+                      setNewKelas(prev => ({ ...prev, tingkat: 'VII' }));
+                    }}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md transition duration-150 cursor-pointer select-none ${selectedJenjang === 'SMP' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-500 hover:bg-slate-200/60'}`}
+                  >
+                    SMP / MTs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedJenjang('SMA');
+                      setNewKelas(prev => ({ ...prev, tingkat: 'X' }));
+                    }}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-md transition duration-150 cursor-pointer select-none ${selectedJenjang === 'SMA' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-500 hover:bg-slate-200/60'}`}
+                  >
+                    SMA / SMK / MA
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-500 font-semibold mb-1">Nama Kelas</label>
@@ -64,13 +134,34 @@ export default function KelasTab({
                 <div>
                   <label className="block text-slate-500 font-semibold mb-1">Tingkat Kurikulum</label>
                   <select 
-                    value={newKelas.tingkat || 'VII'}
+                    value={newKelas.tingkat || (selectedJenjang === 'SD' ? 'I' : selectedJenjang === 'SMA' ? 'X' : 'VII')}
                     onChange={(e) => setNewKelas({...newKelas, tingkat: e.target.value})}
                     className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all font-bold"
                   >
-                    <option value="VII">Kelas VII (Satu)</option>
-                    <option value="VIII">Kelas VIII (Dua)</option>
-                    <option value="IX">Kelas IX (Tiga)</option>
+                    {selectedJenjang === 'SD' && (
+                      <>
+                        <option value="I">Kelas I (Satu)</option>
+                        <option value="II">Kelas II (Dua)</option>
+                        <option value="III">Kelas III (Tiga)</option>
+                        <option value="IV">Kelas IV (Empat)</option>
+                        <option value="V">Kelas V (Lima)</option>
+                        <option value="VI">Kelas VI (Enam)</option>
+                      </>
+                    )}
+                    {selectedJenjang === 'SMP' && (
+                      <>
+                        <option value="VII">Kelas VII (Satu)</option>
+                        <option value="VIII">Kelas VIII (Dua)</option>
+                        <option value="IX">Kelas IX (Tiga)</option>
+                      </>
+                    )}
+                    {selectedJenjang === 'SMA' && (
+                      <>
+                        <option value="X">Kelas X (Sepuluh)</option>
+                        <option value="XI">Kelas XI (Sebelas)</option>
+                        <option value="XII">Kelas XII (Duabelas)</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>

@@ -1,5 +1,16 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [03 Juli 2026 - Jenjang Tingkat Kurikulum Dinamis (SD, SMP, SMA/SMK)]
+### Perubahan Frontend & UX:
+- **Segmented Jenjang Selector**: Menambahkan panel selektor jenjang interaktif di dalam formulir tambah rombel kelas (`/components/KelasTab.tsx`). Pengguna kini dapat dengan mudah beralih jenjang kurikulum antara **SD / MI** (Kelas I - VI), **SMP / MTs** (Kelas VII - IX), dan **SMA / SMK / MA** (Kelas X - XII).
+- **Auto-Detection Jenjang Cerdas**: Mengintegrasikan algoritma deteksi otomatis jenjang sekolah berdasarkan nama unit aktif (Mode Yayasan) atau profil nama sekolah (Mode Mandiri). Sistem akan langsung memilih tab jenjang yang sesuai (misal: "SD IT" otomatis membuka Kelas I-VI, "SMK Negeri" membuka Kelas X-XII).
+- **Key-based React Lifecycle Reset**: Mengimplementasikan pola kunci reaktif (`key={LocalDB.getActiveUnit()}`) pada komponen `KelasTab` di `app/page.tsx` guna mereset instansiasi state tab secara bersih tanpa adanya warning cascading render atau loop tak terbatas.
+- **Tingkat Preservation UX**: Menghilangkan behavior hardcoded reset tingkat ke 'VII' pada fungsi pembuatan kelas baru. Sekarang, pilihan tingkat kurikulum terakhir yang dipilih akan tetap terjaga untuk memudahkan pembuatan rombongan belajar paralel yang efisien.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [03 Juli 2026 - Pengelolaan Multi-Unit Sekolah (Yayasan)]
 ### Perubahan Database & Backend:
 - **Isolasi Virtual Multi-Unit**: Memodifikasi mekanisme prefiks penyimpanan lokal `LocalDB.getUserPrefix()` di `lib/db.ts` untuk secara dinamis mendeteksi unit aktif (misal: SD, SMP, SMA). Hal ini memungkinkan pembagian data (guru, mata pelajaran, kelas, ruangan, pengampu, preferensi, jadwal) secara terisolasi sempurna tanpa resiko tercampur antar jenjang.
