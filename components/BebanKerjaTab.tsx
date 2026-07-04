@@ -326,10 +326,10 @@ export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabP
       {/* GRAFIK DISTRIBUSI & INFORMASI PENDUKUNG */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print:hidden">
         {/* PURE CSS/SVG CHART PANEL (Col-span-8) */}
-        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
-          <div className="flex items-center justify-between">
+        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
+              <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600 shrink-0">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
@@ -337,67 +337,85 @@ export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabP
                 <p className="text-[10px] text-slate-400 font-semibold">Proporsi beban mengajar dalam satuan JP per Minggu.</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-[10px] font-bold">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-amber-500 rounded-full" /> Kurang (&lt;24)</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" /> Ideal (24-40)</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-rose-500 rounded-full" /> Overload (&gt;40)</span>
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+              <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg">
+                <span className="w-2 h-2 bg-amber-500 rounded-full shrink-0" />
+                <span>Kurang (&lt;24)</span>
+              </span>
+              <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full shrink-0" />
+                <span>Ideal (24-40)</span>
+              </span>
+              <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg">
+                <span className="w-2 h-2 bg-rose-500 rounded-full shrink-0" />
+                <span>Overload (&gt;40)</span>
+              </span>
             </div>
           </div>
 
-          {/* DYNAMIC SVG DISTRIBUTION GRAPH */}
-          <div className="h-64 flex items-end gap-3 px-4 pt-8 pb-2 bg-slate-50 border border-slate-200 rounded-2xl relative">
+          {/* DYNAMIC SVG DISTRIBUTION GRAPH WITH SCROLLABLE MOBILE CANVAS */}
+          <div className="h-72 bg-slate-50 border border-slate-200 rounded-2xl p-4 relative overflow-hidden flex flex-col justify-end">
             {/* GRID LINES AND JP VALUE LABELS */}
-            <div className="absolute inset-y-0 left-0 w-full flex flex-col justify-between pointer-events-none py-6 px-4">
-              <div className="border-b border-dashed border-slate-200 w-full text-[8px] font-bold text-slate-400 font-mono text-right">Max Jam (40 JP)</div>
-              <div className="border-b border-dashed border-slate-200 w-full text-[8px] font-bold text-slate-400 font-mono text-right">Batas Sertifikasi (24 JP)</div>
+            <div className="absolute inset-y-0 left-0 right-0 flex flex-col justify-between pointer-events-none py-10 px-4 z-0">
+              <div className="border-b border-dashed border-slate-200 w-full text-[8px] font-bold text-slate-400 font-mono text-right pb-1">Max Jam (40 JP)</div>
+              <div className="border-b border-dashed border-slate-200 w-full text-[8px] font-bold text-slate-400 font-mono text-right pb-1">Batas Sertifikasi (24 JP)</div>
               <div className="w-full text-[8px] font-bold text-slate-300 font-mono text-right">0 JP</div>
             </div>
 
-            {/* BARS */}
-            {filteredData.slice(0, 10).map((d) => {
-              // Hitung persen tinggi terhadap target 45 JP sebagai batas atas visualisasi
-              const maxScale = 45;
-              const percentHeight = Math.min((d.total_jp_rencana / maxScale) * 100, 100);
-              const isKurang = d.total_jp_rencana < 24;
-              const isOver = d.total_jp_rencana > 40;
-              const barColor = isKurang ? 'bg-amber-500 hover:bg-amber-600' : isOver ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-500 hover:bg-indigo-600';
+            {/* SCROLLABLE BARS CONTAINER */}
+            <div className="absolute inset-0 pt-10 pb-4 px-4 overflow-x-auto scrollbar-thin z-10">
+              {filteredData.length > 0 ? (
+                <div 
+                  className="flex items-end gap-3 sm:gap-4 h-full"
+                  style={{ 
+                    minWidth: `${Math.max(450, Math.min(filteredData.length, 10) * 65)}px`,
+                    width: '100%'
+                  }}
+                >
+                  {filteredData.slice(0, 10).map((d) => {
+                    const maxScale = 45;
+                    const percentHeight = Math.min((d.total_jp_rencana / maxScale) * 100, 100);
+                    const isKurang = d.total_jp_rencana < 24;
+                    const isOver = d.total_jp_rencana > 40;
+                    const barColor = isKurang ? 'bg-amber-500 hover:bg-amber-600' : isOver ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-500 hover:bg-indigo-600';
 
-              return (
-                <div key={d.id} className="flex-1 flex flex-col items-center gap-2 group relative z-10 h-full justify-end">
-                  {/* Tooltip on hover */}
-                  <div className="absolute bottom-full mb-2 bg-slate-900 text-white p-2 rounded-lg text-[9px] font-bold opacity-0 group-hover:opacity-100 transition duration-250 pointer-events-none min-w-[120px] shadow-lg text-center z-50">
-                    <span className="block text-indigo-300 mb-0.5">{d.nama}</span>
-                    <span className="block">Mengajar: {d.jp_rencana} JP</span>
-                    {d.jp_ekuivalensi > 0 && <span className="block text-emerald-400">Tugas: +{d.jp_ekuivalensi} JP</span>}
-                    <span className="block border-t border-slate-700 mt-1 pt-1 text-[10px]">Total: {d.total_jp_rencana} JP</span>
-                  </div>
+                    return (
+                      <div key={d.id} className="flex-1 flex flex-col items-center gap-2 group relative h-full justify-end">
+                        {/* Tooltip on hover/touch */}
+                        <div className="absolute bottom-full mb-2 bg-slate-950 text-white p-2.5 rounded-xl text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none min-w-[140px] shadow-xl text-center z-50 border border-slate-800">
+                          <span className="block text-indigo-300 mb-0.5 truncate">{d.nama}</span>
+                          <span className="block">Mengajar: {d.jp_rencana} JP</span>
+                          {d.jp_ekuivalensi > 0 && <span className="block text-emerald-400 font-extrabold">Tugas: +{d.jp_ekuivalensi} JP</span>}
+                          <span className="block border-t border-slate-800 mt-1 pt-1 text-[10px]">Total: {d.total_jp_rencana} JP</span>
+                        </div>
 
-                  {/* The Bar */}
-                  <div className="w-full relative flex items-end justify-center rounded-t-lg bg-slate-200" style={{ height: '75%' }}>
-                    <div 
-                      className={`w-4/5 ${barColor} rounded-t-md transition-all duration-500 flex items-center justify-center`} 
-                      style={{ height: `${percentHeight}%` }}
-                    >
-                      <span className="text-[9px] font-black text-white transform -rotate-90 select-none">
-                        {d.total_jp_rencana}
-                      </span>
-                    </div>
-                  </div>
+                        {/* The Bar wrapper */}
+                        <div className="w-full relative flex items-end justify-center rounded-t-xl bg-slate-200/60 h-[75%] overflow-hidden">
+                          <div 
+                            className={`w-full ${barColor} rounded-t-xl transition-all duration-500 flex items-center justify-center relative group-hover:brightness-105`} 
+                            style={{ height: `${percentHeight}%` }}
+                          >
+                            <span className="text-[10px] font-black text-white select-none">
+                              {d.total_jp_rencana}
+                            </span>
+                          </div>
+                        </div>
 
-                  {/* Name Label */}
-                  <span className="text-[8px] font-extrabold text-slate-500 max-w-[50px] truncate text-center">
-                    {d.nama.split(',')[0]}
-                  </span>
+                        {/* Name Label */}
+                        <span className="text-[9px] font-extrabold text-slate-500 max-w-[65px] truncate text-center block">
+                          {d.nama.split(',')[0]}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-
-            {filteredData.length === 0 && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 font-bold text-xs gap-1.5">
-                <AlertCircle className="w-5 h-5 text-slate-300" />
-                Tidak ada guru yang sesuai kriteria pencarian.
-              </div>
-            )}
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 font-bold text-xs gap-1.5 p-4">
+                  <AlertCircle className="w-5 h-5 text-slate-300" />
+                  Tidak ada guru yang sesuai kriteria pencarian.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -454,9 +472,9 @@ export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabP
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Status:</span>
-            <div className="flex bg-slate-100 border border-slate-200 rounded-xl p-1 gap-1 text-[10px] font-extrabold">
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end overflow-hidden">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono hidden sm:inline">Status:</span>
+            <div className="flex bg-slate-100 border border-slate-200 rounded-xl p-1 gap-1 text-[10px] font-extrabold w-full md:w-auto overflow-x-auto scrollbar-none whitespace-nowrap">
               <button
                 onClick={() => setStatusFilter('semua')}
                 className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${statusFilter === 'semua' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
@@ -491,12 +509,12 @@ export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabP
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                 <th className="px-6 py-4">Guru / NIP</th>
-                <th className="px-6 py-4">Jenis Kelamin</th>
+                <th className="px-6 py-4 hidden md:table-cell">Jenis Kelamin</th>
                 <th className="px-6 py-4 text-center">Beban Tatap Muka</th>
                 <th className="px-6 py-4">Tugas Tambahan &amp; Ekuivalensi</th>
                 <th className="px-6 py-4 text-center">Total Beban</th>
                 <th className="px-6 py-4 text-center">Status BKG</th>
-                <th className="px-6 py-4 text-center print:hidden">Kelayakan Sertifikasi</th>
+                <th className="px-6 py-4 text-center print:hidden hidden lg:table-cell">Kelayakan Sertifikasi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700 font-bold">
@@ -505,14 +523,30 @@ export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabP
                   <tr key={d.id} className="hover:bg-slate-50/50 transition">
                     {/* Guru Info */}
                     <td className="px-6 py-4">
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         <span className="text-slate-900 text-xs font-black block">{d.nama}</span>
-                        <span className="text-[10px] text-slate-400 font-mono block">NIP. {d.nip}</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] text-slate-400 font-mono block">NIP. {d.nip}</span>
+                          <span className="text-[9px] text-slate-300 md:hidden">•</span>
+                          <span className="text-[10px] text-slate-500 font-semibold md:hidden">{d.jenis_kelamin}</span>
+                        </div>
+                        {/* Mobile-only certification eligibility badge */}
+                        <div className="lg:hidden mt-1">
+                          {d.layak_sertifikasi ? (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100/75">
+                              <UserCheck className="w-3 h-3 shrink-0" /> Layak Sertifikasi
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-slate-50 text-slate-400 border border-slate-200">
+                              <UserX className="w-3 h-3 shrink-0" /> Belum Layak
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
                     {/* Jenis Kelamin */}
-                    <td className="px-6 py-4 text-slate-500 font-semibold">{d.jenis_kelamin}</td>
+                    <td className="px-6 py-4 text-slate-500 font-semibold hidden md:table-cell">{d.jenis_kelamin}</td>
 
                     {/* Beban Tatap Muka */}
                     <td className="px-6 py-4 text-center">
@@ -616,7 +650,7 @@ export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabP
                     </td>
 
                     {/* Kelayakan Sertifikasi */}
-                    <td className="px-6 py-4 text-center print:hidden">
+                    <td className="px-6 py-4 text-center print:hidden hidden lg:table-cell">
                       {d.layak_sertifikasi ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
                           <UserCheck className="w-3.5 h-3.5" /> Layak Sertifikasi

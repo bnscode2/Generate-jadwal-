@@ -322,6 +322,7 @@ export class SupabaseSyncService {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('nama_sekolah, is_pro, serial_key, activated_at, role, logo_sekolah, nama_kepsek, nip_kepsek, nama_koordinator, nip_koordinator, kota_cetak, tahun_ajaran')
+          .eq('id', user.id)
           .maybeSingle();
         
         if (!profileError && profileData) {
