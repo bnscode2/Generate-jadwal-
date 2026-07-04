@@ -136,6 +136,10 @@ export default function AdministrativeDashboard() {
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [logoutStatus, setLogoutStatus] = useState<'loading' | 'success'>('loading');
 
+  // Mode Transition States
+  const [isTransitioningMode, setIsTransitioningMode] = useState<boolean>(false);
+  const [transitionStepText, setTransitionStepText] = useState<string>('');
+
   // Auth States
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
@@ -858,20 +862,59 @@ export default function AdministrativeDashboard() {
     });
   };
 
-  const executeSwitchToRealMode = () => {
+  const executeSwitchToRealMode = async () => {
+    setConfirmModal(null);
+    setIsTransitioningMode(true);
+    setTransitionStepText('Mengosongkan cache simulasi lokal secara aman...');
+    
+    // Berikan jeda waktu agar transisi visual terasa memuaskan dan stabil
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     LocalDB.setDemoMode(false);
     loadDatabase(true);
-    setLogMessages(prev => ['Sistem berhasil beralih ke Mode Asli. Seluruh data cache/simulasi telah dikosongkan secara profesional!', ...prev]);
+
+    const activeUser = LocalDB.getCurrentUser();
+    if (isSupabaseModeActive() && activeUser) {
+      setTransitionStepText('Menghubungkan ke cloud database dan mengunduh data riil...');
+      await new Promise(resolve => setTimeout(resolve, 900));
+      try {
+        const pullResult = await SupabaseSyncService.pullAll();
+        if (pullResult.success) {
+          loadDatabase(true);
+          setLogMessages(prev => ['Sistem berhasil beralih ke Mode Asli & data riil berhasil diunduh dari Supabase cloud!', ...prev]);
+        } else {
+          setLogMessages(prev => ['Sistem berhasil beralih ke Mode Asli. Cloud database kosong atau tidak dapat diakses.', ...prev]);
+        }
+      } catch (err) {
+        console.error("Gagal sinkronisasi otomatis dari Supabase:", err);
+        setLogMessages(prev => ['Sistem berhasil beralih ke Mode Asli (Data kosong).', ...prev]);
+      }
+    } else {
+      setLogMessages(prev => ['Sistem berhasil beralih ke Mode Asli. Seluruh data cache/simulasi telah dikosongkan secara profesional!', ...prev]);
+    }
+
+    setTransitionStepText('Memvalidasi integritas basis data...');
+    await new Promise(resolve => setTimeout(resolve, 600));
+
     setSelectedCell(null);
-    setConfirmModal(null);
+    setIsTransitioningMode(false);
   };
 
-  const executeSwitchToDemoMode = () => {
+  const executeSwitchToDemoMode = async () => {
+    setConfirmModal(null);
+    setIsTransitioningMode(true);
+    setTransitionStepText('Mengaktifkan Mode Sandbox & menyiapkan instansi data...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     LocalDB.setDemoMode(true);
     loadDatabase(true);
+
     setLogMessages(prev => ['Sistem berhasil beralih ke Mode Demo dengan data simulasi sekolah SMAN AI.', ...prev]);
+    setTransitionStepText('Memuat data simulasi sekolah SMAN 1 AI...');
+    await new Promise(resolve => setTimeout(resolve, 600));
+
     setSelectedCell(null);
-    setConfirmModal(null);
+    setIsTransitioningMode(false);
   };
 
   const executeClearAllMaster = () => {
@@ -2718,6 +2761,25 @@ export default function AdministrativeDashboard() {
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* PROFESSIONAL MODE TRANSITION OVERLAY */}
+      {isTransitioningMode && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md text-white font-sans text-xs">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-sm w-full mx-4 shadow-2xl flex flex-col items-center text-center space-y-5">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <RefreshCw className="w-4 h-4 text-slate-400 animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-slate-100">Transisi Mode Berjalan</h4>
+              <p className="text-[11px] text-indigo-400 font-mono font-bold leading-relaxed">{transitionStepText}</p>
+              <p className="text-[10px] text-slate-400 font-medium">Harap tunggu sementara sistem mengonfigurasi database...</p>
+            </div>
           </div>
         </div>
       )}

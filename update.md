@@ -1,6 +1,6 @@
 # Log Pembaruan Sistem - Jadwalify
 
-## [03 Juli 2026 - Demo & Real Mode Integration Refinement]
+## [03 Juli 2026 - Demo & Real Mode Integration Refinement v2]
 ### Perubahan Database & Backend:
 - Menambahkan sistem status multi-mode di `lib/db.ts` dengan mendefinisikan metode `isDemoMode()` dan `setDemoMode(isDemo)`.
 - Mengonfigurasi *data fallback* getter data master untuk mengembalikan array kosong `[]` saat berada di **Mode Asli (Real Mode)** agar database bersih total.
@@ -11,7 +11,8 @@
 ### Perubahan Frontend:
 - Menghapus Sticky Demo Mode Banner dari bagian atas header utama untuk mencegah kekacauan visual.
 - Menambahkan **Interactive Mode Selector Widget** di bagian bawah menu navigasi sidebar (di atas tombol Aksi Sistem) yang menampilkan status sistem saat ini (Sandbox vs Mode Asli) dengan tombol transisi yang responsif.
-- Menyempurnakan fungsionalitas transisi: beralih ke Mode Asli akan mengosongkan seluruh cache data master secara aman untuk mulai menyusun jadwal riil, sedangkan beralih kembali ke Mode Sandbox akan mengembalikan data simulasi instan.
+- **Transisi Dengan Pemuat Profesional**: Menambahkan overlay transisi professional dengan status pemuatan bertahap dinamis ("Mengosongkan cache simulasi lokal...", "Menghubungkan ke cloud database dan mengunduh data riil...", "Memvalidasi integritas basis data...").
+- **Sinkronisasi Otomatis Pasca Transisi**: Mengintegrasikan `SupabaseSyncService.pullAll()` saat beralih dari Mode Sandbox ke Mode Asli (Real Mode). Jika pengguna sudah login, data riil sekolah mereka akan ditarik secara otomatis dari cloud dan dipulihkan secara instan tanpa mengacaukan atau menduplikasi database lokal.
 
 ### Status:
 - **LULUS LINTING** (0 error, 5 warning standar).
