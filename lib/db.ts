@@ -17,6 +17,10 @@ export class LocalDB {
       try {
         const u = JSON.parse(user);
         if (u && u.username) {
+          const activeUnit = localStorage.getItem(`sch_${u.username.toLowerCase()}_active_unit`);
+          if (activeUnit) {
+            return `user_${u.username.toLowerCase()}_unit_${activeUnit.toLowerCase().replace(/[^a-z0-9]/g, '_')}_`;
+          }
           return `user_${u.username.toLowerCase()}_`;
         }
       } catch {
@@ -223,6 +227,72 @@ export class LocalDB {
     } catch {
       return null;
     }
+  }
+
+  // --- YAYASAN MULTI-UNIT SERVICES ---
+  static getActiveUnit(): string | null {
+    if (typeof window === 'undefined') return null;
+    const user = this.getCurrentUser();
+    if (!user) return null;
+    return localStorage.getItem(`sch_${user.username.toLowerCase()}_active_unit`);
+  }
+
+  static setActiveUnit(unit: string | null) {
+    if (typeof window === 'undefined') return;
+    const user = this.getCurrentUser();
+    if (!user) return;
+    if (unit) {
+      localStorage.setItem(`sch_${user.username.toLowerCase()}_active_unit`, unit);
+    } else {
+      localStorage.removeItem(`sch_${user.username.toLowerCase()}_active_unit`);
+    }
+  }
+
+  static getUnitsList(): string[] {
+    if (typeof window === 'undefined') return [];
+    const user = this.getCurrentUser();
+    if (!user) return [];
+    const stored = localStorage.getItem(`sch_${user.username.toLowerCase()}_units_list`);
+    if (!stored) return [];
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
+  }
+
+  static addUnit(unitName: string): { success: boolean; message: string } {
+    if (typeof window === 'undefined') return { success: false, message: 'Window undefined' };
+    const user = this.getCurrentUser();
+    if (!user) return { success: false, message: 'User tidak ditemukan' };
+    const cleanedName = unitName.trim();
+    if (!cleanedName) return { success: false, message: 'Nama unit tidak boleh kosong' };
+    
+    const units = this.getUnitsList();
+    if (units.some(u => u.toLowerCase() === cleanedName.toLowerCase())) {
+      return { success: false, message: 'Nama unit sudah terdaftar' };
+    }
+    
+    units.push(cleanedName);
+    localStorage.setItem(`sch_${user.username.toLowerCase()}_units_list`, JSON.stringify(units));
+    return { success: true, message: `Unit ${cleanedName} berhasil ditambahkan` };
+  }
+
+  static deleteUnit(unitName: string): { success: boolean; message: string } {
+    if (typeof window === 'undefined') return { success: false, message: 'Window undefined' };
+    const user = this.getCurrentUser();
+    if (!user) return { success: false, message: 'User tidak ditemukan' };
+    
+    let units = this.getUnitsList();
+    units = units.filter(u => u.toLowerCase() !== unitName.toLowerCase());
+    localStorage.setItem(`sch_${user.username.toLowerCase()}_units_list`, JSON.stringify(units));
+    
+    // If deleted unit was active, deactivate it
+    const activeUnit = this.getActiveUnit();
+    if (activeUnit && activeUnit.toLowerCase() === unitName.toLowerCase()) {
+      this.setActiveUnit(null);
+    }
+    return { success: true, message: `Unit ${unitName} berhasil dihapus` };
   }
 
   // --- DEMO MODE SERVICES ---

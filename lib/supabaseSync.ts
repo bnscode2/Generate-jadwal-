@@ -37,7 +37,9 @@ class IDMapper {
   static getUUID(localId: string): string {
     if (!localId) return '';
     if (isValidUUID(localId)) return localId;
-    return getDeterministicUUID(localId);
+    const activeUnit = LocalDB.getActiveUnit();
+    const salt = activeUnit ? `unit_${activeUnit.toLowerCase().replace(/[^a-z0-9]/g, '_')}_` : '';
+    return getDeterministicUUID(salt + localId);
   }
 
   static reset() {

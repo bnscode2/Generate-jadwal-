@@ -1,5 +1,32 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [03 Juli 2026 - Pengelolaan Multi-Unit Sekolah (Yayasan)]
+### Perubahan Database & Backend:
+- **Isolasi Virtual Multi-Unit**: Memodifikasi mekanisme prefiks penyimpanan lokal `LocalDB.getUserPrefix()` di `lib/db.ts` untuk secara dinamis mendeteksi unit aktif (misal: SD, SMP, SMA). Hal ini memungkinkan pembagian data (guru, mata pelajaran, kelas, ruangan, pengampu, preferensi, jadwal) secara terisolasi sempurna tanpa resiko tercampur antar jenjang.
+- **Yayasan Helper API**: Menambahkan fungsi manajemen unit sekolah (`getActiveUnit`, `setActiveUnit`, `getUnitsList`, `addUnit`, `deleteUnit`) di kelas `LocalDB`.
+- **Supabase ID Partitioning (Tanpa Migrasi DB)**: Menyempurnakan generator UUID deterministik di `IDMapper.getUUID()` pada `/lib/supabaseSync.ts` dengan menyisipkan garam (*salt*) nama unit sekolah aktif ke dalam proses pembuatan hash. Hal ini menjamin bahwa item dengan ID lokal yang sama (misal: `mapel-1` di SD dan `mapel-1` di SMP) akan diubah menjadi UUID yang berbeda di Supabase. Dengan ini, **TIDAK diperlukan pembuatan database baru atau migrasi skema tabel di Supabase!** Data otomatis terisolasi secara aman menggunakan skema tabel yang sudah ada.
+
+### Perubahan Frontend:
+- **Yayasan / Multi-Unit Switcher Widget**: Membuat komponen baru `/components/YayasanUnitSwitcher.tsx` berisi kontrol sakelar (toggle) Mode Yayasan, tombol dropdown pemilihan unit aktif instan (1-click), serta jendela interaktif pengelolaan daftar unit terdaftar (tambah/hapus unit).
+- **Integrasi Sidebar & Live Reload**: Menyatukan widget unit switcher ke dalam layout sidebar di `app/page.tsx`. Saat unit beralih, sistem secara reaktif memuat ulang seluruh master data instan di halaman tanpa memerlukan segarkan (refresh) halaman secara penuh.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
+## [03 Juli 2026 - Template Kurikulum Jenjang & Edit Mapel Aktif]
+### Perubahan Database & Backend:
+- Menambahkan backend sinkronisasi `handleUpdateMapel` dan `handleImportMapels` untuk menyimpan perubahan data mata pelajaran secara persisten di LocalDB dan diselaraskan secara otomatis (real-time) dengan Supabase Cloud jika akun terhubung secara online.
+
+### Perubahan Frontend:
+- **Preset Kurikulum Lengkap**: Menambahkan panel "Template Kurikulum Cepat" untuk semua jenjang pendidikan dasar dan menengah (SD, SMP, SMA, SMK, MI, MTs, MA, MAK) di dalam tab Mata Pelajaran.
+- **Pelajaran Bisa Diedit**: Menyediakan editor live adaptif pada daftar mata pelajaran di template sebelum diimpor ke dalam daftar aktif sekolah. Pengguna dapat memilih (checkbox), mengubah kode mapel, mengedit nama mata pelajaran, dan menyesuaikan durasi (JP) langsung pada tabel pratinjau.
+- **Inline Row-Editing Mapel Aktif**: Menyempurnakan antarmuka tabel mata pelajaran aktif dengan menambahkan fitur edit baris secara langsung (inline editing). Pengguna dapat mengubah kode, nama, dan durasi jam pelajaran aktif tanpa melalui jendela pop-up yang mengganggu alur kerja.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [03 Juli 2026 - Demo & Real Mode Integration Refinement v3]
 ### Perubahan Database & Backend:
 - Menambahkan sistem status multi-mode di `lib/db.ts` dengan mendefinisikan metode `isDemoMode()` dan `setDemoMode(isDemo)`.

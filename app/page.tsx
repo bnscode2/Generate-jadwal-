@@ -64,6 +64,7 @@ import ActivationTab from '../components/ActivationTab';
 import AdminTab from '../components/AdminTab';
 import SchoolProfileTab from '../components/SchoolProfileTab';
 import BebanKerjaTab from '../components/BebanKerjaTab';
+import YayasanUnitSwitcher from '../components/YayasanUnitSwitcher';
 
 export default function AdministrativeDashboard() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -1104,6 +1105,56 @@ export default function AdministrativeDashboard() {
         }
       }
     });
+  };
+
+  const handleUpdateMapel = async (updatedMapel: MataPelajaran) => {
+    // Always save locally first!
+    const updated = mapel.map(m => m.id === updatedMapel.id ? updatedMapel : m);
+    LocalDB.saveMapel(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setLogMessages(prev => [`Mata pelajaran ${updatedMapel.nama_mapel} berhasil diperbarui di browser.`, ...prev]);
+
+    if (isSupabaseModeActive() && currentUser) {
+      try {
+        await SupabaseSyncService.syncSubject(updatedMapel, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Pembaruan mata pelajaran "${updatedMapel.nama_mapel}" diselaraskan ke Supabase Cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi update mapel:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal memperbarui mapel di Cloud (${err.message}). Klik Simpan ke Cloud nanti untuk menyelaraskan.`, ...prev]);
+      }
+    }
+  };
+
+  const handleImportMapels = async (newMapels: MataPelajaran[]) => {
+    // Filter out subjects that have the exact same kode_mapel (case-insensitive)
+    const existingCodes = new Set(mapel.map(m => m.kode_mapel.toUpperCase()));
+    const filteredNew = newMapels.filter(m => !existingCodes.has(m.kode_mapel.toUpperCase()));
+
+    if (filteredNew.length === 0) {
+      setLogMessages(prev => [`⚠️ Semua mata pelajaran dari preset sudah ada di daftar aktif Anda.`, ...prev]);
+      return;
+    }
+
+    const updated = [...mapel, ...filteredNew];
+    LocalDB.saveMapel(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    setLogMessages(prev => [`✅ Berhasil mengimpor ${filteredNew.length} mata pelajaran baru dari preset!`, ...prev]);
+
+    if (isSupabaseModeActive() && currentUser) {
+      try {
+        for (const item of filteredNew) {
+          await SupabaseSyncService.syncSubject(item, 'upsert');
+        }
+        setLogMessages(prev => [`☁️ [Real-time] ${filteredNew.length} mata pelajaran baru dari preset berhasil diselaraskan ke Supabase Cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi impor mapel ke cloud:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan beberapa mapel impor ke Cloud. Klik Simpan ke Cloud nanti.`, ...prev]);
+      }
+    }
   };
 
   // --- CRUD KELAS & RUANGAN ---
@@ -2258,6 +2309,13 @@ export default function AdministrativeDashboard() {
               </button>
             )}
 
+            {/* YAYASAN / MULTI-UNIT switcher widget */}
+            <div className="text-slate-400 font-mono text-[10px] tracking-widest px-2 mt-4 mb-2 uppercase border-t border-slate-100 pt-4 font-bold">Lembaga / Yayasan</div>
+            <YayasanUnitSwitcher 
+              onUnitChanged={() => loadDatabase(true)}
+              addLog={(msg) => setLogMessages(prev => [`🏢 [Yayasan] ${msg}`, ...prev])}
+            />
+
             <div className="text-slate-400 font-mono text-[10px] tracking-widest px-2 mt-4 mb-2 uppercase border-t border-slate-100 pt-4 font-bold">Mode Simulasi / Riil</div>
 
             {isDemoMode ? (
@@ -2407,6 +2465,8 @@ export default function AdministrativeDashboard() {
               setNewMapel={setNewMapel}
               handleAddMapel={handleAddMapel}
               handleDeleteMapel={handleDeleteMapel}
+              handleUpdateMapel={handleUpdateMapel}
+              handleImportMapels={handleImportMapels}
             />
           )}
 
