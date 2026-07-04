@@ -1,15 +1,17 @@
 # Log Pembaruan Sistem - Jadwalify
 
-## [03 Juli 2026 - Demo & Real Mode Integration]
+## [03 Juli 2026 - Demo & Real Mode Integration Refinement]
 ### Perubahan Database & Backend:
 - Menambahkan sistem status multi-mode di `lib/db.ts` dengan mendefinisikan metode `isDemoMode()` dan `setDemoMode(isDemo)`.
-- Mengonfigurasi *data fallback* getter data master (`getGuru`, `getMapel`, `getKelas`, `getRuangan`, `getPengampu`, `getPreferensi`) untuk mengembalikan array kosong `[]` saat berada di **Mode Asli (Real Mode)** agar pengguna baru mendapatkan basis data yang bersih sejak awal pendaftaran.
-- Mengonfigurasi fallback untuk tetap menggunakan data simulasi (`MOCK_*`) saat berada di **Mode Demo (Demo Mode)** guna memberikan akses coba-coba instan bagi pengguna baru.
+- Mengonfigurasi *data fallback* getter data master untuk mengembalikan array kosong `[]` saat berada di **Mode Asli (Real Mode)** agar database bersih total.
+- Mengonfigurasi fallback untuk menggunakan data simulasi (`MOCK_*`) saat berada di **Mode Demo (Sandbox Mode)** untuk akses uji coba instan.
+- **Sistem Deteksi Akun Lama**: Jika akun pengguna sudah memiliki data master buatan sendiri yang aktif (bukan bawaan), sistem secara pintar mendefinisikan default-nya sebagai **Mode Asli (Real Mode)** sehingga data riil mereka di browser/cloud tidak terganggu ataupun tertimpa data demo.
+- Bagi pengguna baru atau akun kosong, sistem tetap memicu **Mode Sandbox** sebagai default awal untuk mempermudah visualisasi langsung saat pertama kali dicoba, dan begitu tombol beralih diklik, data master dikosongkan total ke 0 agar transisinya bersih tanpa bentrok data.
 
 ### Perubahan Frontend:
-- Menambahkan **Sticky Demo Mode Banner** yang modern dan elegan di bagian atas layar utama `/app/page.tsx` ketika Mode Demo aktif, lengkap dengan tombol ajakan bertindak profesional untuk beralih langsung ke Mode Asli.
-- Mengintegrasikan dialog konfirmasi transisi interaktif di modal `'switch_to_real'` dan `'switch_to_demo'`.
-- Menyinkronkan fungsionalitas tombol "Kosongkan Semua Data Master" untuk secara otomatis mematikan Mode Demo dan beralih ke Mode Asli (Mulai dari Nol) demi efisiensi navigasi sistem.
+- Menghapus Sticky Demo Mode Banner dari bagian atas header utama untuk mencegah kekacauan visual.
+- Menambahkan **Interactive Mode Selector Widget** di bagian bawah menu navigasi sidebar (di atas tombol Aksi Sistem) yang menampilkan status sistem saat ini (Sandbox vs Mode Asli) dengan tombol transisi yang responsif.
+- Menyempurnakan fungsionalitas transisi: beralih ke Mode Asli akan mengosongkan seluruh cache data master secara aman untuk mulai menyusun jadwal riil, sedangkan beralih kembali ke Mode Sandbox akan mengembalikan data simulasi instan.
 
 ### Status:
 - **LULUS LINTING** (0 error, 5 warning standar).
@@ -28,7 +30,7 @@
 
 ## [03 Juli 2026]
 ### Perubahan Database & Backend:
-- Tidak ada perubahan database.
+- Tidak ada database perubahan.
 
 ### Perubahan Frontend:
 - Mengubah struktur layout grafik distribusi Beban Kerja Guru di `BebanKerjaTab.tsx` agar responsif menggunakan pendekatan *mobile-first*.

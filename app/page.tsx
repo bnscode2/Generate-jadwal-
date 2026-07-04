@@ -1994,24 +1994,6 @@ export default function AdministrativeDashboard() {
   return (
     <div className="min-h-screen bg-slate-100/60 text-slate-800 flex flex-col font-sans selection:bg-indigo-600 selection:text-white" id="main-root">
       
-      {/* STICKY DEMO MODE BANNER */}
-      {isDemoMode && (
-        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white px-6 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-semibold shadow-md print:hidden z-50">
-          <div className="flex items-center gap-2">
-            <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider text-white">Mode Demo</span>
-            <span>Anda sedang berada dalam <strong>Mode Uji Coba</strong> dengan data sekolah simulasi SMAN 1 AI. Selesai uji coba?</span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleSwitchToRealMode}
-              className="bg-white hover:bg-slate-50 text-amber-900 active:scale-95 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
-            >
-              🚀 Mulai Menyusun Jadwal Sekolah Saya (Mode Asli)
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* HEADER SECTION */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-45 px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs print:hidden">
         <div className="flex items-center gap-3">
@@ -2222,6 +2204,42 @@ export default function AdministrativeDashboard() {
                 <Database className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'admin' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 <span className="text-left leading-tight">Admin Panel</span>
               </button>
+            )}
+
+            <div className="text-slate-400 font-mono text-[10px] tracking-widest px-2 mt-4 mb-2 uppercase border-t border-slate-100 pt-4 font-bold">Mode Simulasi / Riil</div>
+
+            {isDemoMode ? (
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 mb-1.5 mx-1 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 text-amber-800 text-[11px] font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Mode Sandbox (Aktif)
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                  Sistem terisi data sekolah simulasi SMAN 1 AI untuk memudahkan uji coba instan.
+                </p>
+                <button
+                  onClick={handleSwitchToRealMode}
+                  className="w-full text-center py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm shadow-indigo-100 flex items-center justify-center gap-1"
+                >
+                  🚀 Mulai Mode Asli (Bersih)
+                </button>
+              </div>
+            ) : (
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 mb-1.5 mx-1 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 text-emerald-800 text-[11px] font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Mode Asli (Bersih)
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                  Database bersih, siap untuk menginput data riil sekolah Anda secara profesional.
+                </p>
+                <button
+                  onClick={handleSwitchToDemoMode}
+                  className="w-full text-center py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm shadow-amber-100 flex items-center justify-center gap-1"
+                >
+                  🧪 Muat Data Sandbox
+                </button>
+              </div>
             )}
 
             <div className="text-slate-400 font-mono text-[10px] tracking-widest px-2 mt-4 mb-2 uppercase border-t border-slate-100 pt-4 font-bold">Aksi Sistem</div>

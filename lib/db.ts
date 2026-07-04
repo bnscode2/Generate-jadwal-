@@ -230,8 +230,39 @@ export class LocalDB {
     if (typeof window === 'undefined') return true;
     const prefix = this.getUserPrefix();
     const item = localStorage.getItem(prefix + 'sch_is_demo_mode');
-    // Default to true for brand new users to give them an instant populated playground
-    if (item === null) return true;
+    if (item === null) {
+      // Periksa apakah akun ini sudah ada data custom buatan pengguna sebelumnya
+      const rawGuru = localStorage.getItem(prefix + 'sch_guru');
+      const rawMapel = localStorage.getItem(prefix + 'sch_mapel');
+      let isExistingUserWithData = false;
+      
+      if (rawGuru) {
+        try {
+          const parsed = JSON.parse(rawGuru);
+          if (Array.isArray(parsed) && parsed.length > 0 && JSON.stringify(parsed) !== JSON.stringify(MOCK_GURU)) {
+            isExistingUserWithData = true;
+          }
+        } catch {}
+      }
+      
+      if (rawMapel && !isExistingUserWithData) {
+        try {
+          const parsed = JSON.parse(rawMapel);
+          if (Array.isArray(parsed) && parsed.length > 0 && JSON.stringify(parsed) !== JSON.stringify(MOCK_MAPEL)) {
+            isExistingUserWithData = true;
+          }
+        } catch {}
+      }
+
+      if (isExistingUserWithData) {
+        // Jika akun lama sudah memiliki data custom mandiri, default-kan ke Mode Asli (false) demi keamanan data riil mereka
+        localStorage.setItem(prefix + 'sch_is_demo_mode', 'false');
+        return false;
+      }
+
+      // Default awal untuk demo/sandbox saat ini adalah Mode Sandbox (true) agar penguji langsung mendapat visual terisi
+      return true;
+    }
     return item === 'true';
   }
 
