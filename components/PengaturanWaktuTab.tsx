@@ -35,6 +35,116 @@ export default function PengaturanWaktuTab({
   const [newJamMulai, setNewJamMulai] = useState<string>('07:30');
   const [newJamSelesai, setNewJamSelesai] = useState<string>('08:15');
 
+  // Preset generator states
+  const [genJamMulai, setGenJamMulai] = useState<string>('07:30');
+  const [genJumlahJp, setGenJumlahJp] = useState<number>(8);
+  const [genDurasiJp, setGenDurasiJp] = useState<number>(40);
+  const [genBreak1After, setGenBreak1After] = useState<number>(4); // 0 means none
+  const [genBreak1Duration, setGenBreak1Duration] = useState<number>(15);
+  const [genBreak2After, setGenBreak2After] = useState<number>(0); // 0 means none
+  const [genBreak2Duration, setGenBreak2Duration] = useState<number>(15);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+  const addMinutesToTime = (timeStr: string, mins: number): string => {
+    const [hStr, mStr] = timeStr.split(':');
+    let h = parseInt(hStr, 10);
+    let m = parseInt(mStr, 10);
+    if (isNaN(h) || isNaN(m)) return timeStr;
+    
+    m += mins;
+    while (m >= 60) {
+      m -= 60;
+      h += 1;
+    }
+    while (h >= 24) {
+      h -= 24;
+    }
+    
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+
+  const handleGeneratePreset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(genJamMulai)) {
+      alert('Format Jam Mulai tidak valid. Gunakan format HH:MM (contoh: 07:30).');
+      return;
+    }
+
+    const confirmMsg = jamPelajaran.length > 0 
+      ? `Tindakan ini akan menghapus ${jamPelajaran.length} jam pelajaran lama dan menggantikannya dengan preset baru secara otomatis. Apakah Anda yakin?`
+      : `Apakah Anda yakin ingin membuat preset jam pelajaran baru secara otomatis?`;
+
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    try {
+      const generated: JamPelajaran[] = [];
+      let currentStart = genJamMulai;
+
+      for (let i = 1; i <= genJumlahJp; i++) {
+        const currentEnd = addMinutesToTime(currentStart, genDurasiJp);
+        
+        generated.push({
+          id: `period-preset-${i}-${Date.now()}`,
+          jam_ke: i,
+          jam_mulai: currentStart,
+          jam_selesai: currentEnd
+        });
+
+        let nextStart = currentEnd;
+
+        // Apply breaks
+        if (genBreak1After > 0 && i === genBreak1After) {
+          nextStart = addMinutesToTime(currentEnd, genBreak1Duration);
+        } else if (genBreak2After > 0 && i === genBreak2After) {
+          nextStart = addMinutesToTime(currentEnd, genBreak2Duration);
+        }
+
+        currentStart = nextStart;
+      }
+
+      // Save to local storage
+      LocalDB.saveJamPelajaran(generated);
+      onUpdateJamPelajaran(generated);
+
+      // REAL-TIME DIRECT SUPABASE SYNC
+      if (isSupabaseModeActive()) {
+        try {
+          // Delete old periods
+          for (const p of jamPelajaran) {
+            await SupabaseSyncService.syncPeriod(p, 'delete');
+          }
+          // Insert new periods
+          for (const p of generated) {
+            await SupabaseSyncService.syncPeriod(p, 'upsert');
+          }
+          setLogMessages(prev => [`☁️ [Real-time] Berhasil sinkronisasi ${generated.length} jam pelajaran preset ke cloud!`, ...prev]);
+        } catch (err: any) {
+          console.error("Gagal sinkronisasi preset ke cloud:", err);
+          alert('Berhasil menyimpan lokal, namun gagal menyelaraskan ke Cloud Supabase.');
+        }
+      }
+
+      loadDatabase(true);
+      setNewJamKe(generated.length + 1);
+
+      setLogMessages(prev => [
+        `⏰ Berhasil membuat preset ${generated.length} Jam Pelajaran secara otomatis! (Mulai: ${genJamMulai}, Durasi: ${genDurasiJp} menit/JP)`,
+        ...prev
+      ]);
+    } catch (error) {
+      console.error(error);
+      alert('Terjadi kesalahan saat membuat preset.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const [editPeriodId, setEditPeriodId] = useState<string | null>(null);
   const [editJamMulai, setEditJamMulai] = useState<string>('');
   const [editJamSelesai, setEditJamSelesai] = useState<string>('');
@@ -369,6 +479,143 @@ export default function PengaturanWaktuTab({
 
         {/* RIGHT COLUMN: JAM PELAJARAN */}
         <div className="lg:col-span-7 space-y-6">
+          
+          {/* PEMBUAT PRESET JAM PELAJARAN OTOMATIS */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-indigo-600" />
+                <h3 className="font-bold text-slate-800">Pembuat Jam Pelajaran Otomatis</h3>
+              </div>
+              <span className="bg-indigo-50 text-indigo-700 font-mono text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Sangat Cepat
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Buat seluruh deretan jam pelajaran secara instan. Cukup tentukan jam mulai KBM, jumlah JP sehari, durasi, serta waktu istirahat jika ada.
+            </p>
+
+            <form onSubmit={handleGeneratePreset} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono mb-1">Jam Mulai KBM</label>
+                  <input
+                    type="text"
+                    placeholder="07:30"
+                    value={genJamMulai}
+                    onChange={(e) => setGenJamMulai(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono mb-1">Jumlah JP Sehari</label>
+                  <select
+                    value={genJumlahJp}
+                    onChange={(e) => setGenJumlahJp(parseInt(e.target.value) || 8)}
+                    className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 font-mono cursor-pointer"
+                  >
+                    {[...Array(15)].map((_, idx) => (
+                      <option key={idx + 1} value={idx + 1}>{idx + 1} JP</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono mb-1">Durasi per JP (Menit)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="120"
+                    value={genDurasiJp}
+                    onChange={(e) => setGenDurasiJp(parseInt(e.target.value) || 40)}
+                    className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Istirahat Settings Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/50">
+                <div className="space-y-2">
+                  <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide font-mono">Istirahat 1</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[9px] text-slate-400 font-medium mb-1">Setelah JP Ke-</label>
+                      <select
+                        value={genBreak1After}
+                        onChange={(e) => setGenBreak1After(parseInt(e.target.value))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 font-mono cursor-pointer"
+                      >
+                        <option value="0">Tidak Ada</option>
+                        {[...Array(12)].map((_, idx) => (
+                          <option key={idx + 1} value={idx + 1}>JP {idx + 1}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-slate-400 font-medium mb-1">Durasi (Menit)</label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="60"
+                        disabled={genBreak1After === 0}
+                        value={genBreak1Duration}
+                        onChange={(e) => setGenBreak1Duration(parseInt(e.target.value) || 15)}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 font-mono disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide font-mono">Istirahat 2 (Opsional)</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[9px] text-slate-400 font-medium mb-1">Setelah JP Ke-</label>
+                      <select
+                        value={genBreak2After}
+                        onChange={(e) => setGenBreak2After(parseInt(e.target.value))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 font-mono cursor-pointer"
+                      >
+                        <option value="0">Tidak Ada</option>
+                        {[...Array(12)].map((_, idx) => (
+                          <option key={idx + 1} value={idx + 1}>JP {idx + 1}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-slate-400 font-medium mb-1">Durasi (Menit)</label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="60"
+                        disabled={genBreak2After === 0}
+                        value={genBreak2Duration}
+                        onChange={(e) => setGenBreak2Duration(parseInt(e.target.value) || 15)}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 font-mono disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+                <span className="text-[10px] text-amber-600 font-medium bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1 flex items-center gap-1">
+                  ⚠️ Tindakan ini akan mengganti seluruh Jam Pelajaran saat ini.
+                </span>
+                <button
+                  type="submit"
+                  disabled={isGenerating}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                  {isGenerating ? 'Memproses...' : 'Generate Preset Jam'}
+                </button>
+              </div>
+            </form>
+          </div>
+
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <Clock className="w-5 h-5 text-indigo-600" />

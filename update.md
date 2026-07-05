@@ -1,5 +1,16 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [04 Juli 2026 - Pembuat Jam Pelajaran Otomatis (Automatic Period Preset Generator)]
+### Perubahan Frontend & UX:
+- **Automatic Period Preset Generator**: Menambahkan modul pembuat rentang jam pelajaran otomatis di `/components/PengaturanWaktuTab.tsx` yang memungkinkan pengguna menghasilkan susunan Jam Pelajaran (JP) dalam sehari secara instan.
+- **Konfigurasi Fleksibel & Istirahat**: Mendukung isian kustom berupa jam mulai KBM pertama, total JP harian (hingga 15 JP), durasi per JP (menit), serta opsi kustomisasi waktu istirahat (Istirahat 1 & Istirahat 2) dengan penentuan posisi JP pemicu beserta durasinya masing-masing.
+- **Penghitungan Waktu Akurat**: Mengimplementasikan fungsi pembantu `addMinutesToTime` untuk kalkulasi aritmatika waktu secara presisi tanpa hambatan peralihan jam atau hari.
+- **Real-Time Supabase Sync**: Menyediakan sinkronisasi cloud real-time yang menghapus jam lama secara berantai lalu mendaftarkan seluruh preset jam baru ke database Supabase secara transparan bagi pengguna.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [03 Juli 2026 - Jenjang Tingkat Kurikulum Dinamis (SD, SMP, SMA/SMK)]
 ### Perubahan Frontend & UX:
 - **Segmented Jenjang Selector**: Menambahkan panel selektor jenjang interaktif di dalam formulir tambah rombel kelas (`/components/KelasTab.tsx`). Pengguna kini dapat dengan mudah beralih jenjang kurikulum antara **SD / MI** (Kelas I - VI), **SMP / MTs** (Kelas VII - IX), dan **SMA / SMK / MA** (Kelas X - XII).
