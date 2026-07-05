@@ -550,7 +550,7 @@ export default function AdministrativeDashboard() {
   const handleSetActiveTab = (tab: string) => {
     if (tab === activeTab) return;
 
-    if (isSupabaseModeActive() && currentUser && hasUnsavedChanges) {
+    if (isSupabaseModeActive() && currentUser && hasUnsavedChanges && !isDemoMode) {
       setPendingTab(tab);
       setConfirmModal({
         isOpen: true,
@@ -2403,7 +2403,7 @@ export default function AdministrativeDashboard() {
 
         {/* MAIN PANEL CONTENT WINDOW */}
         <main className="flex-1 bg-slate-50/50 p-6 overflow-y-auto print:p-0 print:bg-white">
-          {isSupabaseModeActive() && currentUser && hasUnsavedChanges && (
+          {isSupabaseModeActive() && currentUser && hasUnsavedChanges && !isDemoMode && (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-fade-in print:hidden">
               <div className="flex items-start gap-3">
                 <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping shrink-0 mt-1" />

@@ -1,5 +1,14 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [04 Juli 2026 - Perbaikan Kebocoran Peringatan Cloud di Mode Sandbox (Bypass Cloud Alerts)]
+### Perubahan Frontend & UX:
+- **Pencegahan Modal Peringatan Cloud di Mode Sandbox**: Menyaring dan mematikan pemicuan otomatis modal peringatan "Ada Perubahan Belum Disimpan" saat pengguna berpindah tab/menu jika sistem sedang dalam **Mode Sandbox** (`isDemoMode` bernilai `true`), sehingga tidak mengganggu pengalaman pengujian data lokal.
+- **Penyembunyian Spanduk Peringatan Simpan ke Cloud**: Memperbarui penayangan spanduk kuning (*amber banner*) "Perubahan Data Belum Disimpan ke Cloud" di bagian atas halaman utama (`/app/page.tsx`) agar otomatis disembunyikan sepenuhnya selama Mode Sandbox aktif. Spanduk ini hanya akan tampil kembali ketika pengguna beralih ke Mode Riil (Supabase Cloud aktif).
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [04 Juli 2026 - Ketersediaan Larangan Waktu Mata Pelajaran (Subject-Specific Constraints)]
 ### Perubahan Frontend & UX:
 - **Konstruksi Aturan Ketersediaan Mata Pelajaran (Opsional)**: Menambahkan modal panel interaktif dan estetis di dalam tab Mata Pelajaran (`/components/MapelTab.tsx`) untuk mengonfigurasi slot larangan waktu penempatan mata pelajaran (blocked slots) secara presisi, serupa dengan fitur ketersediaan guru.
