@@ -1,5 +1,18 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [04 Juli 2026 - Penyimpanan Multi-Versi Payload Jadwal Pelajaran]
+### Perubahan Frontend & UX:
+- **Dedicated Versions Tab (Versi Jadwal)**: Menambahkan tab baru berupa panel pengelola versi jadwal (`/components/VersionsTab.tsx`) di sidebar utama, di mana pengguna dapat mengamankan dan mengelola berbagai macam versi jadwal pelajaran secara terisolasi.
+- **Penyimpanan Snapshot Payload**: Memungkinkan pengguna menyimpan keadaan (snapshot) jadwal aktif lengkap dengan metadata seperti skor kepatuhan, total slot waktu terisi, total konflik, algoritma pembuat, durasi kalkulasi, tanggal, nama, dan catatan kustom.
+- **Pemuatan Instan Tanpa Generate Ulang (Load Version)**: Pengguna dapat memilih versi tersimpan mana saja untuk langsung diterapkan sebagai draf jadwal utama secara instan.
+- **Yayasan Multi-Unit Isolation**: Sesuai dengan spesifikasi, versi jadwal diisolasi secara otomatis berdasarkan unit sekolah aktif (SD, SMP, SMA/SMK) di dalam sistem database penyimpanan lokal.
+- **Real-Time Cloud Synchronization**: Mendeteksi jika koneksi Supabase Cloud sedang aktif, maka memuat versi jadwal tersimpan akan langsung menimpa data draf di server cloud Supabase secara otomatis dan aman (re-sync).
+- **CRUD Operations**: Mendukung penamaan baru saat penyimpanan, pengeditan nama & deskripsi di tempat (inline edit) pada payload versi yang sudah tersimpan, serta penghapusan payload permanen dengan konfirmasi yang ramah pengguna.
+
+### Status:
+- **Selesai Diimplementasikan**.
+- **Kompatibel Penuh** dengan sistem cloud sync & multi-unit.
+
 ## [04 Juli 2026 - Pembuat Jam Pelajaran Otomatis (Automatic Period Preset Generator)]
 ### Perubahan Frontend & UX:
 - **Automatic Period Preset Generator**: Menambahkan modul pembuat rentang jam pelajaran otomatis di `/components/PengaturanWaktuTab.tsx` yang memungkinkan pengguna menghasilkan susunan Jam Pelajaran (JP) dalam sehari secara instan.

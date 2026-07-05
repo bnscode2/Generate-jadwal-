@@ -74,3 +74,20 @@ export interface KonflikJadwal {
   jam_ke: number;
   entities_involved: string[]; // nama-nama entitas yang terlibat
 }
+
+export interface ScheduleVersion {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  schedules: Jadwal[];
+  stats: {
+    score: number;
+    totalLessonsPlotted: number;
+    totalLessonsNeeded?: number;
+    totalConflicts: number;
+    algorithm?: string;
+    executionTimeMs?: number;
+  };
+}
+

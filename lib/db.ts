@@ -1,4 +1,4 @@
-import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal, Hari } from './types';
+import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal, Hari, ScheduleVersion } from './types';
 import { MOCK_GURU, MOCK_MAPEL, MOCK_KELAS, MOCK_RUANGAN, MOCK_JAM_PELAJARAN, MOCK_PENGAMPU, MOCK_PREFERENSI } from './mock-db-data';
 
 export interface SystemSettings {
@@ -454,6 +454,14 @@ export class LocalDB {
   static saveJadwal(data: Jadwal[]) { this.setStored('sch_jadwal', data); this.recalculateConflicts(); }
   static saveHariAktif(data: Hari[]) { this.setStored('sch_hari_aktif', data); this.recalculateConflicts(); }
   static saveBatasJamHari(data: Record<Hari, number>) { this.setStored('sch_batas_jam_hari', data); this.recalculateConflicts(); }
+  
+  // --- SCHEDULE VERSIONS MANAGEMENTS ---
+  static getScheduleVersions(): ScheduleVersion[] {
+    return this.getStored<ScheduleVersion[]>('sch_schedule_versions', []);
+  }
+  static saveScheduleVersions(data: ScheduleVersion[]) {
+    this.setStored('sch_schedule_versions', data);
+  }
 
   // --- SAVE DIRECT (SILENT CACHE FOR SUPABASE SYNC) ---
   static saveGuruDirect(data: Guru[]) { this.setStored('sch_guru', data); }

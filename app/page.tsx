@@ -42,7 +42,8 @@ import {
   PreferensiGuru, 
   Jadwal, 
   KonflikJadwal, 
-  Hari 
+  Hari,
+  ScheduleVersion
 } from '../lib/types';
 
 import { LocalDB } from '../lib/db';
@@ -65,6 +66,7 @@ import AdminTab from '../components/AdminTab';
 import SchoolProfileTab from '../components/SchoolProfileTab';
 import BebanKerjaTab from '../components/BebanKerjaTab';
 import YayasanUnitSwitcher from '../components/YayasanUnitSwitcher';
+import VersionsTab from '../components/VersionsTab';
 
 export default function AdministrativeDashboard() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -2289,6 +2291,14 @@ export default function AdministrativeDashboard() {
               <span className="text-left leading-tight">Laporan Beban Kerja</span>
             </button>
 
+            <button 
+              onClick={() => handleSetActiveTab('versions')} 
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold relative cursor-pointer ${activeTab === 'versions' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+            >
+              <Layers className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'versions' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Versi Jadwal (Payload)</span>
+            </button>
+
             <div className="text-slate-400 font-mono text-[10px] tracking-widest px-2 mt-4 mb-2 uppercase border-t border-slate-100 pt-4 font-bold">Lisensi &amp; Aktivasi</div>
 
             <button 
@@ -2573,6 +2583,26 @@ export default function AdministrativeDashboard() {
               guru={guru}
               pengampu={pengampu}
               jadwal={jadwal}
+            />
+          )}
+
+          {activeTab === 'versions' && (
+            <VersionsTab 
+              jadwal={jadwal}
+              conflicts={conflicts}
+              stats={stats}
+              onLoadVersion={(v) => {
+                loadDatabase(true);
+                setStats({
+                  executionTimeMs: v.stats.executionTimeMs || 0,
+                  score: v.stats.score,
+                  totalLessonsNeeded: v.stats.totalLessonsNeeded || pengampu.reduce((acc, curr) => acc + curr.jumlah_jam, 0),
+                  totalLessonsPlotted: v.stats.totalLessonsPlotted,
+                  totalConflicts: v.stats.totalConflicts
+                });
+              }}
+              onRefresh={loadDatabase}
+              addLogMessage={(msg: string) => setLogMessages(prev => [msg, ...prev])}
             />
           )}
 
