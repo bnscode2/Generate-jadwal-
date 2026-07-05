@@ -14,6 +14,7 @@ export interface MataPelajaran {
   kode_mapel: string;
   nama_mapel: string;
   jumlah_jam_per_minggu: number;
+  slot_tidak_bersedia?: { hari: Hari; jam_ke: number }[]; // optional constraint slots for subject
 }
 
 export interface Kelas {

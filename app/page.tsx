@@ -2477,6 +2477,7 @@ export default function AdministrativeDashboard() {
               handleDeleteMapel={handleDeleteMapel}
               handleUpdateMapel={handleUpdateMapel}
               handleImportMapels={handleImportMapels}
+              hariAktif={hariAktif}
             />
           )}
 

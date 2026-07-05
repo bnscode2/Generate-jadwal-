@@ -181,6 +181,12 @@ export class CalendarScheduler {
       prefMap.set(pref.guru_id, pref);
     }
 
+    // Precompute Subject Preferences
+    const mapelMap = new Map<string, MataPelajaran>();
+    for (const m of this.subjects) {
+      mapelMap.set(m.id, m);
+    }
+
     // Is current assignment valid?
     const isValid = (v: ScheduleVariable, val: DomainValue): boolean => {
       // Ensure the whole block fits consecutively in the schedule periods
@@ -214,6 +220,12 @@ export class CalendarScheduler {
           if (pref.hari_tidak_bersedia.includes(val.hari)) return false;
           if (pref.jam_tidak_bersedia.includes(jam_ke)) return false;
           if (pref.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) return false;
+        }
+
+        // 4.5 Hard constraint: Subject preference (blocked day/period/slot)
+        const sObj = mapelMap.get(v.mapel_id);
+        if (sObj && sObj.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
+          return false;
         }
       }
 
@@ -427,6 +439,12 @@ export class CalendarScheduler {
     const periodsList = this.periods.map(p => p.jam_ke);
     const assignmentMap = new Map<string, DomainValue>();
 
+    // Precompute Subject Preferences
+    const mapelMap = new Map<string, MataPelajaran>();
+    for (const m of this.subjects) {
+      mapelMap.set(m.id, m);
+    }
+
     // Use simplified collision detection to guarantee we pack schools
     const teacherUsage = new Set<string>(); 
     const classUsage = new Set<string>();   
@@ -444,6 +462,12 @@ export class CalendarScheduler {
         if (teacherUsage.has(tKey)) return false;
         if (classUsage.has(cKey)) return false;
         if (roomUsage.has(rKey)) return false;
+
+        // Subject preference (blocked day/period/slot)
+        const sObj = mapelMap.get(v.mapel_id);
+        if (sObj && sObj.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
+          return false;
+        }
       }
 
       return true;
@@ -695,6 +719,12 @@ export class CalendarScheduler {
             // Soft positive triggers
             if (pref.hari_favorit.includes(val.hari)) score += 20;
             if (pref.jam_favorit.includes(jam_ke)) score += 20;
+          }
+
+          // Check against subject slot preference
+          const subjObj = this.subjects.find(s => s.id === v.mapel_id);
+          if (subjObj && subjObj.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
+            score -= 400; // Strong penalty if a subject is scheduled in its blocked slot
           }
         }
 

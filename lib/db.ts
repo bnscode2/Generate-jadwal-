@@ -686,6 +686,19 @@ export class LocalDB {
           entities_involved: [tMap.get(s.guru_id) || s.guru_id]
         });
       }
+
+      // Check subject-specific unavailable slot constraints
+      const subj = subjects.find(sub => sub.id === s.mapel_id);
+      if (subj && subj.slot_tidak_bersedia?.some(slot => slot.hari === s.hari && slot.jam_ke === s.jam_ke)) {
+        conflicts.push({
+          id: `conf-subj-slot-${s.id}-${conflictIdCounter++}`,
+          tipe_konflik: 'preferensi_bentrok',
+          deskripsi: `Mata Pelajaran ${subj.nama_mapel} dijadwalkan pada hari ${s.hari} Jam Ke-${s.jam_ke} yang tidak diperbolehkan berdasarkan aturan ketersediaan mapel.`,
+          hari: s.hari,
+          jam_ke: s.jam_ke,
+          entities_involved: [subj.nama_mapel]
+        });
+      }
     }
 
     this.setStored('sch_conflicts', conflicts);

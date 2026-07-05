@@ -1,5 +1,22 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [04 Juli 2026 - Ketersediaan Larangan Waktu Mata Pelajaran (Subject-Specific Constraints)]
+### Perubahan Frontend & UX:
+- **Konstruksi Aturan Ketersediaan Mata Pelajaran (Opsional)**: Menambahkan modal panel interaktif dan estetis di dalam tab Mata Pelajaran (`/components/MapelTab.tsx`) untuk mengonfigurasi slot larangan waktu penempatan mata pelajaran (blocked slots) secara presisi, serupa dengan fitur ketersediaan guru.
+- **Indikator Jumlah Jam Blokir**: Menampilkan badge tag warna merah muda (*pinkish*) di sebelah nama mata pelajaran aktif yang menunjukkan jumlah slot waktu terblokir (misal: "3 Jam Blokir") agar pengguna mendapatkan umpan balik visual secara instan.
+- **1-Click Reset / Freedom**: Menyediakan opsi "Bebaskan Semua Slot" untuk menghapus seluruh batasan waktu untuk mata pelajaran yang bersangkutan secara instan.
+- **Custom Iconography**: Mengintegrasikan pintasan konfigurasi cepat dengan ikon `Calendar` yang selaras secara visual dengan estetika antarmuka modern yang responsif.
+
+### Perubahan Algoritma Penjadwalan & Konvensional:
+- **CSP (Constraint Satisfaction Problem) Integration**: Memperbarui mesin solver backtracking di `solveCSP` pada `/lib/scheduler.ts` untuk melacak `slot_tidak_bersedia` pada setiap mata pelajaran sebagai *hard constraint* baru. Ini memastikan pelajaran seperti Olahraga (PJOK) tidak akan pernah dijadwalkan di akhir hari atau waktu terlarang lainnya.
+- **Relaxed CSP Constraint Tracking**: Memperluas pengecekan pada solver draf cadangan `solveRelaxedCSP` untuk menyaring dan menghindari penempatan mata pelajaran pada slot waktu terblokir.
+- **Algoritma Genetika (GA) Fitness Tuning**: Menambahkan penalti biner yang kuat (skor -400) di fungsi evaluasi kebugaran (`computeFitness`) pada `solveGenetic` apabila kromosom menempatkan mata pelajaran di slot waktu yang dilarang keras oleh pengguna.
+- **Conflict Detection Engine Update**: Memperbarui pendeteksi bentrok bawaan `recalculateConflicts` di `LocalDB` (`/lib/db.ts`) untuk secara otomatis menganalisis dan mendaftarkan bentrok ketersediaan mata pelajaran ke dalam daftar konflik draf jadwal pelajaran.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [04 Juli 2026 - Penyimpanan Multi-Versi Payload Jadwal Pelajaran]
 ### Perubahan Frontend & UX:
 - **Dedicated Versions Tab (Versi Jadwal)**: Menambahkan tab baru berupa panel pengelola versi jadwal (`/components/VersionsTab.tsx`) di sidebar utama, di mana pengguna dapat mengamankan dan mengelola berbagai macam versi jadwal pelajaran secara terisolasi.
