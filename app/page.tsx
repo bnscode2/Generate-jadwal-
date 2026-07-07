@@ -2479,6 +2479,7 @@ export default function AdministrativeDashboard() {
               handleUpdateMapel={handleUpdateMapel}
               handleImportMapels={handleImportMapels}
               hariAktif={hariAktif}
+              jamPelajaran={jamPelajaran}
             />
           )}
 

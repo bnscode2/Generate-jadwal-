@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, Check, X, Sparkles, BookOpen, Download, Calendar } from 'lucide-react';
-import { MataPelajaran, Hari } from '../lib/types';
+import { MataPelajaran, Hari, JamPelajaran } from '../lib/types';
 
 interface MapelTabProps {
   mapel: MataPelajaran[];
@@ -13,6 +13,7 @@ interface MapelTabProps {
   handleUpdateMapel: (updatedMapel: MataPelajaran) => void;
   handleImportMapels: (newMapels: MataPelajaran[]) => void;
   hariAktif: Hari[];
+  jamPelajaran?: JamPelajaran[];
 }
 
 interface SubjectPreset {
@@ -171,8 +172,12 @@ export default function MapelTab({
   handleDeleteMapel,
   handleUpdateMapel,
   handleImportMapels,
-  hariAktif
+  hariAktif,
+  jamPelajaran = []
 }: MapelTabProps) {
+  const periodsList = jamPelajaran && jamPelajaran.length > 0 
+    ? [...jamPelajaran].map(p => p.jam_ke).sort((a, b) => a - b)
+    : [1, 2, 3, 4, 5, 6, 7, 8];
   // Subject specific availability modal state
   const [ketersediaanModalMapelId, setKetersediaanModalMapelId] = useState<string | null>(null);
   const [tempSlotTidakBersedia, setTempSlotTidakBersedia] = useState<{ hari: Hari; jam_ke: number }[]>([]);
@@ -663,7 +668,7 @@ export default function MapelTab({
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200">
                         <th className="p-2 text-left font-bold text-slate-500">Hari \ Jam</th>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                        {periodsList.map((s) => (
                           <th key={s} className="p-2 font-mono font-bold text-slate-500">
                             Ke-{s}
                           </th>
@@ -676,7 +681,7 @@ export default function MapelTab({
                           <td className="p-2 text-left font-semibold text-slate-700 whitespace-nowrap bg-slate-50/30">
                             {d}
                           </td>
-                          {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => {
+                          {periodsList.map((s) => {
                             const isSlotBlocked = tempSlotTidakBersedia.some(x => x.hari === d && x.jam_ke === s);
                             return (
                               <td key={s} className="p-1">

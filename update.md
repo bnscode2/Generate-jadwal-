@@ -1,5 +1,14 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [07 Juli 2026 - Sinkronisasi Ketersediaan Mata Pelajaran dengan Pengaturan Jam Pelajaran (JP)]
+### Perubahan Frontend & UX:
+- **Sinkronisasi Matriks Larangan Mapel**: Mengintegrasikan daftar `jamPelajaran` (JP) dinamis ke dalam komponen `MapelTab`. Matriks blokir slot hari & jam pelajaran (ketersediaan mata pelajaran) kini otomatis menyesuaikan dengan jumlah JP yang diatur pengguna (misal: 10 JP), tidak lagi terbatas kaku pada 8 JP.
+- **Penyesuaian Rendering Kolom**: Memperbarui penataan baris & kolom tabel larangan waktu mengajar pelajaran agar selaras dengan data JP yang aktif.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [06 Juli 2026 - Sinkronisasi Aturan Preferensi Guru dengan Pengaturan Jam Pelajaran (JP)]
 ### Perubahan Frontend & UX:
 - **Sinkronisasi JP Dinamis**: Mengintegrasikan daftar `jamPelajaran` (JP) yang dikonfigurasi pengguna ke dalam komponen `GuruTab`. Hal ini memastikan bahwa batasan mengajar maksimal harian, daftar Jam Berhalangan, daftar Jam Paling Disukai, serta matriks Halangan Khusus (Slot Jam & Hari Spesifik) otomatis menyesuaikan jumlah JP yang diatur (misalnya 10 JP), tidak lagi terkunci kaku di 8 JP.
