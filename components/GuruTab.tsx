@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Edit3, Trash2, Info, Pencil, Sliders } from 'lucide-react';
-import { Guru, PreferensiGuru, Hari } from '../lib/types';
+import { Guru, PreferensiGuru, Hari, JamPelajaran } from '../lib/types';
 
 interface GuruTabProps {
   guru: Guru[];
@@ -21,6 +21,7 @@ interface GuruTabProps {
     slot_tidak_bersedia?: { hari: Hari; jam_ke: number }[];
   }) => void;
   hariAktif: Hari[];
+  jamPelajaran?: JamPelajaran[];
 }
 
 export default function GuruTab({
@@ -32,8 +33,14 @@ export default function GuruTab({
   handleDeleteGuru,
   onUpdateGuru,
   onSavePreferensi,
-  hariAktif
+  hariAktif,
+  jamPelajaran = []
 }: GuruTabProps) {
+  const periodsList = jamPelajaran && jamPelajaran.length > 0 
+    ? [...jamPelajaran].map(p => p.jam_ke).sort((a, b) => a - b)
+    : [1, 2, 3, 4, 5, 6, 7, 8];
+  const maxPeriods = periodsList.length > 0 ? Math.max(...periodsList) : 8;
+
   // Preference modal states
   const [preferensiModalGuruId, setPreferensiModalGuruId] = useState<string | null>(null);
   const [prefDaysBlocked, setPrefDaysBlocked] = useState<Hari[]>([]);
@@ -385,9 +392,9 @@ export default function GuruTab({
                 <input 
                   type="number" 
                   min={1} 
-                  max={8}
+                  max={maxPeriods}
                   value={prefMaxHours}
-                  onChange={(e) => setPrefMaxHours(Math.max(1, Math.min(8, Number(e.target.value))))}
+                  onChange={(e) => setPrefMaxHours(Math.max(1, Math.min(maxPeriods, Number(e.target.value))))}
                   className="bg-white border border-slate-200 w-16 text-center text-slate-800 py-1.5 rounded-lg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 font-bold"
                 />
               </div>
@@ -418,9 +425,9 @@ export default function GuruTab({
 
                   {/* Period Hours */}
                   <div>
-                    <span className="block text-[11px] text-slate-500 mb-1.5 font-semibold">Jam Berhalangan (Jam Ke 1-8):</span>
+                    <span className="block text-[11px] text-slate-500 mb-1.5 font-semibold">Jam Berhalangan (Jam Ke {periodsList.length > 0 ? `${periodsList[0]}-${periodsList[periodsList.length - 1]}` : ''}):</span>
                     <div className="grid grid-cols-4 gap-1.5">
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                      {periodsList.map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -457,9 +464,9 @@ export default function GuruTab({
 
                   {/* Hours */}
                   <div>
-                    <span className="block text-[11px] text-slate-500 mb-1.5 font-semibold">Jam Paling Disukai (Jam Ke 1-8):</span>
+                    <span className="block text-[11px] text-slate-500 mb-1.5 font-semibold">Jam Paling Disukai (Jam Ke {periodsList.length > 0 ? `${periodsList[0]}-${periodsList[periodsList.length - 1]}` : ''}):</span>
                     <div className="grid grid-cols-4 gap-1.5">
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                      {periodsList.map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -491,7 +498,7 @@ export default function GuruTab({
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200">
                         <th className="p-2 text-left font-bold text-slate-500">Hari \ Jam</th>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                        {periodsList.map((s) => (
                           <th key={s} className="p-2 font-mono font-bold text-slate-500">
                             Ke-{s}
                           </th>
@@ -504,7 +511,7 @@ export default function GuruTab({
                           <td className="p-2 text-left font-semibold text-slate-700 whitespace-nowrap bg-slate-50/30">
                             {d}
                           </td>
-                          {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => {
+                          {periodsList.map((s) => {
                             const isSlotBlocked = prefSpecificSlotsBlocked.some(x => x.hari === d && x.jam_ke === s);
                             return (
                               <td key={s} className="p-1">

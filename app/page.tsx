@@ -2465,6 +2465,7 @@ export default function AdministrativeDashboard() {
               onUpdateGuru={handleUpdateGuru}
               onSavePreferensi={handleSavePreferensi}
               hariAktif={hariAktif}
+              jamPelajaran={jamPelajaran}
             />
           )}
 

@@ -1,5 +1,14 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [06 Juli 2026 - Sinkronisasi Aturan Preferensi Guru dengan Pengaturan Jam Pelajaran (JP)]
+### Perubahan Frontend & UX:
+- **Sinkronisasi JP Dinamis**: Mengintegrasikan daftar `jamPelajaran` (JP) yang dikonfigurasi pengguna ke dalam komponen `GuruTab`. Hal ini memastikan bahwa batasan mengajar maksimal harian, daftar Jam Berhalangan, daftar Jam Paling Disukai, serta matriks Halangan Khusus (Slot Jam & Hari Spesifik) otomatis menyesuaikan jumlah JP yang diatur (misalnya 10 JP), tidak lagi terkunci kaku di 8 JP.
+- **Fallback Prop Aman**: Menggunakan nilai bawaan/fallback (1-8 JP) secara cerdas apabila data `jamPelajaran` kosong atau belum didefinisikan untuk menjaga ketahanan aplikasi.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [04 Juli 2026 - Perbaikan Kebocoran Peringatan Cloud di Mode Sandbox (Bypass Cloud Alerts)]
 ### Perubahan Frontend & UX:
 - **Pencegahan Modal Peringatan Cloud di Mode Sandbox**: Menyaring dan mematikan pemicuan otomatis modal peringatan "Ada Perubahan Belum Disimpan" saat pengguna berpindah tab/menu jika sistem sedang dalam **Mode Sandbox** (`isDemoMode` bernilai `true`), sehingga tidak mengganggu pengalaman pengujian data lokal.
