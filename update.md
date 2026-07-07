@@ -1,5 +1,18 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [07 Juli 2026 - Integrasi Desain Pricing Glass Premium pada Tab Aktivasi]
+### Perubahan Frontend & UX:
+- **Tampilan Premium 3-Tier Obsidian Glass**: Mengintegrasikan desain kaca transparan (glassmorphism) bernuansa gelap obsidian untuk halaman aktivasi lisensi. Mengganti layout trial konvensional dengan 3 kartu harga yang terstruktur:
+  1. **Trial Version (Aktif)**: Menampilkan status gratis saat ini dengan fitur-fitur terbatas.
+  2. **Professional PRO (Paling Populer)**: Dilengkapi pencahayaan conic-gradient berputar di border, harga diskon dinamis, rincian fitur unggulan, serta penayangan QRIS interaktif langsung di dalam kartu saat diaktifkan.
+  3. **Manual / Institusi**: Tombol pemicu otomatis untuk menghubungi Admin WhatsApp demi kebutuhan nota LPJ, invoice sekolah, atau kuitansi fisik cap basah.
+- **Interaktivitas Mouse Spotlight**: Mengaktifkan efek sorotan cahaya mengikuti gerakan mouse (*mouse spotlight tracking*) pada permukaan kartu kaca menggunakan `framer-motion` dan `useMotionTemplate`.
+- **Rincian Lisensi Kaca PRO**: Memperbarui tampilan bagi pengguna yang status PRO-nya sudah aktif dengan sertifikat tiket digital transparan bernuansa holografik modern.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [07 Juli 2026 - Sinkronisasi Ketersediaan Mata Pelajaran dengan Pengaturan Jam Pelajaran (JP)]
 ### Perubahan Frontend & UX:
 - **Sinkronisasi Matriks Larangan Mapel**: Mengintegrasikan daftar `jamPelajaran` (JP) dinamis ke dalam komponen `MapelTab`. Matriks blokir slot hari & jam pelajaran (ketersediaan mata pelajaran) kini otomatis menyesuaikan dengan jumlah JP yang diatur pengguna (misal: 10 JP), tidak lagi terbatas kaku pada 8 JP.

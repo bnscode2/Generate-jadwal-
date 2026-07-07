@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, CreditCard, ShieldCheck, HelpCircle, Sparkles, RefreshCw, Smartphone, ExternalLink } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
+import { CheckCircle, AlertCircle, CreditCard, ShieldCheck, HelpCircle, Sparkles, RefreshCw, Smartphone, ExternalLink, Check, Info } from 'lucide-react';
 import { LocalDB, SystemSettings } from '../lib/db';
 import { getSupabaseClient, isSupabaseModeActive } from '../lib/supabaseClient';
 
@@ -10,6 +11,8 @@ interface ActivationTabProps {
   setCurrentUser: (user: any) => void;
   setLogMessages: React.Dispatch<React.SetStateAction<string[]>>;
 }
+
+const NOISE_PATTERN = 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")';
 
 export default function ActivationTab({ currentUser, setCurrentUser, setLogMessages }: ActivationTabProps) {
   const [settings, setSettings] = useState<SystemSettings>(() => {
@@ -24,6 +27,32 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
   
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Spotlights for 3 cards
+  const mouseX1 = useMotionValue(0);
+  const mouseY1 = useMotionValue(0);
+  const mouseX2 = useMotionValue(0);
+  const mouseY2 = useMotionValue(0);
+  const mouseX3 = useMotionValue(0);
+  const mouseY3 = useMotionValue(0);
+
+  function handleMouseMoveCard1({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mouseX1.set(clientX - left);
+    mouseY1.set(clientY - top);
+  }
+
+  function handleMouseMoveCard2({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mouseX2.set(clientX - left);
+    mouseY2.set(clientY - top);
+  }
+
+  function handleMouseMoveCard3({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mouseX3.set(clientX - left);
+    mouseY3.set(clientY - top);
+  }
 
   // Format currency
   const formatRupiah = (value: number) => {
@@ -98,7 +127,6 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
 
     setPaying(true);
     setErrorMsg('');
-    setSuccessMsg('');
     setQrisData(null);
     setPaymentStatus(null);
 
@@ -137,7 +165,7 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
         });
         setPaymentStatus('pending');
 
-        // Start polling the server status API (with direct polling parameters as fallback)
+        // Start polling the server status API
         const interval = setInterval(async () => {
           try {
             const checkRes = await fetch(`/api/pakasir/status?order_id=${orderId}&amount=${settings.harga_pro}&project=${settings.pakasir_project}`);
@@ -192,7 +220,7 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
 
         setPollingId(interval);
       } else {
-        setErrorMsg(resData.message || "Gagal membuat transaksi QRIS. Harap periksa koneksi internet atau gunakan opsi pembayaran WhatsApp.");
+        setErrorMsg(resData.message || "Gagal membuat transaksi QRIS. Harap periksa koneksi internet atau hubungi Admin via WhatsApp.");
       }
     } catch (err: any) {
       console.error("Error creating payment:", err);
@@ -204,8 +232,13 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
 
   const isPro = currentUser?.is_pro;
 
+  const legoVariant = {
+    hidden: { opacity: 0, y: 20, scale: 0.9 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 350, damping: 25 } }
+  };
+
   return (
-    <div className="space-y-6 font-sans" id="activation-tab-container">
+    <div className="space-y-8 font-sans" id="activation-tab-container">
       {/* Header Panel */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4" id="header-panel">
         <div>
@@ -223,303 +256,486 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
               PROFESIONAL (PRO) AKTIF
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold" id="trial-badge">
-              <AlertCircle className="w-4 h-4 text-amber-600" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold animate-pulse" id="trial-badge">
+              <AlertCircle className="w-4 h-4 text-indigo-600" />
               VERSI TRIAL (TERBATAS)
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="activation-main-grid">
-        {/* Left Panel: Checkout QRIS or PRO Status Details */}
-        <div className="lg:col-span-7 space-y-6" id="left-action-panel">
-          {isPro ? (
-            // PRO ACTIVE LAYOUT
-            <div className="bg-gradient-to-br from-slate-900 to-indigo-950 border border-indigo-950 text-white rounded-2xl p-6 shadow-md relative overflow-hidden" id="pro-details-card">
-              <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                <Sparkles className="w-40 h-40" />
+      {isPro ? (
+        // ==========================================
+        // DISPLAY USER ACTIVE PRO LICENSE - GLASSY
+        // ==========================================
+        <div className="bg-[#050505] text-white rounded-[32px] p-1 shadow-2xl relative overflow-hidden border border-white/5">
+          {/* Noise effect */}
+          <div className="absolute inset-0 z-0 opacity-[0.02] mix-blend-overlay pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
+          {/* Animated blurred light backdrop */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none z-0 animate-pulse" />
+          
+          <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center justify-between">
+            <div className="space-y-4 max-w-xl text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded-full">
+                <Sparkles className="w-3.5 h-3.5" />
+                Aktivasi Permanen Sukses
+              </div>
+              <h3 className="text-3xl font-black tracking-tight text-white">
+                Jadwalify Professional
+              </h3>
+              <p className="text-sm text-white/60 leading-relaxed">
+                Sekolah Anda telah terdaftar sebagai pengguna resmi **Jadwalify PRO Lifetime**. Selamat menggunakan semua fitur penataan jadwal otomatis berbasis Algoritma Genetika tanpa batas dan format ekspor PDF siap cetak.
+              </p>
+              
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+                <div className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+                  <span>Generasi Fitness Tanpa Batas</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+                  <span>Ekspor PDF Premium / LPJ</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+                  <span>Sinkronisasi Cloud Real-Time</span>
+                </div>
+              </div>
+            </div>
+
+            {/* License details ticket - Glass styling */}
+            <div className="w-full md:w-80 overflow-hidden rounded-[24px] bg-white/5 border border-white/10 p-6 shadow-2xl relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                <ShieldCheck className="w-32 h-32 text-emerald-400" />
               </div>
               
-              <div className="flex items-center gap-3 mb-6">
-                <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <ShieldCheck className="w-6 h-6 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-[10px] text-indigo-300 font-bold tracking-widest uppercase font-mono">Lisensi Premium Terverifikasi</div>
-                  <h3 className="text-lg font-black tracking-tight text-white">Jadwalify Professional</h3>
-                </div>
-              </div>
-
-              <div className="space-y-4 bg-white/5 p-4 rounded-xl border border-white/5 backdrop-blur-xs font-mono text-xs">
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-slate-300">Pemilik Akun</span>
+              <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4 font-mono">
+                Rincian Lisensi Sekolah
+              </h4>
+              <div className="space-y-3.5 font-mono text-xs text-white/70">
+                <div className="flex justify-between border-b border-white/5 pb-2.5">
+                  <span className="text-white/40">Akun</span>
                   <span className="font-bold text-white">@{currentUser?.username || 'Guest'}</span>
                 </div>
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-slate-300">Nama Sekolah</span>
-                  <span className="font-bold text-indigo-200 truncate max-w-[180px]" title={currentUser?.nama_sekolah}>
+                <div className="flex justify-between border-b border-white/5 pb-2.5">
+                  <span className="text-white/40">Sekolah</span>
+                  <span className="font-bold text-white truncate max-w-[140px]" title={currentUser?.nama_sekolah}>
                     {currentUser?.nama_sekolah || '-'}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-slate-300">Metode Lisensi</span>
-                  <span className="font-bold text-emerald-300">
-                    Sistem Pembayaran Instan QRIS
-                  </span>
+                <div className="flex justify-between border-b border-white/5 pb-2.5">
+                  <span className="text-white/40">Tipe</span>
+                  <span className="font-bold text-emerald-400">PRO LIFETIME</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-300">Tanggal Aktivasi</span>
-                  <span className="font-bold text-slate-200">
+                  <span className="text-white/40">Aktivasi</span>
+                  <span className="font-bold text-white">
                     {currentUser?.activated_at ? new Date(currentUser.activated_at).toLocaleDateString('id-ID', {
                       day: 'numeric',
-                      month: 'long',
+                      month: 'short',
                       year: 'numeric'
                     }) : new Date().toLocaleDateString('id-ID', {
                       day: 'numeric',
-                      month: 'long',
+                      month: 'short',
                       year: 'numeric'
                     })}
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // ==========================================
+        // 3-TIER PRICING GLASS LAYOUT FOR TRIAL
+        // ==========================================
+        <div className="bg-[#050505] text-white rounded-[32px] p-6 md:p-12 shadow-2xl relative overflow-hidden border border-white/5" id="pricing-glass-section">
+          {/* Noise effect */}
+          <div className="absolute inset-0 z-0 opacity-[0.03] mix-blend-overlay pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
+          {/* Ambient Spotlight */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[550px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none z-0" />
 
-              <div className="mt-6 flex items-center gap-2 text-xs text-indigo-200 font-semibold bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/20">
-                <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
-                <span>Terima kasih! Dukungan Anda memungkinkan kami terus menyempurnakan algoritma penataan jadwal sekolah otomatis ini.</span>
+          {/* Section title */}
+          <div className="relative z-10 flex flex-col items-center text-center gap-4 mb-14 max-w-3xl mx-auto">
+            <div className="inline-flex items-center gap-1 px-3 py-1 bg-white/5 border border-white/10 text-white/80 text-[10px] font-black uppercase tracking-wider rounded-full font-mono">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              Paket Lisensi Jadwalify
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white">
+              Satu Kali Bayar, Aktif Selamanya.
+            </h2>
+            <p className="text-sm md:text-base text-white/50 leading-relaxed">
+              Pilih opsi aktivasi terbaik untuk sekolah Anda. Nikmati kemudahan ekspor data, koordinasi otomatis super lancar, dan optimasi jadwal tanpa batas.
+            </p>
+          </div>
+
+          {/* 3-Tier Grid */}
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+            
+            {/* TIER 1: FREE TRIAL (CARD 1) */}
+            <div
+              onMouseMove={handleMouseMoveCard1}
+              className="group relative overflow-hidden rounded-[32px] bg-white/1 backdrop-blur-3xl backdrop-saturate-200 backdrop-brightness-110 flex flex-col transition-all duration-500 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_32px_64px_-12px_rgba(0,0,0,0.6)]"
+            >
+              {/* Card Spotlight */}
+              <motion.div
+                className="absolute inset-0 z-0 pointer-events-none rounded-[32px] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                style={{
+                  background: useMotionTemplate`radial-gradient(400px at ${mouseX1}px ${mouseY1}px, rgba(255,255,255,0.08), transparent)`
+                }}
+              />
+              <div className="absolute inset-0 z-0 opacity-[0.01] mix-blend-overlay pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
+              
+              <div className="relative z-10 flex flex-col p-8 flex-1">
+                <h3 className="text-lg font-bold text-white/60 tracking-wider">
+                  Trial Version
+                </h3>
+                
+                <div className="flex items-baseline gap-1 mt-4 mb-2">
+                  <span className="text-white/40 text-2xl font-semibold tracking-tight">Rp</span>
+                  <div className="h-[50px] flex items-center">
+                    <span className="text-[44px] font-black text-white tracking-tighter leading-none">
+                      0
+                    </span>
+                  </div>
+                  <span className="text-white/40 text-sm font-semibold ml-1">/ selamanya</span>
+                </div>
+                
+                <p className="text-white/40 text-xs leading-relaxed mb-6 min-h-[36px]">
+                  Fungsionalitas terbatas untuk keperluan uji coba awal di sekolah.
+                </p>
+                
+                <div className="w-full h-px bg-white/10 mb-6" />
+                
+                {/* Features list */}
+                <div className="flex flex-col gap-3.5 mb-8 flex-1">
+                  <div className="flex items-start gap-2.5">
+                    <span className="shrink-0 text-red-400 font-bold text-xs mt-0.5">✕</span>
+                    <span className="text-white/50 text-[13px] leading-tight">Maksimal 5 Generasi Genetika</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="shrink-0 text-red-400 font-bold text-xs mt-0.5">✕</span>
+                    <span className="text-white/50 text-[13px] leading-tight">Format Ekspor PDF Terbatas (Watermark)</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="shrink-0 text-red-400 font-bold text-xs mt-0.5">✕</span>
+                    <span className="text-white/50 text-[13px] leading-tight">Tidak Ada Sinkronisasi Cloud</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-white/10 border border-white/10">
+                      <Check className="w-2.5 h-2.5 text-white/80" strokeWidth={3} />
+                    </div>
+                    <span className="text-white/70 text-[13px] leading-tight">Penyimpanan Offline Browser</span>
+                  </div>
+                </div>
+
+                <div className="mt-auto">
+                  <div className="w-full py-3.5 bg-white/5 border border-white/10 rounded-2xl text-center text-xs font-bold text-white/50 cursor-default">
+                    Sedang Digunakan
+                  </div>
+                </div>
               </div>
             </div>
-          ) : (
-            // TRIAL CHECKOUT & QRIS GENERATOR
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6" id="trial-checkout-card">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-100 text-indigo-600">
-                    <CreditCard className="w-5 h-5" />
+
+            {/* TIER 2: PROFESSIONAL AUTOMATIC QRIS (CARD 2) */}
+            <div
+              onMouseMove={handleMouseMoveCard2}
+              className="group relative overflow-hidden rounded-[32px] bg-white/1 backdrop-blur-3xl backdrop-saturate-200 backdrop-brightness-110 flex flex-col transition-all duration-500 border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),inset_0_-1px_1px_rgba(255,255,255,0.05),0_32px_64px_-12px_rgba(0,0,0,0.6),0_0_80px_rgba(255,255,255,0.05)] lg:-translate-y-4"
+            >
+              {/* Dynamic shining border */}
+              <div 
+                className="absolute inset-0 z-0 rounded-[32px] pointer-events-none p-px"
+                style={{
+                  WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                  WebkitMaskComposite: "xor",
+                  maskComposite: "exclude"
+                }}
+              >
+                <div 
+                  className="absolute -inset-full animate-[spin_4s_linear_infinite]"
+                  style={{ background: "conic-gradient(from 0deg, transparent 70%, rgba(255,255,255,0.6) 100%)" }}
+                />
+              </div>
+
+              {/* Card Spotlight */}
+              <motion.div
+                className="absolute inset-0 z-0 pointer-events-none rounded-[32px] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                style={{
+                  background: useMotionTemplate`radial-gradient(400px at ${mouseX2}px ${mouseY2}px, rgba(255,255,255,0.12), transparent)`
+                }}
+              />
+              <div className="absolute inset-0 z-0 opacity-[0.03] mix-blend-overlay pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
+
+              {/* Badge */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-indigo-600 border-b border-x border-white/10 rounded-b-xl text-[9px] font-black uppercase tracking-widest text-white/95 shadow-[0_4px_12px_rgba(0,0,0,0.2)]">
+                Bayar Otomatis QRIS
+              </div>
+
+              <div className="relative z-10 flex flex-col p-8 md:p-9 flex-1">
+                <h3 className="text-lg font-black text-white tracking-wider flex items-center gap-1.5">
+                  Professional PRO
+                  <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
+                </h3>
+                
+                <div className="flex flex-col gap-1 mt-4 mb-2">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-white/40 text-lg font-semibold tracking-tight">Rp</span>
+                    <div className="h-[50px] overflow-hidden flex items-center">
+                      <span className="text-[36px] md:text-[40px] font-black text-white tracking-tighter leading-none">
+                        {settings.harga_pro.toLocaleString('id-ID')}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900">Aktivasi Instan via QRIS</h3>
-                    <p className="text-[10px] text-slate-400 font-semibold">Aktifkan status PRO dalam hitungan detik secara otomatis.</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/30 line-through font-semibold">
+                      Rp {settings.harga_coret.toLocaleString('id-ID')}
+                    </span>
+                    <span className="px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-500/30 rounded text-emerald-400 text-[8px] font-black uppercase tracking-wide">
+                      {settings.teks_diskon}
+                    </span>
                   </div>
                 </div>
                 
-                <span className="px-2 py-0.5 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md font-bold uppercase animate-pulse">
-                  Metode Otomatis
-                </span>
-              </div>
+                <p className="text-white/40 text-xs leading-relaxed mb-6 min-h-[36px]">
+                  Lisensi resmi institusi sekali bayar untuk kepemilikan seumur hidup (lifetime).
+                </p>
+                
+                <div className="w-full h-px bg-white/10 mb-6" />
 
-              {/* Pricing Showcase */}
-              {!qrisData && (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="space-y-1 text-center md:text-left">
-                    <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest font-mono">Buka Lisensi Seumur Hidup (Lifetime)</div>
-                    <div className="flex items-baseline justify-center md:justify-start gap-2">
-                      <span className="text-2xl font-black text-indigo-600">{formatRupiah(settings.harga_pro)}</span>
-                      <span className="text-xs text-slate-400 line-through font-semibold">{formatRupiah(settings.harga_coret)}</span>
-                    </div>
-                    <div className="inline-flex px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-700 text-[8px] font-black uppercase font-mono tracking-wider">
-                      {settings.teks_diskon}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleInitiatePayment}
-                    disabled={paying || loadingSettings}
-                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition shadow-xs hover:shadow-md disabled:opacity-75 flex items-center gap-2 cursor-pointer w-full md:w-auto justify-center"
-                    id="btn-generate-qris"
-                  >
-                    {paying ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Generating QRIS...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="w-4 h-4" />
-                        Bayar Instan Sekarang (QRIS)
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* QRIS Display */}
-              {qrisData && (
-                <div className="bg-slate-50 border border-indigo-100 rounded-2xl p-6 text-center space-y-4 animate-fade-in" id="qris-display-panel">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider font-mono">Scan Kode QRIS di Bawah Ini</span>
-                    <h4 className="text-base font-black text-slate-900">{formatRupiah(qrisData.total)}</h4>
-                    <p className="text-[9px] text-slate-400 font-semibold">Sudah termasuk biaya admin {formatRupiah(qrisData.fee)}</p>
-                  </div>
-
-                  {/* QR Image */}
-                  <div className="mx-auto bg-white p-3 rounded-2xl border border-slate-200/80 w-52 h-52 flex items-center justify-center relative shadow-xs">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrisData.qrString)}`}
-                      alt="Pakasir QRIS Code"
-                      className="w-44 h-44 rounded-lg"
-                    />
-                    {paymentStatus === 'success' && (
-                      <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center text-emerald-600 space-y-2 animate-fade-in">
-                        <CheckCircle className="w-12 h-12 text-emerald-500 animate-bounce" />
-                        <span className="text-xs font-black uppercase tracking-wider font-mono">Pembayaran Sukses!</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Live Status Indicator */}
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-bold">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping"></div>
-                      Menunggu Pembayaran (Otomatis Aktif)...
-                    </div>
-
-                    <div className="text-[10px] text-slate-400 font-semibold leading-relaxed">
-                      QRIS mendukung seluruh aplikasi pembayaran perbankan (M-Banking) &amp; e-Wallet seperti <strong>GoPay, OVO, Dana, LinkAja, ShopeePay, dsb</strong>.
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        if (pollingId) clearInterval(pollingId);
-                        setPollingId(null);
-                        setQrisData(null);
-                        setPaymentStatus(null);
-                      }}
-                      className="px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-100 transition text-[10px] font-bold cursor-pointer"
+                {/* Conditional view: If QRIS generated, replace feature lists to focus on QR code checkout */}
+                <AnimatePresence mode="wait">
+                  {qrisData ? (
+                    <motion.div
+                      key="qris-box"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="flex flex-col items-center justify-center space-y-4 bg-white/5 border border-white/10 p-5 rounded-2xl relative overflow-hidden mb-4"
                     >
-                      Batal / Cari Alternatif Lain
+                      <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
+                      
+                      <div className="text-center space-y-1">
+                        <span className="text-[9px] font-extrabold text-indigo-400 uppercase tracking-widest font-mono">Pindai QRIS Instan</span>
+                        <h4 className="text-lg font-black text-white">{formatRupiah(qrisData.total)}</h4>
+                        <p className="text-[8px] text-white/40">Biaya admin {formatRupiah(qrisData.fee)}</p>
+                      </div>
+
+                      <div className="bg-white p-2 rounded-xl relative shadow-lg">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrisData.qrString)}`}
+                          alt="Pakasir QRIS Code"
+                          className="w-36 h-36 rounded-md"
+                        />
+                        {paymentStatus === 'success' && (
+                          <div className="absolute inset-0 bg-black/90 rounded-xl flex flex-col items-center justify-center text-emerald-400 space-y-2">
+                            <CheckCircle className="w-10 h-10 text-emerald-400 animate-bounce" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Sukses!</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-center gap-1.5 text-center">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-[9px] font-bold text-amber-400">
+                          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping"></div>
+                          Menunggu Transfer...
+                        </div>
+                        <p className="text-[8px] text-white/40 leading-tight max-w-[180px]">
+                          Mendukung GoPay, OVO, Dana, LinkAja, BCA, Mandiri, dll.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (pollingId) clearInterval(pollingId);
+                          setPollingId(null);
+                          setQrisData(null);
+                          setPaymentStatus(null);
+                        }}
+                        className="text-[9px] font-bold text-white/50 hover:text-white border border-white/10 px-3 py-1.5 rounded-lg hover:bg-white/5 transition"
+                      >
+                        Batalkan QRIS
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="features-box"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex flex-col gap-3.5 mb-8 flex-1"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
+                        </div>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Generasi Fitness Tanpa Batas</span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
+                        </div>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Format Cetak PDF Premium (LPJ)</span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
+                        </div>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Sinkronisasi Cloud Real-Time</span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
+                        </div>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Lisensi Permanen Seumur Hidup</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Display Messages */}
+                {errorMsg && (
+                  <div className="mb-4 p-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-[10px] font-semibold text-red-400 flex items-center gap-1.5 animate-fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                {successMsg && (
+                  <div className="mb-4 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-semibold text-emerald-400 flex items-center gap-1.5 animate-fade-in">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>{successMsg}</span>
+                  </div>
+                )}
+
+                {!qrisData && (
+                  <div className="mt-auto">
+                    <button
+                      onClick={handleInitiatePayment}
+                      disabled={paying || loadingSettings}
+                      className="w-full py-4 rounded-2xl font-black text-xs text-black bg-white hover:bg-white/95 active:scale-[0.98] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      id="btn-generate-qris-glass"
+                    >
+                      {paying ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                          Menghubungkan Server...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          Aktivasi Instan (QRIS)
+                        </>
+                      )}
                     </button>
                   </div>
-                </div>
-              )}
-
-              {errorMsg && (
-                <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-xs font-semibold text-rose-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
-              {successMsg && (
-                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-semibold text-emerald-700 flex items-center gap-2 animate-fade-in">
-                  <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>{successMsg}</span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          )}
 
-          {/* Trial Limitations Card */}
-          {!isPro && (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4" id="trial-limits-card">
-              <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider font-mono">Batasan Fitur Akun Trial (Uji Coba)</h4>
-              <div className="space-y-2.5 text-xs text-slate-600 font-semibold leading-relaxed">
-                <p className="flex items-start gap-2">
-                  <span className="text-rose-500 font-bold shrink-0">✕</span>
-                  <span><strong>Format PDF Terbatas:</strong> Hasil cetak master tidak didukung oleh styling kustom premium.</span>
+            {/* TIER 3: MANUAL LICENSE / INSTITUTION via WHATSAPP (CARD 3) */}
+            <div
+              onMouseMove={handleMouseMoveCard3}
+              className="group relative overflow-hidden rounded-[32px] bg-white/1 backdrop-blur-3xl backdrop-saturate-200 backdrop-brightness-110 flex flex-col transition-all duration-500 border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_32px_64px_-12px_rgba(0,0,0,0.6)]"
+            >
+              {/* Card Spotlight */}
+              <motion.div
+                className="absolute inset-0 z-0 pointer-events-none rounded-[32px] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                style={{
+                  background: useMotionTemplate`radial-gradient(400px at ${mouseX3}px ${mouseY3}px, rgba(255,255,255,0.08), transparent)`
+                }}
+              />
+              <div className="absolute inset-0 z-0 opacity-[0.01] mix-blend-overlay pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
+
+              <div className="relative z-10 flex flex-col p-8 flex-1">
+                <h3 className="text-lg font-bold text-white/60 tracking-wider">
+                  Manual / Institusi
+                </h3>
+                
+                <div className="flex items-baseline gap-1 mt-4 mb-2">
+                  <span className="text-white/40 text-2xl font-semibold tracking-tight">Invoice</span>
+                  <div className="h-[50px] flex items-center">
+                    <span className="text-[36px] font-black text-white tracking-tighter leading-none">
+                      Resmi
+                    </span>
+                  </div>
+                </div>
+                
+                <p className="text-white/40 text-xs leading-relaxed mb-6 min-h-[36px]">
+                  Dukungan bendahara sekolah, kuitansi formal cap basah, & penawaran LPJ.
                 </p>
-                <p className="flex items-start gap-2">
-                  <span className="text-rose-500 font-bold shrink-0">✕</span>
-                  <span><strong>Batas Penjadwalan:</strong> Algoritma Genetika hanya terbatas pada 5 generasi kalkulasi.</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <span className="text-rose-500 font-bold shrink-0">✕</span>
-                  <span><strong>Cloud Sync:</strong> Tidak dapat mengaktifkan sinkronisasi database cloud otomatis.</span>
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Secondary WhatsApp Support */}
-          {!isPro && (
-            <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-6 shadow-xs space-y-4" id="wa-purchase-card">
-              <div className="flex items-start gap-3">
-                <div className="bg-emerald-500 text-white p-2 rounded-xl shrink-0">
-                  <Smartphone className="w-5 h-5" />
+                
+                <div className="w-full h-px bg-white/10 mb-6" />
+                
+                {/* Features list */}
+                <div className="flex flex-col gap-3.5 mb-8 flex-1">
+                  <div className="flex items-start gap-2.5">
+                    <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-white/10 border border-white/10">
+                      <Check className="w-2.5 h-2.5 text-white/80" strokeWidth={3} />
+                    </div>
+                    <span className="text-white/70 text-[13px] leading-tight">Penawaran Formal &amp; Invoice LPJ</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-white/10 border border-white/10">
+                      <Check className="w-2.5 h-2.5 text-white/80" strokeWidth={3} />
+                    </div>
+                    <span className="text-white/70 text-[13px] leading-tight">Transfer Bank Manual (BCA/Mandiri)</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-white/10 border border-white/10">
+                      <Check className="w-2.5 h-2.5 text-white/80" strokeWidth={3} />
+                    </div>
+                    <span className="text-white/70 text-[13px] leading-tight">Kuitansi Cap Basah Resmi</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-white/10 border border-white/10">
+                      <Check className="w-2.5 h-2.5 text-white/80" strokeWidth={3} />
+                    </div>
+                    <span className="text-white/70 text-[13px] leading-tight">Pendampingan Setup Prioritas</span>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900">Beli Manual / Konfirmasi WhatsApp</h3>
-                  <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
-                    Apabila Anda memerlukan invoice penawaran formal untuk bendahara sekolah atau ingin bertransaksi secara manual melalui transfer bank konvensional.
-                  </p>
-                </div>
-              </div>
 
-              <a
-                href={`https://wa.me/6289522537711?text=${encodeURIComponent(
-                  `Halo Admin Jadwalify 👋,\n\nSaya tertarik untuk membeli Lisensi PRO Resmi melalui konfirmasi manual.\n\nBerikut detail akun sekolah saya:\n• Username     : @${currentUser?.username || 'user'}\n• Nama Sekolah : ${currentUser?.nama_sekolah || '-'}\n\nMohon informasi prosedur pembayarannya. Terima kasih!`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-emerald-200 hover:border-emerald-300 text-emerald-700 text-xs font-bold rounded-xl transition shadow-xs cursor-pointer"
-              >
-                <span>Hubungi Layanan WhatsApp</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          )}
-        </div>
-
-        {/* Right Panel: Benefits & FAQ */}
-        <div className="lg:col-span-5 space-y-6" id="right-info-panel">
-          {/* Pro Benefits Panel */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5" id="pro-benefits-card">
-            <h3 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-indigo-600" />
-              Keunggulan Akun Profesional (PRO)
-            </h3>
-
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600 h-8 w-8 shrink-0 flex items-center justify-center font-bold">✓</div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">PDF Cetak Profesional Kustom</h4>
-                  <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">Cetak jadwal kolektif super bersih dengan layout landscape, footer tanda tangan, dan legenda otomatis.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600 h-8 w-8 shrink-0 flex items-center justify-center font-bold">✓</div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">Optimasi Genetika Tanpa Batas</h4>
-                  <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">Temukan solusi jadwal sekolah super padat dengan ratusan generasi fitness kalkulasi bebas bentrok.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600 h-8 w-8 shrink-0 flex items-center justify-center font-bold">✓</div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">Pencadangan Cloud Otomatis</h4>
-                  <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">Hubungkan jadwal sekolah Anda secara reaktif ke Supabase Cloud untuk kolaborasi multi-perangkat.</p>
+                <div className="mt-auto">
+                  <a
+                    href={`https://wa.me/6289522537711?text=${encodeURIComponent(
+                      `Halo Admin Jadwalify 👋,\n\nSaya tertarik untuk membeli Lisensi PRO Resmi melalui konfirmasi manual.\n\nBerikut detail akun sekolah saya:\n• Username     : @${currentUser?.username || 'user'}\n• Nama Sekolah : ${currentUser?.nama_sekolah || '-'}\n\nMohon informasi prosedur pembayarannya. Terima kasih!`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 rounded-2xl font-black text-xs text-center text-white bg-white/10 hover:bg-white/20 active:scale-[0.98] transition border border-white/10 hover:scale-[1.01] flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Smartphone className="w-4 h-4 text-emerald-400" />
+                    Hubungi WhatsApp Admin
+                    <ExternalLink className="w-3.5 h-3.5 text-white/60 ml-0.5" />
+                  </a>
                 </div>
               </div>
             </div>
+
           </div>
 
-          {/* Licensing FAQ */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4" id="licensing-faq-card">
-            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-slate-400" />
-              Pertanyaan Umum (FAQ)
+          {/* Collapsible/Elegant Licensing FAQ section inside the dark box */}
+          <div className="relative z-10 mt-20 border-t border-white/10 pt-12">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-8 justify-center md:justify-start">
+              <HelpCircle className="w-5 h-5 text-indigo-400" />
+              Pertanyaan Umum (FAQ) Lisensi Jadwalify
             </h3>
 
-            <div className="space-y-3 text-[11px] font-semibold text-slate-600 leading-relaxed">
-              <div className="border-b border-slate-50 pb-2.5">
-                <h4 className="font-bold text-slate-800 mb-0.5">Apakah pembayaran QRIS aman?</h4>
-                <p className="text-slate-500 leading-relaxed">Ya, sangat aman. Kode QRIS di-generate secara unik untuk transaksi Anda secara real-time. Begitu terbayar, sistem mendeteksinya langsung dalam hitungan detik dan mengaktifkan akun Anda secara instan.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-white/60 leading-relaxed font-semibold">
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-sm hover:border-white/10 transition">
+                <h4 className="font-bold text-white text-sm mb-2">Apakah pembayaran QRIS aman?</h4>
+                <p className="leading-relaxed">Ya, sangat aman. Kode QRIS di-generate secara unik untuk transaksi Anda secara real-time. Begitu terbayar, sistem mendeteksinya langsung dalam hitungan detik dan mengaktifkan akun Anda secara instan.</p>
               </div>
-              <div className="border-b border-slate-50 pb-2.5">
-                <h4 className="font-bold text-slate-800 mb-0.5">Apakah Lisensi PRO berlaku selamanya?</h4>
-                <p className="text-slate-500 leading-relaxed">Ya, sekali diaktifkan, lisensi PRO berlaku seumur hidup (lifetime) untuk akun sekolah Anda tanpa biaya bulanan atau tahunan tambahan.</p>
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-sm hover:border-white/10 transition">
+                <h4 className="font-bold text-white text-sm mb-2">Apakah Lisensi PRO berlaku selamanya?</h4>
+                <p className="leading-relaxed">Ya, sekali diaktifkan, lisensi PRO berlaku seumur hidup (lifetime) untuk akun sekolah Anda tanpa biaya bulanan atau tahunan tambahan.</p>
               </div>
-              <div>
-                <h4 className="font-bold text-slate-800 mb-0.5">Dapatkah satu Akun PRO dibuka di beberapa perangkat?</h4>
-                <p className="text-slate-500 leading-relaxed">Tentu saja. Dengan mengaktifkan Supabase cloud mode, data utama sekolah Anda tersimpan aman di cloud. Anda dapat mengakses, mengisi data, atau mengedit jadwal dari komputer mana saja secara instan.</p>
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-sm hover:border-white/10 transition">
+                <h4 className="font-bold text-white text-sm mb-2">Dapatkah dibuka di beberapa perangkat?</h4>
+                <p className="leading-relaxed">Tentu saja. Dengan mengaktifkan Supabase cloud mode, data utama sekolah Anda tersimpan aman di cloud. Anda dapat mengakses, mengisi data, atau mengedit jadwal dari komputer mana saja secara instan.</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
