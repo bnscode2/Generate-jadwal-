@@ -945,6 +945,18 @@ export default function AdministrativeDashboard() {
       alert('Nama dan NIP wajib diisi.');
       return;
     }
+
+    // Validasi Duplikasi NIP (Standard Profesional)
+    const normalizedNip = newGuru.nip.trim();
+    const existingGuruWithSameNip = guru.find(
+      g => g.nip.trim().toLowerCase() === normalizedNip.toLowerCase()
+    );
+
+    if (existingGuruWithSameNip) {
+      alert(`Peringatan Validasi: NIP "${normalizedNip}" sudah terdaftar atas nama "${existingGuruWithSameNip.nama}". Mohon gunakan nomor NIP lain yang unik.`);
+      return;
+    }
+
     const created: Guru = {
       id: `guru-${Date.now()}`,
       nip: newGuru.nip,
@@ -1074,6 +1086,17 @@ export default function AdministrativeDashboard() {
   };
 
   const handleUpdateGuru = async (updatedGuru: Guru) => {
+    // Validasi Duplikasi NIP (Standard Profesional)
+    const normalizedNip = updatedGuru.nip.trim();
+    const existingGuruWithSameNip = guru.find(
+      g => g.id !== updatedGuru.id && g.nip.trim().toLowerCase() === normalizedNip.toLowerCase()
+    );
+
+    if (existingGuruWithSameNip) {
+      alert(`Peringatan Validasi: Gagal memperbarui data guru. NIP "${normalizedNip}" sudah digunakan oleh guru lain ("${existingGuruWithSameNip.nama}"). Silakan periksa atau ganti NIP.`);
+      return;
+    }
+
     if (isSupabaseModeActive() && currentUser) {
       try {
         // Direct and immediate cloud update

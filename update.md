@@ -230,3 +230,16 @@
 ### Status:
 - **LULUS LINTING** (0 error, 5 warning standar).
 - **LULUS KOMPILASI** (Build sukses).
+
+## [08 Juli 2026 - Validasi Profesional Duplikasi NIP Guru]
+### Perubahan Database & Backend:
+- **Pencegahan Kegagalan Simpan**: Mengintegrasikan sistem validasi pre-flight lokal untuk memeriksa kecocokan NIP sebelum data dikirim ke Supabase Cloud. Hal ini mengeliminasi risiko raw database constraint violation error (`unique_nip_per_user`) yang membingungkan bagi pengguna.
+
+### Perubahan Frontend & UX:
+- **Validasi Cerdas Pendaftaran Guru Baru**: Saat pendaftaran guru baru, sistem secara otomatis melacak data lokal di memory untuk mendeteksi apakah ada guru aktif yang menggunakan NIP yang sama. Jika ada, sistem akan memblokir registrasi dan menampilkan dialog peringatan profesional: *"Peringatan Validasi: NIP [NIP] sudah terdaftar atas nama [Nama Guru]"*.
+- **Validasi Modifikasi Biodata Guru**: Penerapan filter eksklusi ID yang memastikan bahwa saat memperbarui biodata guru aktif, perubahan tidak akan menabrak NIP guru lain, melainkan tetap memperbolehkan pembaruan jika NIP tersebut memang milik guru bersangkutan itu sendiri.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
