@@ -283,3 +283,15 @@
 - **LULUS LINTING** (0 error, 5 warning standar).
 - **LULUS KOMPILASI** (Build sukses).
 
+## [08 Juli 2026 - Otomatisasi Sinkronisasi Jam JP pada Ploting Pengampu]
+### Perubahan Database & Backend:
+- *Tidak ada perubahan.*
+
+### Perubahan Frontend & UX:
+- **Auto-Sync JP Allocation**: Mengimplementasikan pengisian alokasi jam mengajar secara otomatis (auto-fill) pada input "Alokasi (Jam JP/Minggu)" saat pengguna memilih Mata Pelajaran di menu "Kelola Pembagian Pengampu Mata Pelajaran". Beban jam mengajar diambil langsung dari konfigurasi `jumlah_jam_per_minggu` yang didefinisikan pada pengaturan mata pelajaran.
+- **Dynamic Override Kept**: Menjamin alokasi jam JP yang terisi otomatis tetap sepenuhnya dinamis dan dapat diubah manual jika dibutuhkan sebelum mengunci alokasi tugas.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+

@@ -60,7 +60,15 @@ export default function PengampuTab({
               <label className="block text-slate-500 font-semibold mb-1">Mata Pelajaran Diampu</label>
               <select 
                 value={newPengampu.mapel_id || ''}
-                onChange={(e) => setNewPengampu({...newPengampu, mapel_id: e.target.value})}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const selectedMapel = mapel.find(m => m.id === selectedId);
+                  setNewPengampu({
+                    ...newPengampu,
+                    mapel_id: selectedId,
+                    jumlah_jam: selectedMapel ? selectedMapel.jumlah_jam_per_minggu : 4
+                  });
+                }}
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 font-medium transition-all"
                 required
               >
