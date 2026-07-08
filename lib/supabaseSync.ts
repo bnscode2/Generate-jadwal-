@@ -37,8 +37,11 @@ class IDMapper {
   static getUUID(localId: string): string {
     if (!localId) return '';
     if (isValidUUID(localId)) return localId;
+    const currentUser = LocalDB.getCurrentUser();
+    const username = currentUser?.username ? currentUser.username.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'anonymous';
     const activeUnit = LocalDB.getActiveUnit();
-    const salt = activeUnit ? `unit_${activeUnit.toLowerCase().replace(/[^a-z0-9]/g, '_')}_` : '';
+    const unitSalt = activeUnit ? `unit_${activeUnit.toLowerCase().replace(/[^a-z0-9]/g, '_')}_` : '';
+    const salt = `usr_${username}_${unitSalt}`;
     return getDeterministicUUID(salt + localId);
   }
 

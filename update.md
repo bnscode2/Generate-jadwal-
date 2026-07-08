@@ -1,5 +1,18 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [08 Juli 2026 - Resolusi Bug `schedules_pkey` Duplikat (User-Scoped Deterministic Salt Hashing)]
+### Perubahan Database & Backend (Supabase):
+- **Isolasi UUID Antar Pengguna**: Menyempurnakan mekanisme pemetaan ID lokal ke UUID di `IDMapper.getUUID` (`/lib/supabaseSync.ts`). Sekarang, sistem menyuntikkan `username` pengguna yang aktif sebagai **salt utama** dalam algoritma hashing deterministik (`usr_${username}_`).
+- **Pencegahan Kegagalan `schedules_pkey`**: Memastikan draf jadwal pelajaran (`schedules`), guru (`teachers`), mata pelajaran (`subjects`), kelas (`classes`), dll. yang berasal dari template awal lokal yang sama tidak akan lagi menghasilkan UUID yang bertabrakan di antara pengguna yang berbeda di satu database Supabase cloud yang sama.
+- **Standar Multi-Tenant yang Aman**: Mematuhi kaidah isolasi data multi-tenant dengan tetap mempertahankan satu database fisik terbagi dengan pengamanan ketat lewat Row Level Security (RLS).
+
+### Perubahan Frontend & UX:
+- **Pesan Edukasi Sinkronisasi**: Memperkuat penanganan error dan konfirmasi di tab penampil kisi (`/components/GridTab.tsx`) dengan penjelasan teknis yang santun dan solutif.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [08 Juli 2026 - Resolusi Bug Sinkronisasi Cloud & Integrasi Promosi Jadwalify PRO]
 ### Perubahan Database & Backend (Supabase):
 - **Resolusi Konflik Duplikasi Kunci Primer (`schedules_pkey`)**: Menyempurnakan logika pemetaan ID di `/lib/supabaseSync.ts` (`pushSchedulesOnly` & `pushAll`). Sekarang, sistem secara otomatis melacak UUID yang sudah dipetakan (`seenSchedules` & `seenConflicts`) untuk menjamin tidak ada duplikasi kunci primer yang dikirimkan dalam satu batch operasi database. Jika terdeteksi ID yang sama, sistem menyuntikkan salt dinamis secara otomatis untuk menghasilkan UUID yang aman dan unik tanpa merusak integritas hubungan data.
