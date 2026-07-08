@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css'; // Global styles
 import PWARegister from '../components/PWARegister';
+import GlobalAlertProvider from '../components/GlobalAlertProvider';
 
 export const metadata: Metadata = {
   title: 'Jadwalify - Penjadwalan Sekolah Otomatis',
@@ -21,7 +22,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
       </head>
       <body suppressHydrationWarning>
         <PWARegister />
-        {children}
+        <GlobalAlertProvider>
+          {children}
+        </GlobalAlertProvider>
       </body>
     </html>
   );
