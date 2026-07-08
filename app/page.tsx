@@ -965,24 +965,40 @@ export default function AdministrativeDashboard() {
       max_jam_per_hari: 6
     };
 
-    // Always save locally first!
-    const updated = [...guru, created];
-    LocalDB.saveGuru(updated);
-    LocalDB.savePreferensi([...preferensi, defaultPref]);
-    setHasUnsavedChanges(true);
-    loadDatabase(true);
-
     setNewGuru({ nama: '', nip: '', jenis_kelamin: 'Laki-laki', no_hp: '', status_aktif: true });
 
     if (isSupabaseModeActive() && currentUser) {
       try {
+        // Direct and immediate cloud save first
         await SupabaseSyncService.syncTeacher(created, 'upsert');
         await SupabaseSyncService.syncPreference(defaultPref, 'upsert');
-        setLogMessages(prev => ["☁️ [Real-time] Guru dan Preferensi berhasil diselaraskan ke Supabase Cloud!", ...prev]);
+        
+        // Save to LocalDB to keep cache identical
+        const updated = [...guru, created];
+        LocalDB.saveGuru(updated);
+        LocalDB.savePreferensi([...preferensi, defaultPref]);
+        loadDatabase(true);
+        
+        setLogMessages(prev => ["☁️ [Real-time] Guru baru dan preferensinya berhasil langsung disimpan ke Supabase Cloud!", ...prev]);
+        alert("Guru baru berhasil didaftarkan langsung ke cloud database.");
       } catch (err: any) {
         console.error("Gagal sinkronisasi guru baru ke cloud:", err);
-        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan guru baru ke Cloud (${err.message}). Data Anda aman di lokal browser, silakan klik tombol Simpan ke Cloud untuk mengunggah ulang.`, ...prev]);
+        // Fallback to local on failure
+        const updated = [...guru, created];
+        LocalDB.saveGuru(updated);
+        LocalDB.savePreferensi([...preferensi, defaultPref]);
+        setHasUnsavedChanges(true);
+        loadDatabase(true);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal menyimpan ke Cloud (${err.message}). Data disimpan lokal.`, ...prev]);
+        alert(`Gagal menyimpan langsung ke cloud: ${err.message || String(err)}. Data tetap disimpan di lokal.`);
       }
+    } else {
+      // Offline/sandbox mode
+      const updated = [...guru, created];
+      LocalDB.saveGuru(updated);
+      LocalDB.savePreferensi([...preferensi, defaultPref]);
+      loadDatabase(true);
+      setLogMessages(prev => ["Guru baru disimpan di penyimpanan lokal.", ...prev]);
     }
   };
 
@@ -995,53 +1011,98 @@ export default function AdministrativeDashboard() {
       message: `Apakah Anda yakin ingin menghapus guru "${targetName}"? Seluruh data preferensi, tugas pengampu, dan jadwal terkait akan ikut dihapus secara permanen dari sistem.`,
       type: 'delete_guru',
       onConfirm: async () => {
-        // Always save locally first!
-        const filteredGuru = guru.filter(g => g.id !== id);
-        const filteredAssignment = pengampu.filter(a => a.guru_id !== id);
-        const filteredPref = preferensi.filter(p => p.guru_id !== id);
-        const filteredSched = jadwal.filter(s => s.guru_id !== id);
-        
-        LocalDB.saveGuru(filteredGuru);
-        LocalDB.savePengampu(filteredAssignment);
-        LocalDB.savePreferensi(filteredPref);
-        LocalDB.saveJadwal(filteredSched);
-        setHasUnsavedChanges(true);
-        loadDatabase(true);
-
-        setLogMessages(prev => [`Data guru "${targetName}" beserta relasi terkait berhasil dihapus dari browser.`, ...prev]);
-        setSelectedCell(null);
-        setConfirmModal(null);
-
         if (isSupabaseModeActive() && currentUser && target) {
           try {
+            // Direct and immediate cloud deletion
             await SupabaseSyncService.syncTeacher(target, 'delete');
-            setLogMessages(prev => [`☁️ [Real-time] Penghapusan Guru "${targetName}" berhasil diselaraskan di cloud!`, ...prev]);
+            
+            // Delete locally as well
+            const filteredGuru = guru.filter(g => g.id !== id);
+            const filteredAssignment = pengampu.filter(a => a.guru_id !== id);
+            const filteredPref = preferensi.filter(p => p.guru_id !== id);
+            const filteredSched = jadwal.filter(s => s.guru_id !== id);
+            
+            LocalDB.saveGuru(filteredGuru);
+            LocalDB.savePengampu(filteredAssignment);
+            LocalDB.savePreferensi(filteredPref);
+            LocalDB.saveJadwal(filteredSched);
+            loadDatabase(true);
+
+            setLogMessages(prev => [`☁️ [Real-time] Guru "${targetName}" beserta seluruh relasinya berhasil dihapus langsung dari Supabase Cloud!`, ...prev]);
+            setSelectedCell(null);
+            setConfirmModal(null);
+            alert(`Guru "${targetName}" berhasil dihapus langsung dari cloud database.`);
           } catch (err: any) {
             console.error("Gagal sinkronisasi hapus guru:", err);
-            setLogMessages(prev => [`⚠️ Peringatan: Gagal menghapus guru di Cloud (${err.message}). Silakan lakukan klik Simpan ke Cloud nanti untuk merapikan cloud database Anda.`, ...prev]);
+            // Fallback: Delete locally and mark unsaved changes
+            const filteredGuru = guru.filter(g => g.id !== id);
+            const filteredAssignment = pengampu.filter(a => a.guru_id !== id);
+            const filteredPref = preferensi.filter(p => p.guru_id !== id);
+            const filteredSched = jadwal.filter(s => s.guru_id !== id);
+            
+            LocalDB.saveGuru(filteredGuru);
+            LocalDB.savePengampu(filteredAssignment);
+            LocalDB.savePreferensi(filteredPref);
+            LocalDB.saveJadwal(filteredSched);
+            setHasUnsavedChanges(true);
+            loadDatabase(true);
+
+            setLogMessages(prev => [`⚠️ Peringatan: Gagal menghapus langsung dari Cloud (${err.message}). Terhapus lokal, harap sinkronkan nanti.`, ...prev]);
+            setSelectedCell(null);
+            setConfirmModal(null);
+            alert(`Gagal menghapus langsung dari cloud: ${err.message || String(err)}. Data terhapus lokal, harap sinkronkan manual.`);
           }
+        } else {
+          // Offline/sandbox mode
+          const filteredGuru = guru.filter(g => g.id !== id);
+          const filteredAssignment = pengampu.filter(a => a.guru_id !== id);
+          const filteredPref = preferensi.filter(p => p.guru_id !== id);
+          const filteredSched = jadwal.filter(s => s.guru_id !== id);
+          
+          LocalDB.saveGuru(filteredGuru);
+          LocalDB.savePengampu(filteredAssignment);
+          LocalDB.savePreferensi(filteredPref);
+          LocalDB.saveJadwal(filteredSched);
+          loadDatabase(true);
+
+          setLogMessages(prev => [`Data guru "${targetName}" berhasil dihapus secara lokal.`, ...prev]);
+          setSelectedCell(null);
+          setConfirmModal(null);
         }
       }
     });
   };
 
   const handleUpdateGuru = async (updatedGuru: Guru) => {
-    // Always save locally first!
-    const updated = guru.map(g => g.id === updatedGuru.id ? updatedGuru : g);
-    LocalDB.saveGuru(updated);
-    setHasUnsavedChanges(true);
-    loadDatabase(true);
-
-    setLogMessages(prev => [`Biodata guru ${updatedGuru.nama} berhasil diperbarui di browser.`, ...prev]);
-
     if (isSupabaseModeActive() && currentUser) {
       try {
+        // Direct and immediate cloud update
         await SupabaseSyncService.syncTeacher(updatedGuru, 'upsert');
-        setLogMessages(prev => [`☁️ [Real-time] Pembaruan biodata guru ${updatedGuru.nama} diselaraskan ke cloud!`, ...prev]);
+        
+        // Update locally
+        const updated = guru.map(g => g.id === updatedGuru.id ? updatedGuru : g);
+        LocalDB.saveGuru(updated);
+        loadDatabase(true);
+        
+        setLogMessages(prev => [`☁️ [Real-time] Pembaruan biodata guru ${updatedGuru.nama} berhasil langsung disimpan ke Supabase Cloud!`, ...prev]);
+        alert(`Biodata guru "${updatedGuru.nama}" berhasil diperbarui langsung ke cloud database.`);
       } catch (err: any) {
         console.error("Gagal sinkronisasi update guru:", err);
-        setLogMessages(prev => [`⚠️ Peringatan: Gagal memperbarui guru di Cloud (${err.message}). Klik Simpan ke Cloud nanti untuk menyelaraskan.`, ...prev]);
+        // Fallback: Update locally and mark unsaved changes
+        const updated = guru.map(g => g.id === updatedGuru.id ? updatedGuru : g);
+        LocalDB.saveGuru(updated);
+        setHasUnsavedChanges(true);
+        loadDatabase(true);
+        
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal memperbarui langsung ke Cloud (${err.message}). Diperbarui lokal.`, ...prev]);
+        alert(`Gagal memperbarui ke cloud: ${err.message || String(err)}. Diperbarui lokal.`);
       }
+    } else {
+      // Offline/sandbox mode
+      const updated = guru.map(g => g.id === updatedGuru.id ? updatedGuru : g);
+      LocalDB.saveGuru(updated);
+      loadDatabase(true);
+      setLogMessages(prev => [`Biodata guru ${updatedGuru.nama} berhasil diperbarui secara lokal.`, ...prev]);
     }
   };
 

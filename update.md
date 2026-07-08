@@ -217,3 +217,16 @@
 ### Status:
 - **LULUS LINTING** (0 error, 5 warning standar).
 - **LULUS KOMPILASI** (Build sukses).
+
+## [08 Juli 2026 - Sinkronisasi Real-time Instan & Cloud-First untuk CRUD Data Guru]
+### Perubahan Database & Backend:
+- **Metode Cloud-First & Real-time**: Mengubah alur penyimpanan dan penghapusan data Guru agar langsung dikirimkan ke cloud database Supabase terlebih dahulu (`SupabaseSyncService.syncTeacher`).
+- **Pemanfaatan Cascade Deletion**: Memanfaatkan properti `ON DELETE CASCADE` di sisi database Supabase sehingga ketika data guru berhasil dihapus dari cloud, seluruh relasi preferensi, tugas pengampu, dan jadwal terkait akan otomatis dibersihkan secara instan di cloud dan lokal tanpa risiko konflik cache memory.
+
+### Perubahan Frontend & UX:
+- **Bypass Unsaved Changes Alert**: Menghilangkan tanda peringatan kuning "Perubahan Data Belum Disimpan ke Cloud" untuk transaksi Guru karena penambahan, pembaruan, dan penghapusan guru kini langsung tersimpan reaktif ke Supabase.
+- **Sistem Fallback Kuat**: Jika terjadi kegagalan jaringan saat mengirim data ke cloud, aplikasi secara otomatis melakukan fallback aman dengan menyimpannya ke memori lokal browser (LocalDB) dan menandai status belum sinkron agar pengguna dapat melakukan sinkronisasi ulang nanti.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
