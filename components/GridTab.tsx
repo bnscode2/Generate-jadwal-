@@ -687,22 +687,33 @@ export default function GridTab({
       <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm font-sans relative overflow-hidden">
         
         <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-3 w-full lg:w-auto">
-          <div className="flex bg-slate-100/80 border border-slate-200/60 rounded-xl p-1 text-xs w-full sm:w-auto h-10 items-center justify-between sm:justify-start shadow-xs">
+          <div 
+            className="flex bg-slate-100/80 border border-slate-200/60 rounded-xl p-1 text-xs w-full sm:w-auto h-10 items-center overflow-x-auto flex-nowrap shadow-xs gap-1 scroll-smooth no-scrollbar"
+          >
+            <style dangerouslySetInnerHTML={{ __html: `
+              .no-scrollbar::-webkit-scrollbar {
+                display: none;
+              }
+              .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+              }
+            ` }} />
             <button 
               onClick={() => { setFilterType('kelas'); setFilterId(kelas[0]?.id || ''); }}
-              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap ${filterType === 'kelas' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
+              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap shrink-0 ${filterType === 'kelas' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
             >
               Berdasarkan Kelas
             </button>
             <button 
               onClick={() => { setFilterType('guru'); setFilterId(guru[0]?.id || ''); }}
-              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap ${filterType === 'guru' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
+              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap shrink-0 ${filterType === 'guru' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
             >
               Berdasarkan Guru
             </button>
             <button 
               onClick={() => { setFilterType('ruangan'); setFilterId(ruangan[0]?.id || ''); }}
-              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap ${filterType === 'ruangan' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
+              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap shrink-0 ${filterType === 'ruangan' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
             >
               Berdasarkan Ruangan
             </button>

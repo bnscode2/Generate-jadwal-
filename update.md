@@ -187,6 +187,7 @@
   - **Ekspor Excel (CSV)**: Menambahkan status biner responsif; tombol berlatar belakang putih bersih dengan aksen ikon hijau premium saat aktif (PRO), dan beralih otomatis ke mode redup berkabut dengan lencana "PRO" kapsul jika fitur terkunci.
   - **Cetak PDF Profesional**: Menggunakan tombol solid indigo premium berkilau dengan efek bayangan elegan untuk kenyamanan akses cetak instan.
 - **Pencegahan Pemotongan Teks**: Menambahkan aturan `whitespace-nowrap` pada seluruh tombol aksi utama untuk menjamin integritas tipografi yang kokoh di semua resolusi viewport.
+- **Horizontal Scroll Filter Mobile (Scrollable Tabs)**: Memperbarui tombol filter kategori (`Berdasarkan Kelas`, `Berdasarkan Guru`, `Berdasarkan Ruangan`) di layar mobile sehingga mengalir horizontal (`flex-nowrap`, `overflow-x-auto`) dengan pergeseran mulus (`scroll-smooth`), mencegah penyusutan tombol (`shrink-0`), serta menyembunyikan scrollbar secara estetik (`no-scrollbar`) agar menyajikan interaksi navigasi yang sangat murni tanpa merusak kerapian tata letak desktop maupun landscape.
 
 ### Status:
 - **LULUS LINTING** (0 error, 5 warning standar).
