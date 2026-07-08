@@ -64,6 +64,104 @@ export function getSupabaseClient() {
   return cachedSupabaseClient;
 }
 
+/**
+ * Dapatkan user authenticated dari Supabase dengan batas waktu (timeout).
+ * Jika pemanggilan menggantung (stuck) atau terjadi error sesi kritis,
+ * secara otomatis bersihkan cache sesi Supabase agar sistem pulih secara instan tanpa perlu hapus cache browser manual.
+ */
+export async function getAuthenticatedUserWithTimeout(timeoutMs = 8000): Promise<any> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
+  const timeoutPromise = new Promise<null>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('TIMEOUT_AUTH_CHECK'));
+    }, timeoutMs);
+  });
+
+  try {
+    const userPromise = (async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      return user;
+    })();
+
+    const user = await Promise.race([userPromise, timeoutPromise]);
+    return user;
+  } catch (error: any) {
+    console.error('Pemeriksaan user otentikasi Supabase gagal atau stuck:', error);
+    handleCorruptedSession(error);
+    throw error;
+  }
+}
+
+/**
+ * Dapatkan session aktif dari Supabase dengan batas waktu (timeout).
+ * Berguna untuk inisialisasi aplikasi awal agar halaman tidak stuck ketika token kedaluwarsa/korup.
+ */
+export async function getAuthenticatedSessionWithTimeout(timeoutMs = 8000): Promise<any> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
+  const timeoutPromise = new Promise<null>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('TIMEOUT_SESSION_CHECK'));
+    }, timeoutMs);
+  });
+
+  try {
+    const sessionPromise = (async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      return session;
+    })();
+
+    const session = await Promise.race([sessionPromise, timeoutPromise]);
+    return session;
+  } catch (error: any) {
+    console.error('Pemeriksaan session Supabase gagal atau stuck:', error);
+    handleCorruptedSession(error);
+    throw error;
+  }
+}
+
+/**
+ * Fungsi utilitas untuk membersihkan localStorage dari token Supabase yang rusak secara otomatis
+ */
+function handleCorruptedSession(error: any) {
+  if (typeof window === 'undefined') return;
+  
+  const isTimeout = error?.message === 'TIMEOUT_AUTH_CHECK' || error?.message === 'TIMEOUT_SESSION_CHECK';
+  const isAuthError = error?.status === 400 || error?.status === 401 || 
+                      error?.message?.toLowerCase().includes('jwt') || 
+                      error?.message?.toLowerCase().includes('session') ||
+                      error?.message?.toLowerCase().includes('invalid') ||
+                      error?.message?.toLowerCase().includes('refresh_token');
+
+  if (isTimeout || isAuthError) {
+    console.warn('Mendeteksi sesi rusak atau timeout. Membersihkan sesi lokal secara paksa...');
+    try {
+      // Hapus seluruh key di localStorage yang diawali dengan 'sb-' (standard Supabase JWT storage key)
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key === 'sch_current_user')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      
+      // Logout secara non-blocking
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        supabase.auth.signOut().catch(() => {});
+      }
+    } catch (e) {
+      console.error('Gagal membersihkan sesi lokal:', e);
+    }
+  }
+}
+
 // Fungsi pembantu untuk memeriksa apakah mode koneksi Supabase aktif
 export function isSupabaseModeActive(): boolean {
   if (typeof window === 'undefined') return false;

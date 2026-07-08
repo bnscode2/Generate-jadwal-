@@ -49,7 +49,7 @@ import {
 
 import { LocalDB } from '../lib/db';
 import { CalendarScheduler } from '../lib/scheduler';
-import { getSupabaseClient, isSupabaseModeActive } from '../lib/supabaseClient';
+import { getSupabaseClient, isSupabaseModeActive, getAuthenticatedSessionWithTimeout } from '../lib/supabaseClient';
 import { SupabaseSyncService } from '../lib/supabaseSync';
 
 import DashboardTab from '../components/DashboardTab';
@@ -175,11 +175,10 @@ export default function AdministrativeDashboard() {
     if (!supabase) return;
 
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Gagal mengambil session Supabase:', error);
-        return;
-      }
+      const session = await getAuthenticatedSessionWithTimeout(8000).catch((err: any) => {
+        console.error('Gagal mengambil session Supabase (timeout/error):', err);
+        return null;
+      });
 
       if (session?.user) {
         const sbUser = session.user;

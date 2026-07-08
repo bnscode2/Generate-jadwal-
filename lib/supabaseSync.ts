@@ -1,4 +1,4 @@
-import { getSupabaseClient, isSupabaseModeActive } from './supabaseClient';
+import { getSupabaseClient, isSupabaseModeActive, getAuthenticatedUserWithTimeout } from './supabaseClient';
 import { LocalDB } from './db';
 import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal } from './types';
 
@@ -100,13 +100,23 @@ export class SupabaseSyncService {
       const schedules = LocalDB.getJadwal();
       const conflicts = LocalDB.getConflicts();
 
-      // Coba dapatkan user authenticated jika ada, jika tidak, batalkan karena RLS mencegah penulisan tanpa auth
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      // Coba dapatkan user authenticated dengan batas waktu (timeout) 8 detik
+      let user = null;
+      try {
+        user = await getAuthenticatedUserWithTimeout(8000);
+      } catch (authErr: any) {
+        return {
+          success: false,
+          message: 'Sesi masuk Supabase kedaluwarsa atau tidak valid. Sesi Anda telah direset otomatis demi keamanan, silakan coba masuk kembali menggunakan Google.',
+          logs: ['Sinkronisasi dibatalkan karena kegagalan atau timeout otentikasi Supabase.', `Detail: ${authErr?.message || String(authErr)}`]
+        };
+      }
+
+      if (!user) {
         return {
           success: false,
           message: 'Sesi masuk Supabase tidak terdeteksi atau telah berakhir. Silakan login terlebih dahulu menggunakan Google.',
-          logs: ['Sinkronisasi dibatalkan karena pengguna tidak terautentikasi.', ...(userError ? [`Detail: ${userError.message}`] : [])]
+          logs: ['Sinkronisasi dibatalkan karena pengguna tidak terautentikasi.']
         };
       }
       const userId = user.id;
@@ -318,13 +328,23 @@ export class SupabaseSyncService {
 
     try {
       if (onProgress) onProgress(5, 'Mengautentikasi dan menyiapkan pengunduhan...');
-      // Coba dapatkan user authenticated jika ada, jika tidak, batalkan karena RLS mencegah penulisan/pembacaan tanpa auth
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      // Coba dapatkan user authenticated dengan batas waktu (timeout) 8 detik
+      let user = null;
+      try {
+        user = await getAuthenticatedUserWithTimeout(8000);
+      } catch (authErr: any) {
+        return {
+          success: false,
+          message: 'Sesi masuk Supabase kedaluwarsa atau tidak valid. Sesi Anda telah direset otomatis demi keamanan, silakan coba masuk kembali menggunakan Google.',
+          logs: ['Sinkronisasi unduh dibatalkan karena kegagalan atau timeout otentikasi Supabase.', `Detail: ${authErr?.message || String(authErr)}`]
+        };
+      }
+
+      if (!user) {
         return {
           success: false,
           message: 'Sesi masuk Supabase tidak terdeteksi atau telah berakhir. Silakan login terlebih dahulu menggunakan Google.',
-          logs: ['Sinkronisasi unduh dibatalkan karena pengguna tidak terautentikasi.', ...(userError ? [`Detail: ${userError.message}`] : [])]
+          logs: ['Sinkronisasi unduh dibatalkan karena pengguna tidak terautentikasi.']
         };
       }
 
@@ -550,7 +570,7 @@ export class SupabaseSyncService {
     if (!supabase) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUserWithTimeout(5000).catch(() => null);
       const userId = user?.id || null;
       if (!userId) return; // Prevent unauthenticated writes!
       
@@ -651,9 +671,9 @@ export class SupabaseSyncService {
       return { success: false, message: 'Supabase tidak terkonfigurasi.' };
     }
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUserWithTimeout(8000).catch(() => null);
       if (!user) {
-        return { success: false, message: 'Pengguna tidak terautentikasi.' };
+        return { success: false, message: 'Pengguna tidak terautentikasi atau sesi berakhir.' };
       }
       const userId = user.id;
 

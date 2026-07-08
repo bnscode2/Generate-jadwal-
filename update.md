@@ -270,3 +270,16 @@
 - **LULUS LINTING** (0 error, 5 warning standar).
 - **LULUS KOMPILASI** (Build sukses).
 
+## [08 Juli 2026 - Perbaikan Bug Sesi Menggantung (Stuck 5%) & Otomasi Self-Healing Token Supabase]
+### Perubahan Database & Backend:
+- *Tidak ada perubahan pada tabel database.* Keamanan terjamin tanpa modifikasi RLS.
+
+### Perubahan Frontend & UX:
+- **Auth Timeout Protection**: Mengintegrasikan batas waktu pemanggilan (Timeout) pada setiap pemeriksaan otentikasi (`getUser` & `getSession`) menggunakan `Promise.race()`. Jika proses verifikasi dengan cloud melebihi 8 detik, sistem akan secara otomatis membatalkan pemanggilan dan melempar error penanganan yang aman daripada membiarkan user terjebak di progress "5%".
+- **Programmatic Session Self-Healing**: Mengembangkan mekanisme pembersihan otomatis jika sesi terdeteksi rusak atau kedaluwarsa. Sistem sekarang secara otomatis memprogram pembersihan seluruh Supabase key (`sb-` tokens) di `localStorage` dan mereset status login lokal secara bersih jika verifikasi gagal/gantung. Ini meniadakan kebutuhan pengguna untuk menghapus cache browser secara manual.
+- **Improved Background Sync Stability**: Menyesuaikan latar belakang penulisan instan (`syncSingleItem`) dengan proteksi timeout yang lebih ketat agar tidak memblokir antarmuka pengguna saat koneksi tidak stabil.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
