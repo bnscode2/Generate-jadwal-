@@ -77,7 +77,7 @@ export class SupabaseSyncService {
   }
 
   // 2. Push Semua Data dari LocalDB ke Supabase (Upload)
-  static async pushAll(): Promise<SyncResult> {
+  static async pushAll(onProgress?: (percent: number, message: string) => void): Promise<SyncResult> {
     const logs: string[] = [];
     const supabase = getSupabaseClient();
     if (!supabase) {
@@ -85,6 +85,7 @@ export class SupabaseSyncService {
     }
 
     try {
+      if (onProgress) onProgress(5, 'Mengonfigurasi dan memeriksa otentikasi...');
       logs.push('Memulai proses unggah data ke Supabase...');
       IDMapper.reset();
 
@@ -113,6 +114,7 @@ export class SupabaseSyncService {
       logs.push(`User authenticated terdeteksi: ${user.email}`);
 
       // Sync School Profile
+      if (onProgress) onProgress(15, 'Menyelaraskan Profil Sekolah...');
       const currentUserNow = LocalDB.getCurrentUser();
       const schoolName = currentUserNow?.nama_sekolah || 'SMAN 1 AI INDONESIA';
       const localProfile = LocalDB.getSchoolProfile();
@@ -177,6 +179,7 @@ export class SupabaseSyncService {
       };
 
       // 1. Teachers
+      if (onProgress) onProgress(25, `Menyelaraskan ${teachers.length} data Guru...`);
       const mappedTeachers = teachers.map(t => ({
         id: IDMapper.getUUID(t.id),
         nip: t.nip,
@@ -190,6 +193,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedTeachers.length} data Guru.`);
 
       // 2. Subjects
+      if (onProgress) onProgress(35, `Menyelaraskan ${subjects.length} data Mata Pelajaran...`);
       const mappedSubjects = subjects.map(s => ({
         id: IDMapper.getUUID(s.id),
         kode_mapel: s.kode_mapel,
@@ -201,6 +205,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedSubjects.length} data Mata Pelajaran.`);
 
       // 3. Classes
+      if (onProgress) onProgress(45, `Menyelaraskan ${classes.length} data Kelas...`);
       const mappedClasses = classes.map(c => ({
         id: IDMapper.getUUID(c.id),
         nama_kelas: c.nama_kelas,
@@ -212,6 +217,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedClasses.length} data Kelas.`);
 
       // 4. Rooms
+      if (onProgress) onProgress(55, `Menyelaraskan ${rooms.length} data Ruangan...`);
       const mappedRooms = rooms.map(r => ({
         id: IDMapper.getUUID(r.id),
         nama_ruangan: r.nama_ruangan,
@@ -222,6 +228,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedRooms.length} data Ruangan.`);
 
       // 5. Periods (Jam Pelajaran)
+      if (onProgress) onProgress(65, `Menyelaraskan ${periods.length} data Jam Pelajaran...`);
       const mappedPeriods = periods.map(p => ({
         id: IDMapper.getUUID(p.id),
         jam_ke: p.jam_ke,
@@ -233,6 +240,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedPeriods.length} data Jam Pelajaran.`);
 
       // 6. Teacher Preferences
+      if (onProgress) onProgress(75, `Menyelaraskan ${preferences.length} data Preferensi Guru...`);
       const mappedPreferences = preferences.map(p => ({
         id: IDMapper.getUUID(p.id),
         guru_id: IDMapper.getUUID(p.guru_id),
@@ -247,6 +255,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedPreferences.length} data Preferensi Guru.`);
 
       // 7. Teaching Assignments (Pengampu)
+      if (onProgress) onProgress(85, `Menyelaraskan ${assignments.length} data Pengampu...`);
       const mappedAssignments = assignments.map(a => ({
         id: IDMapper.getUUID(a.id),
         guru_id: IDMapper.getUUID(a.guru_id),
@@ -259,6 +268,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedAssignments.length} data Pengampu Mata Pelajaran.`);
 
       // 8. Schedules (Jadwal)
+      if (onProgress) onProgress(90, `Menyelaraskan ${schedules.length} data Jadwal Pelajaran...`);
       const mappedSchedules = schedules.map(s => ({
         id: IDMapper.getUUID(s.id),
         assignment_id: s.assignment_id ? IDMapper.getUUID(s.assignment_id) : null,
@@ -274,6 +284,7 @@ export class SupabaseSyncService {
       logs.push(`Berhasil menyelaraskan ${mappedSchedules.length} data Jadwal Pelajaran.`);
 
       // 9. Schedule Conflicts (Konflik)
+      if (onProgress) onProgress(95, `Menyelaraskan ${conflicts.length} deteksi konflik...`);
       const mappedConflicts = conflicts.map(c => ({
         id: IDMapper.getUUID(c.id),
         tipe_konflik: c.tipe_konflik,
@@ -286,6 +297,7 @@ export class SupabaseSyncService {
       await syncTable('schedule_conflicts', mappedConflicts);
       logs.push(`Berhasil menyelaraskan ${mappedConflicts.length} data Deteksi Konflik.`);
 
+      if (onProgress) onProgress(100, 'Seluruh data berhasil diselaraskan ke Cloud database!');
       logs.push('SINKRONISASI UNGGAH BERHASIL! Seluruh data lokal kini tersimpan dengan aman di Supabase cloud.');
       return { success: true, message: 'Seluruh data berhasil diunggah ke Supabase!', logs };
 
@@ -297,7 +309,7 @@ export class SupabaseSyncService {
   }
 
   // 3. Pull Semua Data dari Supabase ke LocalDB (Download)
-  static async pullAll(): Promise<SyncResult> {
+  static async pullAll(onProgress?: (percent: number, message: string) => void): Promise<SyncResult> {
     const logs: string[] = [];
     const supabase = getSupabaseClient();
     if (!supabase) {
@@ -305,6 +317,7 @@ export class SupabaseSyncService {
     }
 
     try {
+      if (onProgress) onProgress(5, 'Mengautentikasi dan menyiapkan pengunduhan...');
       // Coba dapatkan user authenticated jika ada, jika tidak, batalkan karena RLS mencegah penulisan/pembacaan tanpa auth
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -319,6 +332,7 @@ export class SupabaseSyncService {
       logs.push('Mengunduh seluruh data dari database Supabase cloud...');
 
       // Update current user's school name if we pulled a profile
+      if (onProgress) onProgress(15, 'Membaca Profil Sekolah dari Cloud...');
       let schoolName = 'SMAN 1 AI INDONESIA';
       try {
         const { data: profileData, error: profileError } = await supabase
@@ -370,31 +384,40 @@ export class SupabaseSyncService {
         return data || [];
       };
 
+      if (onProgress) onProgress(25, 'Mengunduh data Guru...');
       const teachersData = await fetchTable('teachers');
       logs.push(`Terunduh ${teachersData.length} data Guru.`);
 
+      if (onProgress) onProgress(35, 'Mengunduh data Mata Pelajaran...');
       const subjectsData = await fetchTable('subjects');
       logs.push(`Terunduh ${subjectsData.length} data Mata Pelajaran.`);
 
+      if (onProgress) onProgress(45, 'Mengunduh data Kelas...');
       const classesData = await fetchTable('classes');
       logs.push(`Terunduh ${classesData.length} data Kelas.`);
 
+      if (onProgress) onProgress(55, 'Mengunduh data Ruangan...');
       const roomsData = await fetchTable('rooms');
       logs.push(`Terunduh ${roomsData.length} data Ruangan.`);
 
+      if (onProgress) onProgress(65, 'Mengunduh data Jam Pelajaran...');
       const periodsData = await fetchTable('periods');
       logs.push(`Terunduh ${periodsData.length} data Jam Pelajaran.`);
 
+      if (onProgress) onProgress(75, 'Mengunduh data Preferensi Guru...');
       const preferencesData = await fetchTable('teacher_preferences');
       logs.push(`Terunduh ${preferencesData.length} data Preferensi Guru.`);
 
+      if (onProgress) onProgress(85, 'Mengunduh data Tugas Pengampu...');
       const assignmentsData = await fetchTable('teaching_assignments');
       logs.push(`Terunduh ${assignmentsData.length} data Pengampu Mata Pelajaran.`);
 
+      if (onProgress) onProgress(92, 'Mengunduh data Jadwal Pelajaran...');
       const schedulesData = await fetchTable('schedules');
       logs.push(`Terunduh ${schedulesData.length} data Jadwal Pelajaran.`);
 
       // Petakan kembali ke format LocalDB
+      if (onProgress) onProgress(96, 'Memetakan data dan merekonstruksi basis data lokal...');
       const localTeachers: Guru[] = teachersData.map((t: any) => ({
         id: t.id,
         nip: t.nip,
@@ -491,6 +514,7 @@ export class SupabaseSyncService {
         normalize(localSchedules) !== normalize(currentSchedules);
 
       if (!hasChanges) {
+        if (onProgress) onProgress(100, 'Selesai! Data Anda sudah up-to-date.');
         logs.push('Data lokal sudah selaras sempurna dengan Supabase Cloud. Lewati penulisan ulang.');
         return { success: true, message: 'Data sudah up-to-date.', logs };
       }
@@ -508,6 +532,7 @@ export class SupabaseSyncService {
       // Hitung konflik sekali saja di akhir untuk seluruh batch data
       LocalDB.recalculateConflicts();
 
+      if (onProgress) onProgress(100, 'Berhasil diselaraskan! Penyimpanan lokal diperbarui.');
       logs.push('SINKRONISASI UNDUH BERHASIL! Data lokal Anda kini sama persis dengan data di Supabase cloud.');
       return { success: true, message: 'Seluruh data berhasil diunduh dari Supabase!', logs };
 

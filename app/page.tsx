@@ -401,6 +401,14 @@ export default function AdministrativeDashboard() {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [backgroundSyncStatus, setBackgroundSyncStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
 
+  // Modern interactive sync states
+  const [syncProgress, setSyncProgress] = useState<number>(0);
+  const [syncStatusText, setSyncStatusText] = useState<string>('');
+  const [syncShowModal, setSyncShowModal] = useState<boolean>(false);
+  const [syncResultState, setSyncResultState] = useState<'syncing' | 'success' | 'failed' | null>(null);
+  const [syncErrorMessage, setSyncErrorMessage] = useState<string>('');
+  const [syncLogs, setSyncLogs] = useState<string[]>([]);
+
   // Keep a ref of isCloudSyncing so our background sync interval is stable and does not get reset constantly
   const isCloudSyncingRef = useRef<boolean>(isCloudSyncing);
   useEffect(() => {
@@ -417,13 +425,24 @@ export default function AdministrativeDashboard() {
   const handleManualForceSync = async () => {
     if (!isSupabaseModeActive() || !currentUser) return;
     
+    setSyncProgress(0);
+    setSyncStatusText('Menghubungkan ke Supabase...');
+    setSyncShowModal(true);
+    setSyncResultState('syncing');
+    setSyncErrorMessage('');
+    setSyncLogs(['🔄 Memulai sinkronisasi paksa dari Cloud...']);
+
     setBackgroundSyncStatus('checking');
     setLogMessages(prev => ["🔄 Memulai sinkronisasi manual paksa...", ...prev]);
     try {
       const res = await Promise.race([
-        SupabaseSyncService.pullAll(),
+        SupabaseSyncService.pullAll((percent, msg) => {
+          setSyncProgress(percent);
+          setSyncStatusText(msg);
+          setSyncLogs(prev => [...prev, msg]);
+        }),
         new Promise<any>((_, reject) => 
-          setTimeout(() => reject(new Error('Batas waktu sinkronisasi terlampaui')), 12000)
+          setTimeout(() => reject(new Error('Batas waktu sinkronisasi terlampaui')), 25000)
         )
       ]);
       if (res.success) {
@@ -431,16 +450,23 @@ export default function AdministrativeDashboard() {
         setBackgroundSyncStatus('success');
         loadDatabase(true);
         setLogMessages(prev => ["✅ Sinkronisasi manual berhasil! Data lokal diselaraskan dengan Cloud.", ...prev]);
-        alert("Sinkronisasi Berhasil! Data Anda sekarang 100% selaras dengan cloud.");
+        setSyncProgress(100);
+        setSyncStatusText('Sinkronisasi Berhasil!');
+        setSyncResultState('success');
+        setSyncLogs(prev => [...prev, '✅ Seluruh data lokal Anda sekarang 100% selaras dengan cloud.']);
       } else {
         setBackgroundSyncStatus('failed');
         setLogMessages(prev => [`⚠️ Sinkronisasi gagal: ${res.message}`, ...prev]);
-        alert(`Gagal mensinkronisasikan: ${res.message}`);
+        setSyncResultState('failed');
+        setSyncErrorMessage(res.message);
+        setSyncLogs(prev => [...prev, `❌ Gagal: ${res.message}`]);
       }
     } catch (err: any) {
       setBackgroundSyncStatus('failed');
       setLogMessages(prev => [`❌ Error sinkronisasi manual: ${err.message || String(err)}`, ...prev]);
-      alert(`Error sinkronisasi manual: ${err.message || String(err)}`);
+      setSyncResultState('failed');
+      setSyncErrorMessage(err.message || String(err));
+      setSyncLogs(prev => [...prev, `❌ Error: ${err.message || String(err)}`]);
     } finally {
       setTimeout(() => setBackgroundSyncStatus('idle'), 3000);
     }
@@ -449,22 +475,41 @@ export default function AdministrativeDashboard() {
   const handlePushAllToCloud = async () => {
     if (!isSupabaseModeActive() || !currentUser) return;
     
+    setSyncProgress(0);
+    setSyncStatusText('Menyiapkan data penyimpanan...');
+    setSyncShowModal(true);
+    setSyncResultState('syncing');
+    setSyncErrorMessage('');
+    setSyncLogs(['🔄 Memulai pengunggahan seluruh data lokal ke Cloud...']);
+
     setIsCloudSyncing(true);
     setLogMessages(prev => ["🔄 Mengunggah seluruh data lokal Anda ke cloud...", ...prev]);
     try {
-      const res = await SupabaseSyncService.pushAll();
+      const res = await SupabaseSyncService.pushAll((percent, msg) => {
+        setSyncProgress(percent);
+        setSyncStatusText(msg);
+        setSyncLogs(prev => [...prev, msg]);
+      });
       if (res.success) {
         setHasUnsavedChanges(false);
+        setLastSyncTime(new Date());
         setLogMessages(prev => ["✅ Unggah seluruh data berhasil! Data cloud kini selaras dengan data browser Anda.", ...prev]);
-        alert("Penyimpanan berhasil! Seluruh data Master, Preferensi, dan Jadwal telah diselaraskan ke Supabase Cloud.");
+        setSyncProgress(100);
+        setSyncStatusText('Penyimpanan Berhasil!');
+        setSyncResultState('success');
+        setSyncLogs(prev => [...prev, '✅ Penyimpanan sukses! Seluruh data Anda tersimpan di Cloud.']);
       } else {
         setLogMessages(prev => [`⚠️ Gagal mengunggah data: ${res.message}`, ...prev]);
-        alert(`Gagal mengunggah data: ${res.message}`);
+        setSyncResultState('failed');
+        setSyncErrorMessage(res.message);
+        setSyncLogs(prev => [...prev, `❌ Gagal menyimpan: ${res.message}`]);
       }
     } catch (err: any) {
       console.error(err);
       setLogMessages(prev => [`⚠️ Kesalahan saat mengunggah: ${err.message || err}`, ...prev]);
-      alert(`Kesalahan saat mengunggah data: ${err.message || err}`);
+      setSyncResultState('failed');
+      setSyncErrorMessage(err.message || String(err));
+      setSyncLogs(prev => [...prev, `❌ Kesalahan: ${err.message || String(err)}`]);
     } finally {
       setIsCloudSyncing(false);
     }
@@ -512,27 +557,42 @@ export default function AdministrativeDashboard() {
   const handleSaveAndNavigate = async () => {
     if (!pendingTab) return;
     setConfirmModal(null);
+    
+    setSyncProgress(0);
+    setSyncStatusText('Menyimpan data sebelum berpindah halaman...');
+    setSyncShowModal(true);
+    setSyncResultState('syncing');
+    setSyncErrorMessage('');
+    setSyncLogs([`🔄 Menyimpan seluruh data ke cloud sebelum berpindah ke halaman ${pendingTab}...`]);
+
     setIsCloudSyncing(true);
     setLogMessages(prev => [`🔄 Menyimpan seluruh data ke cloud sebelum berpindah ke halaman ${pendingTab}...`, ...prev]);
     try {
-      const res = await SupabaseSyncService.pushAll();
+      const res = await SupabaseSyncService.pushAll((percent, msg) => {
+        setSyncProgress(percent);
+        setSyncStatusText(msg);
+        setSyncLogs(prev => [...prev, msg]);
+      });
       if (res.success) {
         setHasUnsavedChanges(false);
+        setLastSyncTime(new Date());
         setLogMessages(prev => ["✅ Penyimpanan sukses sebelum berpindah halaman!", ...prev]);
-        const target = pendingTab;
-        setPendingTab(null);
-        setActiveTab(target);
-        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-          setSidebarOpen(false);
-        }
+        setSyncProgress(100);
+        setSyncStatusText('Penyimpanan Berhasil!');
+        setSyncResultState('success');
+        setSyncLogs(prev => [...prev, `✅ Berhasil disimpan! Menunggu Anda mengklik lanjutkan untuk berpindah ke "${pendingTab}".`]);
       } else {
         setLogMessages(prev => [`⚠️ Gagal mengunggah data: ${res.message}`, ...prev]);
-        alert(`Gagal mengunggah data: ${res.message}. Perpindahan halaman dibatalkan.`);
+        setSyncResultState('failed');
+        setSyncErrorMessage(res.message);
+        setSyncLogs(prev => [...prev, `❌ Gagal menyimpan: ${res.message}`]);
       }
     } catch (err: any) {
       console.error(err);
       setLogMessages(prev => [`⚠️ Kesalahan saat mengunggah: ${err.message || err}`, ...prev]);
-      alert(`Kesalahan saat mengunggah data: ${err.message || err}. Perpindahan halaman dibatalkan.`);
+      setSyncResultState('failed');
+      setSyncErrorMessage(err.message || String(err));
+      setSyncLogs(prev => [...prev, `❌ Kesalahan: ${err.message || String(err)}`]);
     } finally {
       setIsCloudSyncing(false);
     }
@@ -2734,6 +2794,174 @@ export default function AdministrativeDashboard() {
           )}
         </main>
       </div>
+
+      {/* SYNC PROGRESS MODAL */}
+      {syncShowModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4 animate-fade-in font-sans">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col p-6 space-y-4">
+            
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
+              <div className={`p-2 rounded-full border ${
+                syncResultState === 'syncing' ? 'bg-indigo-50 border-indigo-200 text-indigo-600 animate-pulse' :
+                syncResultState === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
+                'bg-rose-50 border-rose-200 text-rose-600'
+              }`}>
+                {syncResultState === 'syncing' ? (
+                  <CloudUpload className="w-5 h-5 animate-bounce-slow" />
+                ) : syncResultState === 'success' ? (
+                  <Check className="w-5 h-5 stroke-[3px]" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-slate-900 truncate">
+                  {syncResultState === 'syncing' ? 'Penyelarasan Supabase' :
+                   syncResultState === 'success' ? 'Sinkronisasi Berhasil!' :
+                   'Sinkronisasi Gagal'}
+                </h4>
+                <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase font-mono">
+                  {syncResultState === 'syncing' ? 'SEDANG MENGIRIM DATA' : 'STATUS PENYIMPANAN'}
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="space-y-4 py-1 text-xs text-slate-600">
+              {syncResultState === 'syncing' && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs font-semibold text-slate-700">
+                    <span className="truncate text-slate-800">{syncStatusText}</span>
+                    <span className="font-mono text-indigo-600 font-bold ml-2 shrink-0">{syncProgress}%</span>
+                  </div>
+                  
+                  {/* Progress Bar Container */}
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60 relative">
+                    <div 
+                      className="h-full bg-indigo-600 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${syncProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic">
+                    Mohon jangan menutup halaman ini selama proses sinkronisasi berlangsung.
+                  </p>
+                </div>
+              )}
+
+              {syncResultState === 'success' && (
+                <div className="space-y-3">
+                  <div className="p-3.5 bg-emerald-50/60 border border-emerald-100 rounded-xl text-emerald-850 font-medium leading-relaxed">
+                    Seluruh data Anda (**Profil Sekolah**, **Guru**, **Mata Pelajaran**, **Kelas**, **Ruangan**, **Jam Pelajaran**, **Preferensi**, **Pengampu**, **Jadwal**, dan **Konflik**) telah berhasil disimpan dan diselaraskan secara aman dengan Supabase Cloud.
+                  </div>
+                  <div className="text-[10px] text-slate-400 flex items-center gap-1.5 justify-center font-medium">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                    Data offline Anda sekarang 100% sinkron di Cloud.
+                  </div>
+                </div>
+              )}
+
+              {syncResultState === 'failed' && (
+                <div className="space-y-3">
+                  <div className="p-3.5 bg-rose-50/60 border border-rose-100 rounded-xl text-rose-850 font-medium leading-relaxed break-words">
+                    <p className="font-bold mb-1 text-rose-900">Detail Kesalahan:</p>
+                    {syncErrorMessage || 'Terjadi kesalahan tidak dikenal saat menghubungi server Supabase.'}
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Silakan periksa koneksi internet Anda atau coba beberapa saat lagi. Data Anda masih tersimpan dengan aman di browser lokal Anda.
+                  </p>
+                </div>
+              )}
+
+              {/* Collapsible Logs Panel */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                <div className="px-3.5 py-2 border-b border-slate-200 bg-slate-100/80 flex justify-between items-center">
+                  <span className="font-mono text-[9px] tracking-wider uppercase font-bold text-slate-500">Log Sinkronisasi Real-Time</span>
+                  <span className="px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded text-[8px] font-mono font-bold">{syncLogs.length} Entri</span>
+                </div>
+                <div className="p-3 max-h-24 overflow-y-auto font-mono text-[9px] text-slate-500 space-y-1.5 scrollbar-thin">
+                  {syncLogs.map((log, i) => (
+                    <div key={i} className="leading-tight truncate">
+                      {log.startsWith('✅') || log.includes('berhasil') || log.includes('Sukses') ? (
+                        <span className="text-emerald-600 font-semibold">{log}</span>
+                      ) : log.startsWith('⚠️') ? (
+                        <span className="text-amber-600 font-semibold">{log}</span>
+                      ) : log.startsWith('❌') || log.startsWith('ERROR') ? (
+                        <span className="text-rose-600 font-bold">{log}</span>
+                      ) : (
+                        <span>{log}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end pt-2 border-t border-slate-100 gap-2">
+              {syncResultState === 'syncing' ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-2.5 px-4 bg-slate-50 text-slate-400 font-bold rounded-xl cursor-not-allowed text-xs flex items-center justify-center gap-2 border border-slate-100"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Sedang Menyingkronkan...
+                </button>
+              ) : syncResultState === 'success' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSyncShowModal(false);
+                    // Jika ada pending tab hasil simpan saat berpindah tab, lakukan perpindahan tab di sini
+                    if (pendingTab) {
+                      const target = pendingTab;
+                      setPendingTab(null);
+                      setActiveTab(target);
+                      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                        setSidebarOpen(false);
+                      }
+                    }
+                  }}
+                  className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold rounded-xl transition cursor-pointer text-xs shadow-sm shadow-indigo-100 flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  Oke, Sangat Bagus &amp; Lanjutkan
+                </button>
+              ) : (
+                <div className="flex w-full gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSyncShowModal(false);
+                    }}
+                    className="w-1/2 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer text-xs text-center font-semibold"
+                  >
+                    Tutup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      // Coba lagi berdasarkan operasi terakhir
+                      if (syncLogs[0]?.includes('pengunggahan') || syncLogs[0]?.includes('berpindah') || syncLogs[0]?.includes('Menyimpan')) {
+                        await handlePushAllToCloud();
+                      } else {
+                        await handleManualForceSync();
+                      }
+                    }}
+                    className="w-1/2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition cursor-pointer text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Coba Lagi
+                  </button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* CONFIRMATION MODAL */}
       {confirmModal && confirmModal.isOpen && (
