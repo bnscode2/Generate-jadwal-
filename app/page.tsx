@@ -2718,6 +2718,7 @@ export default function AdministrativeDashboard() {
               onUpdateBatasJamHari={handleUpdateBatasJamHari}
               loadDatabase={loadDatabase}
               setLogMessages={setLogMessages}
+              onPushAllToCloud={handlePushAllToCloud}
             />
           )}
 

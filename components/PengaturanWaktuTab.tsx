@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, Clock, Plus, Trash2, AlertTriangle, Check, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, AlertTriangle, Check, RefreshCw, Cloud, AlertCircle } from 'lucide-react';
 import { Hari, JamPelajaran } from '../lib/types';
 import { LocalDB } from '../lib/db';
 import { isSupabaseModeActive } from '../lib/supabaseClient';
@@ -16,6 +16,7 @@ interface PengaturanWaktuTabProps {
   onUpdateBatasJamHari: (batas: Record<Hari, number>) => void;
   loadDatabase: (skipCloudSync?: boolean) => void;
   setLogMessages: React.Dispatch<React.SetStateAction<string[]>>;
+  onPushAllToCloud?: () => Promise<void>;
 }
 
 const SEMUA_HARI: Hari[] = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -29,6 +30,7 @@ export default function PengaturanWaktuTab({
   onUpdateBatasJamHari,
   loadDatabase,
   setLogMessages,
+  onPushAllToCloud,
 }: PengaturanWaktuTabProps) {
   // Periods form states
   const [newJamKe, setNewJamKe] = useState<number>(jamPelajaran.length + 1);
@@ -44,6 +46,8 @@ export default function PengaturanWaktuTab({
   const [genBreak2After, setGenBreak2After] = useState<number>(0); // 0 means none
   const [genBreak2Duration, setGenBreak2Duration] = useState<number>(15);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [showConfirmPresetModal, setShowConfirmPresetModal] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   const addMinutesToTime = (timeStr: string, mins: number): string => {
     const [hStr, mStr] = timeStr.split(':');
@@ -63,7 +67,7 @@ export default function PengaturanWaktuTab({
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  const handleGeneratePreset = async (e: React.FormEvent) => {
+  const handleFormSubmitPreset = (e: React.FormEvent) => {
     e.preventDefault();
     
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -72,14 +76,11 @@ export default function PengaturanWaktuTab({
       return;
     }
 
-    const confirmMsg = jamPelajaran.length > 0 
-      ? `Tindakan ini akan menghapus ${jamPelajaran.length} jam pelajaran lama dan menggantikannya dengan preset baru secara otomatis. Apakah Anda yakin?`
-      : `Apakah Anda yakin ingin membuat preset jam pelajaran baru secara otomatis?`;
+    setShowConfirmPresetModal(true);
+  };
 
-    if (!confirm(confirmMsg)) {
-      return;
-    }
-
+  const executeGeneratePreset = async () => {
+    setShowConfirmPresetModal(false);
     setIsGenerating(true);
     
     try {
@@ -332,7 +333,37 @@ export default function PengaturanWaktuTab({
             Konfigurasikan hari aktif mingguan serta struktur jam pelajaran harian yang digunakan oleh sekolah secara dinamis.
           </p>
         </div>
+
+        {isSupabaseModeActive() && onPushAllToCloud && (
+          <button
+            type="button"
+            id="save-to-cloud-button"
+            onClick={async () => {
+              try {
+                await onPushAllToCloud();
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="w-full md:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 cursor-pointer select-none shrink-0"
+          >
+            <Cloud className="w-4 h-4 animate-pulse" />
+            <span>Simpan ke Cloud</span>
+          </button>
+        )}
       </div>
+
+      {isSupabaseModeActive() && onPushAllToCloud && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3 shadow-xs animate-in fade-in duration-200">
+          <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-amber-950">Penyimpanan Terintegrasi Cloud Aktif</p>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Perubahan Anda otomatis disimpan sementara di browser ini. Agar perubahan pada kalender, hari kerja, dan jam pelajaran sekolah tersimpan secara permanen di database cloud Anda, klik tombol <span className="font-bold">Simpan ke Cloud</span> di kanan atas.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
@@ -496,7 +527,7 @@ export default function PengaturanWaktuTab({
               Buat seluruh deretan jam pelajaran secara instan. Cukup tentukan jam mulai KBM, jumlah JP sehari, durasi, serta waktu istirahat jika ada.
             </p>
 
-            <form onSubmit={handleGeneratePreset} className="space-y-4">
+            <form onSubmit={handleFormSubmitPreset} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono mb-1">Jam Mulai KBM</label>
@@ -810,6 +841,66 @@ export default function PengaturanWaktuTab({
           </div>
         </div>
       </div>
+
+      {/* MODERN CONFIRMATION MODAL FOR PRESET */}
+      {showConfirmPresetModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden transform transition-all duration-300 animate-in fade-in zoom-in-95">
+            {/* Header / Accent Bar */}
+            <div className="h-1.5 bg-indigo-600 w-full" />
+            
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-indigo-50 rounded-2xl shrink-0">
+                  <Clock className="w-6 h-6 text-indigo-600 animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-slate-900">
+                    Konfirmasi Pembuatan Preset
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Tindakan otomatisasi struktur waktu
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/70 border border-slate-100 p-4 rounded-xl space-y-2.5">
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  {jamPelajaran.length > 0 ? (
+                    <span>
+                      Tindakan ini akan <b className="text-rose-600 font-bold font-sans">menghapus {jamPelajaran.length} jam pelajaran lama</b> yang ada saat ini dan menggantinya dengan preset baru secara otomatis.
+                    </span>
+                  ) : (
+                    <span>Apakah Anda yakin ingin membuat preset jam pelajaran baru secara otomatis?</span>
+                  )}
+                </p>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Struktur jam pelajaran yang baru akan langsung diterapkan di seluruh sistem penjadwalan. Anda dapat mengubah urutan atau durasinya secara manual nanti.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  id="confirm-preset-cancel"
+                  onClick={() => setShowConfirmPresetModal(false)}
+                  className="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer text-center select-none"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  id="confirm-preset-execute"
+                  onClick={executeGeneratePreset}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer text-center select-none"
+                >
+                  Ya, Terapkan Preset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
