@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, FileText, Info, Trash2, Calendar, Play, AlertTriangle, CheckCircle, HelpCircle, BarChart3, BookOpen, Users, Clock, Printer, X, Settings, RefreshCw } from 'lucide-react';
+import { Download, FileText, Info, Trash2, Calendar, Play, AlertTriangle, CheckCircle, HelpCircle, BarChart3, BookOpen, Users, Clock, Printer, X, Settings, RefreshCw, CloudUpload, Sparkles } from 'lucide-react';
 import { Guru, Kelas, MataPelajaran, Ruangan, JamPelajaran, Jadwal, Hari, KonflikJadwal, PengampuMataPelajaran } from '../lib/types';
 import { LocalDB } from '../lib/db';
 import { getInitialGuru } from '../lib/utils';
@@ -684,25 +684,25 @@ export default function GridTab({
       <div className="print:hidden space-y-6">
       
       {/* FILTERING CONTROLS FOR CALENDAR TABLE */}
-      <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs font-sans">
+      <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm font-sans relative overflow-hidden">
         
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-1 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-3 w-full lg:w-auto">
+          <div className="flex bg-slate-100/80 border border-slate-200/60 rounded-xl p-1 text-xs w-full sm:w-auto h-10 items-center justify-between sm:justify-start shadow-xs">
             <button 
               onClick={() => { setFilterType('kelas'); setFilterId(kelas[0]?.id || ''); }}
-              className={`px-3 py-1.5 rounded transition font-bold cursor-pointer ${filterType === 'kelas' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
+              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap ${filterType === 'kelas' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
             >
               Berdasarkan Kelas
             </button>
             <button 
               onClick={() => { setFilterType('guru'); setFilterId(guru[0]?.id || ''); }}
-              className={`px-3 py-1.5 rounded transition font-bold cursor-pointer ${filterType === 'guru' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
+              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap ${filterType === 'guru' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
             >
               Berdasarkan Guru
             </button>
             <button 
               onClick={() => { setFilterType('ruangan'); setFilterId(ruangan[0]?.id || ''); }}
-              className={`px-3 py-1.5 rounded transition font-bold cursor-pointer ${filterType === 'ruangan' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
+              className={`px-3.5 py-1.5 rounded-lg transition font-bold cursor-pointer text-xs whitespace-nowrap ${filterType === 'ruangan' ? 'bg-white text-indigo-700 border border-slate-200/50 shadow-xs' : 'text-slate-600 hover:text-slate-950'}`}
             >
               Berdasarkan Ruangan
             </button>
@@ -712,7 +712,7 @@ export default function GridTab({
           <select 
             value={filterId}
             onChange={(e) => setFilterId(e.target.value)}
-            className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 font-semibold"
+            className="bg-white border border-slate-200 rounded-xl px-3.5 h-10 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 font-bold w-full sm:w-auto shadow-xs hover:border-slate-300 transition-colors"
           >
             {filterType === 'kelas' && kelas.map(c => (
               <option key={c.id} value={c.id}>Kelas {c.nama_kelas}</option>
@@ -726,7 +726,7 @@ export default function GridTab({
           </select>
 
           {/* Toggle Kode Guru */}
-          <label className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-50 border border-slate-200/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 select-none" title="Ubah tampilan guru pada grid menjadi inisial/kode singkat">
+          <label className="flex items-center justify-center gap-2 text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-4 h-10 cursor-pointer hover:bg-slate-100 select-none w-full sm:w-auto shadow-xs active:scale-95 transition-all" title="Ubah tampilan guru pada grid menjadi inisial/kode singkat">
             <input 
               type="checkbox" 
               checked={useTeacherCode} 
@@ -737,32 +737,48 @@ export default function GridTab({
           </label>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* ACTIONS TOOLBAR */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex lg:items-center gap-2.5 w-full lg:w-auto">
           {isSupabaseModeActive() && (
             <button 
               onClick={handlePushSchedulesToCloud}
               disabled={isCloudSaving}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold rounded-lg text-xs transition cursor-pointer shrink-0 shadow-xs"
+              className="flex items-center justify-center gap-2 px-4 h-10 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200/50 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shrink-0 shadow-sm shadow-emerald-100 hover:shadow-md hover:scale-[1.01] active:scale-95 whitespace-nowrap w-full lg:w-auto"
               title="Simpan draf jadwal aktif ke database cloud Supabase"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isCloudSaving ? 'animate-spin' : ''}`} />
-              {isCloudSaving ? 'Menyimpan...' : 'Simpan ke Cloud'}
+              {isCloudSaving ? (
+                <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+              ) : (
+                <CloudUpload className="w-4 h-4 shrink-0" />
+              )}
+              <span>{isCloudSaving ? 'Menyimpan...' : 'Simpan ke Cloud'}</span>
             </button>
           )}
           <button 
             onClick={isPro ? handleExportExcel : undefined}
             disabled={!isPro}
-            className={`flex items-center gap-1.5 px-3 py-1.5 font-bold border rounded-lg text-xs transition ${isPro ? 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'}`}
+            className={`flex items-center justify-center gap-2 px-4 h-10 font-bold border rounded-xl text-xs transition-all whitespace-nowrap w-full lg:w-auto shadow-xs active:scale-95 ${
+              isPro 
+                ? 'bg-white text-slate-700 border-slate-200 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm cursor-pointer' 
+                : 'bg-slate-50/50 text-slate-400 border-slate-200/60 cursor-not-allowed opacity-75'
+            }`}
             title={isPro ? "Ekspor ke Excel CSV" : "Fitur Ekspor Excel hanya tersedia untuk Akun PRO"}
           >
-            <Download className="w-3.5 h-3.5 text-indigo-500" /> Ekspor Excel (CSV) {!isPro && <span className="ml-1 text-[8px] bg-indigo-600 text-white px-1 py-0.5 rounded font-black">PRO</span>}
+            <Download className={`w-4 h-4 shrink-0 ${isPro ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>Ekspor Excel (CSV)</span>
+            {!isPro && (
+              <span className="ml-1 text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-extrabold tracking-wide">
+                PRO
+              </span>
+            )}
           </button>
           <button 
             onClick={() => setShowPrintModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer"
+            className="flex items-center justify-center gap-2 px-4 h-10 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-sm shadow-indigo-100 hover:shadow-md hover:scale-[1.01] active:scale-95 whitespace-nowrap w-full lg:w-auto"
             title="Cetak/Print PDF Jadwal dengan Format Profesional"
           >
-            <Printer className="w-3.5 h-3.5" /> Cetak PDF Profesional
+            <Printer className="w-4 h-4 shrink-0" />
+            <span>Cetak PDF Profesional</span>
           </button>
         </div>
 

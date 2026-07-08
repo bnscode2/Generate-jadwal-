@@ -168,12 +168,26 @@
 ## [02 Juli 2026]
 ### Perubahan Database & Backend:
 - Tidak ada (Menggunakan relasi tabel `teachers`, `teacher_assignments`, dan `schedules` yang sudah ada secara dinamis).
-
+ 
 ### Perubahan Frontend:
 - Pembuatan komponen `BebanKerjaTab.tsx` yang mengimplementasikan visualisasi, analisis, pencarian, filter, penugasan tugas tambahan dinamis dengan ekuivalensi JP, serta kelayakan sertifikasi guru berdasarkan standar Permendikbud No. 15 Tahun 2018.
 - Integrasi menu baru **Laporan Beban Kerja** pada Sidebar navigasi di `page.tsx`.
 - Pemuatan dan penyimpanan tugas tambahan menggunakan *lazy state initialization* dari `localStorage` agar data persisten di sisi klien.
-
+ 
 ### Status:
 - **LULUS LINTING** (0 error, 5 warning LCP standar).
+- **LULUS KOMPILASI** (Build sukses).
+
+## [07 Juli 2026 - Penyempurnaan Tata Letak Toolbar Filter & Aksi Jadwal (Simpan Cloud, Ekspor Excel, Cetak PDF)]
+### Perubahan Frontend & UX:
+- **Desain Toolbar Responsif Berbasis Grid**: Mendesain ulang wadah kontrol filter dan tombol aksi utama pada tabel jadwal (`/components/GridTab.tsx`) dari flex row kaku menjadi layout grid reaktif (`grid grid-cols-1 sm:grid-cols-3 lg:flex`) guna mencegah penumpukan elemen dan pemotongan teks tombol (*text-wrapping*) di layar mobile dan tablet.
+- **Penyelarasan Tinggi & Padding Seragam**: Menyeragamkan tinggi seluruh elemen interaktif (pilihan tab filter, dropdown selektor, toggle kode guru, serta ketiga tombol aksi utama) secara presisi dengan tinggi tetap `h-10` dan border melingkar premium (`rounded-xl`).
+- **Pemberian Aksen Tombol Premium**:
+  - **Simpan ke Cloud**: Dilengkapi transisi efek hover halus, bayangan bayang hijau, serta animasi pintar di mana ikon `CloudUpload` otomatis berubah menjadi `RefreshCw` yang berputar (*spin*) ketika sinkronisasi cloud berlangsung.
+  - **Ekspor Excel (CSV)**: Menambahkan status biner responsif; tombol berlatar belakang putih bersih dengan aksen ikon hijau premium saat aktif (PRO), dan beralih otomatis ke mode redup berkabut dengan lencana "PRO" kapsul jika fitur terkunci.
+  - **Cetak PDF Profesional**: Menggunakan tombol solid indigo premium berkilau dengan efek bayangan elegan untuk kenyamanan akses cetak instan.
+- **Pencegahan Pemotongan Teks**: Menambahkan aturan `whitespace-nowrap` pada seluruh tombol aksi utama untuk menjamin integritas tipografi yang kokoh di semua resolusi viewport.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
 - **LULUS KOMPILASI** (Build sukses).
