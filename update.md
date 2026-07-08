@@ -257,3 +257,16 @@
 - **LULUS LINTING** (0 error, 5 warning standar).
 - **LULUS KOMPILASI** (Build sukses).
 
+## [08 Juli 2026 - Penggantian Control Dropdown Tingkat Kurikulum Dengan Segmented Buttons Grid Premium]
+### Perubahan Database & Backend:
+- *Tidak ada perubahan pada struktur database atau backend schema.* Data tersimpan tetap kompatibel penuh dengan skema yang ada.
+
+### Perubahan Frontend & UX:
+- **Custom Segmented Button Grid**: Mengganti dropdown native `<select>` tingkat kurikulum pada tab Kelola Kelas dengan *segmented grid* tombol kustom yang interaktif, elegan, dan *mobile-friendly*.
+- **Multi-line Option Badging**: Setiap opsi menampilkan visual interaktif berupa angka Romawi tebal (bold) di baris pertama dan teks ejaan tingkatan dalam format huruf kapital kecil (uppercase) yang elegan di bawahnya.
+- **Dynamic Grid Layout**: Grid tombol secara dinamis menyesuaikan tata letak kolom yang optimal (3 kolom) untuk SD (I-VI), SMP (VII-IX), dan SMA (X-XII) sehingga mencegah penumpukan layout pada layar ponsel yang sempit.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+

@@ -133,36 +133,56 @@ export default function KelasTab({
 
                 <div>
                   <label className="block text-slate-500 font-semibold mb-1">Tingkat Kurikulum</label>
-                  <select 
-                    value={newKelas.tingkat || (selectedJenjang === 'SD' ? 'I' : selectedJenjang === 'SMA' ? 'X' : 'VII')}
-                    onChange={(e) => setNewKelas({...newKelas, tingkat: e.target.value})}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all font-bold"
-                  >
-                    {selectedJenjang === 'SD' && (
-                      <>
-                        <option value="I">Kelas I (Satu)</option>
-                        <option value="II">Kelas II (Dua)</option>
-                        <option value="III">Kelas III (Tiga)</option>
-                        <option value="IV">Kelas IV (Empat)</option>
-                        <option value="V">Kelas V (Lima)</option>
-                        <option value="VI">Kelas VI (Enam)</option>
-                      </>
-                    )}
-                    {selectedJenjang === 'SMP' && (
-                      <>
-                        <option value="VII">Kelas VII (Satu)</option>
-                        <option value="VIII">Kelas VIII (Dua)</option>
-                        <option value="IX">Kelas IX (Tiga)</option>
-                      </>
-                    )}
-                    {selectedJenjang === 'SMA' && (
-                      <>
-                        <option value="X">Kelas X (Sepuluh)</option>
-                        <option value="XI">Kelas XI (Sebelas)</option>
-                        <option value="XII">Kelas XII (Duabelas)</option>
-                      </>
-                    )}
-                  </select>
+                  {(() => {
+                    const currentTingkat = newKelas.tingkat || (selectedJenjang === 'SD' ? 'I' : selectedJenjang === 'SMA' ? 'X' : 'VII');
+                    const tingkatOptions = selectedJenjang === 'SD' 
+                      ? [
+                          { value: 'I', label: 'I', desc: 'Satu' },
+                          { value: 'II', label: 'II', desc: 'Dua' },
+                          { value: 'III', label: 'III', desc: 'Tiga' },
+                          { value: 'IV', label: 'IV', desc: 'Empat' },
+                          { value: 'V', label: 'V', desc: 'Lima' },
+                          { value: 'VI', label: 'VI', desc: 'Enam' }
+                        ]
+                      : selectedJenjang === 'SMP'
+                      ? [
+                          { value: 'VII', label: 'VII', desc: 'Satu' },
+                          { value: 'VIII', label: 'VIII', desc: 'Dua' },
+                          { value: 'IX', label: 'IX', desc: 'Tiga' }
+                        ]
+                      : [
+                          { value: 'X', label: 'X', desc: 'Sepuluh' },
+                          { value: 'XI', label: 'XI', desc: 'Sebelas' },
+                          { value: 'XII', label: 'XII', desc: 'Duabelas' }
+                        ];
+
+                    return (
+                      <div className={`grid ${tingkatOptions.length > 3 ? 'grid-cols-3' : 'grid-cols-3'} gap-1.5 p-1 bg-slate-100 rounded-lg border border-slate-200/50`}>
+                        {tingkatOptions.map((opt) => {
+                          const isSelected = currentTingkat === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setNewKelas({ ...newKelas, tingkat: opt.value })}
+                              className={`py-1.5 px-1 text-center rounded-md transition-all duration-150 cursor-pointer select-none flex flex-col items-center justify-center border ${
+                                isSelected 
+                                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-100' 
+                                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                              }`}
+                            >
+                              <span className={`text-[10px] font-extrabold leading-none ${isSelected ? 'text-white' : 'text-slate-800'}`}>
+                                {opt.label}
+                              </span>
+                              <span className={`text-[7px] font-bold uppercase tracking-wider mt-0.5 leading-none ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                {opt.desc}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
