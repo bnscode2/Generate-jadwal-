@@ -279,31 +279,61 @@ export class SupabaseSyncService {
 
       // 8. Schedules (Jadwal)
       if (onProgress) onProgress(90, `Menyelaraskan ${schedules.length} data Jadwal Pelajaran...`);
-      const mappedSchedules = schedules.map(s => ({
-        id: IDMapper.getUUID(s.id),
-        assignment_id: s.assignment_id ? IDMapper.getUUID(s.assignment_id) : null,
-        guru_id: IDMapper.getUUID(s.guru_id),
-        mapel_id: IDMapper.getUUID(s.mapel_id),
-        kelas_id: IDMapper.getUUID(s.kelas_id),
-        ruangan_id: IDMapper.getUUID(s.ruangan_id),
-        hari: s.hari,
-        jam_ke: s.jam_ke,
-        ...(userId ? { user_id: userId } : {})
-      }));
+      const seenSchedules = new Set<string>();
+      const mappedSchedules = [];
+
+      for (let i = 0; i < schedules.length; i++) {
+        const s = schedules[i];
+        let baseId = s.id || `sch-gen-safe-${i}`;
+        let mappedId = IDMapper.getUUID(baseId);
+
+        if (seenSchedules.has(mappedId)) {
+          mappedId = IDMapper.getUUID(`${baseId}_idx_${i}_salt`);
+        }
+
+        seenSchedules.add(mappedId);
+
+        mappedSchedules.push({
+          id: mappedId,
+          assignment_id: s.assignment_id ? IDMapper.getUUID(s.assignment_id) : null,
+          guru_id: IDMapper.getUUID(s.guru_id),
+          mapel_id: IDMapper.getUUID(s.mapel_id),
+          kelas_id: IDMapper.getUUID(s.kelas_id),
+          ruangan_id: IDMapper.getUUID(s.ruangan_id),
+          hari: s.hari,
+          jam_ke: s.jam_ke,
+          ...(userId ? { user_id: userId } : {})
+        });
+      }
       await syncTable('schedules', mappedSchedules);
       logs.push(`Berhasil menyelaraskan ${mappedSchedules.length} data Jadwal Pelajaran.`);
 
       // 9. Schedule Conflicts (Konflik)
       if (onProgress) onProgress(95, `Menyelaraskan ${conflicts.length} deteksi konflik...`);
-      const mappedConflicts = conflicts.map(c => ({
-        id: IDMapper.getUUID(c.id),
-        tipe_konflik: c.tipe_konflik,
-        deskripsi: c.deskripsi,
-        hari: c.hari,
-        jam_ke: c.jam_ke,
-        entities_involved: c.entities_involved || [],
-        ...(userId ? { user_id: userId } : {})
-      }));
+      const seenConflicts = new Set<string>();
+      const mappedConflicts = [];
+
+      for (let i = 0; i < conflicts.length; i++) {
+        const c = conflicts[i];
+        let baseId = c.id || `conf-safe-${i}`;
+        let mappedId = IDMapper.getUUID(baseId);
+
+        if (seenConflicts.has(mappedId)) {
+          mappedId = IDMapper.getUUID(`${baseId}_idx_${i}_salt`);
+        }
+
+        seenConflicts.add(mappedId);
+
+        mappedConflicts.push({
+          id: mappedId,
+          tipe_konflik: c.tipe_konflik,
+          deskripsi: c.deskripsi,
+          hari: c.hari,
+          jam_ke: c.jam_ke,
+          entities_involved: c.entities_involved || [],
+          ...(userId ? { user_id: userId } : {})
+        });
+      }
       await syncTable('schedule_conflicts', mappedConflicts);
       logs.push(`Berhasil menyelaraskan ${mappedConflicts.length} data Deteksi Konflik.`);
 
@@ -677,18 +707,33 @@ export class SupabaseSyncService {
       }
       const userId = user.id;
 
-      // Map schedules
-      const mappedSchedules = schedules.map(s => ({
-        id: IDMapper.getUUID(s.id),
-        assignment_id: s.assignment_id ? IDMapper.getUUID(s.assignment_id) : null,
-        guru_id: IDMapper.getUUID(s.guru_id),
-        mapel_id: IDMapper.getUUID(s.mapel_id),
-        kelas_id: IDMapper.getUUID(s.kelas_id),
-        ruangan_id: IDMapper.getUUID(s.ruangan_id),
-        hari: s.hari,
-        jam_ke: s.jam_ke,
-        user_id: userId
-      }));
+      // Map schedules ensuring unique IDs to avoid primary key duplicates in postgres
+      const seenSchedules = new Set<string>();
+      const mappedSchedules = [];
+
+      for (let i = 0; i < schedules.length; i++) {
+        const s = schedules[i];
+        let baseId = s.id || `sch-gen-safe-${i}`;
+        let mappedId = IDMapper.getUUID(baseId);
+
+        if (seenSchedules.has(mappedId)) {
+          mappedId = IDMapper.getUUID(`${baseId}_idx_${i}_salt`);
+        }
+
+        seenSchedules.add(mappedId);
+
+        mappedSchedules.push({
+          id: mappedId,
+          assignment_id: s.assignment_id ? IDMapper.getUUID(s.assignment_id) : null,
+          guru_id: IDMapper.getUUID(s.guru_id),
+          mapel_id: IDMapper.getUUID(s.mapel_id),
+          kelas_id: IDMapper.getUUID(s.kelas_id),
+          ruangan_id: IDMapper.getUUID(s.ruangan_id),
+          hari: s.hari,
+          jam_ke: s.jam_ke,
+          user_id: userId
+        });
+      }
 
       // Delete all old schedules for this user first
       await supabase.from('schedules').delete().eq('user_id', userId);
@@ -699,16 +744,31 @@ export class SupabaseSyncService {
         if (upsertErr) throw new Error(`Gagal menyimpan draf jadwal: ${upsertErr.message}`);
       }
 
-      // Map conflicts
-      const mappedConflicts = conflicts.map(c => ({
-        id: IDMapper.getUUID(c.id),
-        tipe_konflik: c.tipe_konflik,
-        deskripsi: c.deskripsi,
-        hari: c.hari,
-        jam_ke: c.jam_ke,
-        entities_involved: c.entities_involved || [],
-        user_id: userId
-      }));
+      // Map conflicts ensuring unique IDs
+      const seenConflicts = new Set<string>();
+      const mappedConflicts = [];
+
+      for (let i = 0; i < conflicts.length; i++) {
+        const c = conflicts[i];
+        let baseId = c.id || `conf-safe-${i}`;
+        let mappedId = IDMapper.getUUID(baseId);
+
+        if (seenConflicts.has(mappedId)) {
+          mappedId = IDMapper.getUUID(`${baseId}_idx_${i}_salt`);
+        }
+
+        seenConflicts.add(mappedId);
+
+        mappedConflicts.push({
+          id: mappedId,
+          tipe_konflik: c.tipe_konflik,
+          deskripsi: c.deskripsi,
+          hari: c.hari,
+          jam_ke: c.jam_ke,
+          entities_involved: c.entities_involved || [],
+          user_id: userId
+        });
+      }
 
       // Delete all old conflicts for this user
       await supabase.from('schedule_conflicts').delete().eq('user_id', userId);

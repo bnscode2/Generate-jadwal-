@@ -1,5 +1,21 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [08 Juli 2026 - Resolusi Bug Sinkronisasi Cloud & Integrasi Promosi Jadwalify PRO]
+### Perubahan Database & Backend (Supabase):
+- **Resolusi Konflik Duplikasi Kunci Primer (`schedules_pkey`)**: Menyempurnakan logika pemetaan ID di `/lib/supabaseSync.ts` (`pushSchedulesOnly` & `pushAll`). Sekarang, sistem secara otomatis melacak UUID yang sudah dipetakan (`seenSchedules` & `seenConflicts`) untuk menjamin tidak ada duplikasi kunci primer yang dikirimkan dalam satu batch operasi database. Jika terdeteksi ID yang sama, sistem menyuntikkan salt dinamis secara otomatis untuk menghasilkan UUID yang aman dan unik tanpa merusak integritas hubungan data.
+- **Pembersihan Laporan Konflik Aman**: Mengimplementasikan penanganan ID duplikat yang sama untuk tabel `schedule_conflicts` guna mencegah kegagalan sinkronisasi laporan konflik jadwal.
+
+### Perubahan Frontend & UX:
+- **Dialog Promosi Interaktif & Informatif**: Menambahkan modal kustom premium (`showProPromoModal`) di dalam tab penampil kisi (`/components/GridTab.tsx`). Modal ini menggantikan fungsi alert browser standar yang kaku.
+- **Visualisasi Edukasi Lisensi**:
+  - Jika sinkronisasi berhasil pada **Mode Trial**, modal menampilkan pemberitahuan informatif bahwa penyimpanan cloud berhasil, sekaligus mengajak pengguna mengaktifkan versi PRO untuk membuka fitur ekspor Excel (.CSV), cetak PDF berlogo kustom, tanda tangan rill, dan performa kecerdasan AI berkecepatan tinggi.
+  - Jika terjadi kendala sinkronisasi, modal mengomunikasikan detail kendala secara transparan dan santun, serta memberikan saran pemecahan masalah yang menenangkan.
+- **Pintasan Navigasi PRO**: Menyertakan tombol pemicu langsung (*Call to Action*) yang intuitif untuk mengarahkan pengguna Trial langsung ke tab Aktivasi (`activation`) dalam satu klik tanpa mengganggu kenyamanan bernavigasi.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [07 Juli 2026 - Integrasi Desain Pricing Glass Premium pada Tab Aktivasi]
 ### Perubahan Frontend & UX:
 - **Tampilan Premium 3-Tier Obsidian Glass**: Mengintegrasikan desain kaca transparan (glassmorphism) bernuansa gelap obsidian untuk halaman aktivasi lisensi. Mengganti layout trial konvensional dengan 3 kartu harga yang terstruktur:

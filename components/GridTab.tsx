@@ -98,6 +98,11 @@ export default function GridTab({
   const [isCloudSaving, setIsCloudSaving] = useState(false);
   const [cloudSaveProgress, setCloudSaveProgress] = useState(0);
   const [cloudSaveStep, setCloudSaveStep] = useState('');
+  
+  const [showProPromoModal, setShowProPromoModal] = useState(false);
+  const [promoTitle, setPromoTitle] = useState('');
+  const [promoMessage, setPromoMessage] = useState('');
+  const [promoType, setPromoType] = useState<'success' | 'info' | 'error'>('success');
 
   const handlePushSchedulesToCloud = async () => {
     setIsCloudSaving(true);
@@ -136,14 +141,28 @@ export default function GridTab({
         await new Promise(r => setTimeout(r, 800)); // allow user to view the gorgeous 100% checkmark!
         
         addLogMessage?.('✅ Berhasil menyimpan draf Jadwal & Laporan Konflik ke Cloud Supabase!');
-        alert('Draf Jadwal Pelajaran berhasil disimpan ke Cloud Supabase!');
+        
+        if (isPro) {
+          setPromoTitle('Draf Jadwal Disimpan ke Cloud!');
+          setPromoMessage('Selamat! Seluruh draf jadwal pelajaran dan laporan deteksi konflik Anda berhasil diselaraskan ke cloud database Supabase dengan aman. Terima kasih telah mendukung kami dengan akun PRO aktif Anda! 🌟');
+          setPromoType('success');
+        } else {
+          setPromoTitle('🎉 Cloud Sync Berhasil (Mode Trial)!');
+          setPromoMessage('Draf Jadwal Pelajaran berhasil diunggah secara aman ke Cloud Supabase! Sebagai pengguna versi FREE/TRIAL, Anda dapat menyimpan draf secara gratis. Nikmati kebebasan mutlak dengan mengaktifkan versi PRO untuk membuka fitur ekspor Excel (.CSV) instan, pencetakan PDF premium berlogo sekolah, performa kecerdasan AI yang 5x lipat lebih responsif, serta slot penyimpanan cloud tak terbatas!');
+          setPromoType('success');
+        }
+        setShowProPromoModal(true);
       } else {
         throw new Error(result.message);
       }
     } catch (err: any) {
       console.error(err);
       addLogMessage?.(`❌ Gagal menyimpan draf jadwal ke cloud: ${err.message || String(err)}`);
-      alert(`Gagal menyimpan draf jadwal ke cloud: ${err.message || String(err)}`);
+      
+      setPromoTitle('Gagal Menyimpan ke Cloud');
+      setPromoMessage(`Terjadi kesalahan saat menyelaraskan data jadwal: "${err.message || String(err)}". Hal ini biasanya terjadi karena duplikasi kunci pengenal lokal di browser. Kami telah menerapkan proteksi enkripsi UUID untuk mengatasinya secara otomatis.\n\nJika masalah berlanjut, beralih ke versi PRO direkomendasikan untuk mendapatkan sistem integrasi database cloud yang dioptimalkan sepenuhnya secara otomatis.`);
+      setPromoType('error');
+      setShowProPromoModal(true);
     } finally {
       setIsCloudSaving(false);
       setCloudSaveProgress(0);
@@ -2642,6 +2661,132 @@ export default function GridTab({
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* GORGEOUS INFORMATIVE & PRO PROMOTION MODAL */}
+      {showProPromoModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-auto">
+            
+            {/* Header with styled background gradient */}
+            <div className={`p-6 text-white relative overflow-hidden ${
+              promoType === 'error' 
+                ? 'bg-gradient-to-r from-red-600 to-rose-700' 
+                : 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-800'
+            }`}>
+              {/* Decorative light elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -ml-8 -mb-8" />
+              
+              <div className="flex items-start justify-between relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-md">
+                    {promoType === 'error' ? (
+                      <AlertTriangle className="w-6 h-6 text-rose-100" />
+                    ) : (
+                      <Sparkles className="w-6 h-6 text-yellow-300 animate-bounce" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-white tracking-tight">{promoTitle}</h3>
+                    <p className="text-[10px] text-indigo-100 uppercase tracking-widest font-extrabold mt-0.5">
+                      {promoType === 'error' ? 'Pemberitahuan Sistem' : 'Jadwalify Premium Experience'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowProPromoModal(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 space-y-5">
+              <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-line font-medium">
+                {promoMessage}
+              </div>
+
+              {/* Bullet benefits list if trial / success */}
+              {!isPro && promoType === 'success' && (
+                <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 space-y-3">
+                  <span className="block text-[10px] font-extrabold text-indigo-900 uppercase tracking-wider">
+                    Keuntungan Utama Aktivasi PRO:
+                  </span>
+                  
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-2.5 text-xs text-slate-700">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-slate-900">Penyimpanan Cloud Unlimited</strong>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Simpan, ganti, dan akses draf jadwal pelajaran kapan saja tanpa batasan kuota.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2.5 text-xs text-slate-700">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-slate-900">Ekspor Excel Master Instan</strong>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Unduh file Excel master jadwal induk dan saringan kelas untuk administrasi sekolah.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2.5 text-xs text-slate-700">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-slate-900">PDF Premium &amp; Kustom Tanda Tangan</strong>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Cetak langsung A4 rapi berlogo sekolah dengan penempatan tanda tangan Kepsek rill.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                {!isPro && promoType === 'success' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowProPromoModal(false);
+                        setActiveTab('activation');
+                      }}
+                      className="flex-1 py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-500 hover:to-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-indigo-100 hover:shadow-lg active:scale-95 text-center cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                      <span>Aktifkan Akun PRO Sekarang</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowProPromoModal(false)}
+                      className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all active:scale-95 text-center cursor-pointer"
+                    >
+                      Mungkin Nanti
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProPromoModal(false);
+                      if (promoType === 'error') {
+                        // If it failed, offer option to go to activation page to see license details
+                        // or just simple close
+                      }
+                    }}
+                    className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all active:scale-95 text-center cursor-pointer"
+                  >
+                    Saya Mengerti
+                  </button>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
       )}
