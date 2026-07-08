@@ -192,3 +192,14 @@
 ### Status:
 - **LULUS LINTING** (0 error, 5 warning standar).
 - **LULUS KOMPILASI** (Build sukses).
+
+## [07 Juli 2026 - Penambahan Pusat Panduan Interaktif: Menu Tutorial & FAQ Lengkap]
+### Perubahan Frontend & UX:
+- **Pusat Panduan & Bantuan Interaktif**: Membuat komponen baru `/components/TutorialTab.tsx` yang mengemas sistem tutorial alur kerja (workflow timeline) interaktif 7 langkah (dari pengaturan waktu, input guru, mata pelajaran, penugasan pengampu, eksekusi otomatisasi genetika, hingga langkah sinkronisasi dan ekspor).
+- **Desain Stepper Reaktif & Navigasi Cepat**: Setiap langkah dilengkapi indikator lencana (*badge*), penjelasan detail, tips profesional, serta tombol pintasan langsung (*Quick Jump*) untuk membuka tab menu terkait.
+- **Accordion FAQ Berbasis Kategori & Pencarian Real-time**: Menyediakan menu FAQ interaktif yang dikelompokkan berdasarkan kategori topik (Dasar Penggunaan, Algoritma & Bentrok, Cloud Database, Ekspor & Cetak) dengan fungsionalitas pencarian kata kunci dinamis serta efek transisi pembukaan accordion yang sangat mulus menggunakan Framer Motion (`motion/react`).
+- **Integrasi Sidebar Navigasi**: Menambahkan tombol berikon bantuan (`HelpCircle`) "Tutorial & FAQ" pada daftar utama Sidebar navigasi di halaman dashboard utama (`/app/page.tsx`).
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).

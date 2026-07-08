@@ -29,7 +29,8 @@ import {
   School,
   CloudUpload,
   Check,
-  Briefcase
+  Briefcase,
+  HelpCircle
 } from 'lucide-react';
 
 import { 
@@ -67,6 +68,7 @@ import SchoolProfileTab from '../components/SchoolProfileTab';
 import BebanKerjaTab from '../components/BebanKerjaTab';
 import YayasanUnitSwitcher from '../components/YayasanUnitSwitcher';
 import VersionsTab from '../components/VersionsTab';
+import TutorialTab from '../components/TutorialTab';
 
 export default function AdministrativeDashboard() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -2205,6 +2207,14 @@ export default function AdministrativeDashboard() {
             </button>
 
             <button 
+              onClick={() => handleSetActiveTab('tutorial')} 
+              className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'tutorial' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+            >
+              <HelpCircle className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'tutorial' ? 'text-indigo-600' : 'text-slate-400'}`} />
+              <span className="text-left leading-tight">Tutorial &amp; FAQ</span>
+            </button>
+
+            <button 
               onClick={() => handleSetActiveTab('guru')} 
               className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-all font-semibold cursor-pointer ${activeTab === 'guru' ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
             >
@@ -2606,6 +2616,13 @@ export default function AdministrativeDashboard() {
               }}
               onRefresh={loadDatabase}
               addLogMessage={(msg: string) => setLogMessages(prev => [msg, ...prev])}
+            />
+          )}
+
+          {activeTab === 'tutorial' && (
+            <TutorialTab 
+              setActiveTab={handleSetActiveTab} 
+              isSupabaseActive={isSupabaseModeActive()} 
             />
           )}
 
