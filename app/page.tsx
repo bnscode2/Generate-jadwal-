@@ -2849,13 +2849,57 @@ export default function AdministrativeDashboard() {
               )}
 
               {syncResultState === 'success' && (
-                <div className="space-y-3">
-                  <div className="p-3.5 bg-emerald-50/60 border border-emerald-100 rounded-xl text-emerald-850 font-medium leading-relaxed">
-                    Seluruh data Anda (**Profil Sekolah**, **Guru**, **Mata Pelajaran**, **Kelas**, **Ruangan**, **Jam Pelajaran**, **Preferensi**, **Pengampu**, **Jadwal**, dan **Konflik**) telah berhasil disimpan dan diselaraskan secara aman dengan Supabase Cloud.
+                <div className="space-y-4">
+                  {/* Deskripsi Utama */}
+                  <p className="text-slate-600 text-xs leading-relaxed">
+                    Seluruh konfigurasi dan jadwal pelajaran Anda telah berhasil disinkronkan secara aman ke <span className="font-semibold text-emerald-600">Supabase Cloud</span>.
+                  </p>
+
+                  {/* Grid Komponen Terarsip & Sinkron */}
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                      Komponen Terarsip &amp; Sinkron:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        'Profil Sekolah',
+                        'Data Guru',
+                        'Mata Pelajaran',
+                        'Rombel &amp; Kelas',
+                        'Ruang Belajar',
+                        'Jam Pelajaran',
+                        'Preferensi Guru',
+                        'Ploting Pengampu',
+                        'Draf Jadwal',
+                        'Laporan Konflik'
+                      ].map((item, idx) => (
+                        <div 
+                          key={idx} 
+                          className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-150/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                        >
+                          <div className="w-4 h-4 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                            <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3px]" />
+                          </div>
+                          <span className="text-[11px] font-medium text-slate-700 truncate">{item}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-slate-400 flex items-center gap-1.5 justify-center font-medium">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                    Data offline Anda sekarang 100% sinkron di Cloud.
+
+                  {/* Indikator Status Cloud */}
+                  <div className="bg-emerald-50/40 border border-emerald-100/80 rounded-xl p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-600">
+                        Sistem Cloud Aktif
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100/60 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      100% Sinkron
+                    </span>
                   </div>
                 </div>
               )}
