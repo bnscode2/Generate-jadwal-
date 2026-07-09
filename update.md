@@ -1,5 +1,15 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Banner Edukasi Mode Sandbox Profesional]
+### Perubahan Antarmuka & UX (Frontend):
+- **Sticky Banner Sandbox Mode**: Mengimplementasikan banner edukasi & tawaran beralih yang sangat profesional di bagian atas panel utama (`main area`) ketika sistem mendeteksi user aktif berada dalam **Mode Sandbox (Uji Coba)**. 
+- **Pencegahan Data Tercampur**: Banner ini dirancang khusus untuk mengedukasi guru (terutama yang masih awam) agar sadar bahwa data yang sedang mereka lihat adalah data contoh/simulasi, dan memberi mereka tombol pintas **🚀 Beralih ke Mode Asli (Mulai Bersih)** untuk membersihkan database dan memulai input jadwal riil sekolah mereka dengan aman.
+- **Integrasi Dialog Konfirmasi Profesional**: Menghubungkan CTA banner langsung ke dialog konfirmasi transisi sistem (`switch_to_real`) lengkap dengan validasi integrasi basis data.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Aturan Lisensi PRO 1 Tahun & Tampilan Indigo Gelap Premium]
 ### Perubahan Antarmuka & UX (Frontend):
 - **Skema Lisensi Baru (Masa Aktif 1 Tahun)**: Memperbarui ketentuan lisensi PRO dari seumur hidup (lifetime) menjadi masa aktif 1 tahun (365 hari) penuh untuk mendukung keberlanjutan lisensi tahunan sekolah.

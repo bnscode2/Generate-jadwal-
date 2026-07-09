@@ -2595,6 +2595,34 @@ export default function AdministrativeDashboard() {
 
         {/* MAIN PANEL CONTENT WINDOW */}
         <main className="flex-1 bg-slate-50/50 p-6 overflow-y-auto print:p-0 print:bg-white">
+          {isDemoMode && (
+            <div className="mb-4 bg-gradient-to-r from-amber-500/5 to-orange-500/5 border border-amber-500/20 rounded-xl p-4 shadow-xs animate-fade-in print:hidden">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-200 flex items-center justify-center shrink-0 text-amber-600 mt-0.5">
+                    <HelpCircle className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-amber-950 text-xs sm:text-sm flex items-center gap-1.5">
+                      Anda Sedang Menggunakan Mode Uji Coba (Sandbox)
+                    </h5>
+                    <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed mt-1 font-medium">
+                      Sistem saat ini menampilkan <strong>data simulasi/contoh sekolah</strong> untuk uji coba instan. Jika Anda ingin mulai menginput data riil guru, kelas, mata pelajaran, dan menyusun jadwal riil sekolah Anda, silakan beralih ke <strong>Mode Asli (Bersih)</strong> sekarang.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleSwitchToRealMode}
+                    className="w-full md:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
+                  >
+                    🚀 Beralih ke Mode Asli (Mulai Bersih)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isSupabaseModeActive() && currentUser && hasUnsavedChanges && !isDemoMode && (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-fade-in print:hidden">
               <div className="flex items-start gap-3">
