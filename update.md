@@ -1,5 +1,14 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Penyaringan & Pengabaian Bentrok Ruangan Secara Menyeluruh]
+### Perubahan Alur Kerja & Sistem Validasi:
+- **Penyaringan Bentrok Ruangan Real-Time**: Menyinkronkan variabel status preferensi `ignoreRoomConflicts` (Abaikan Bentrok Ruangan) secara global ke seluruh dashboard, tab diagnosa, indikator tab samping, serta kisi kalender jadwal.
+- **Penyembunyian Peringatan Bentrok Ruangan Dinamis**: Ketika opsi "Abaikan Bentrok Ruangan" diaktifkan (bawaan sistem: `true`), semua peringatan bertipe `ruangan_bentrok` akan disaring keluar dari UI secara cerdas. Hal ini memastikan bahwa sekolah-sekolah di Indonesia yang menganut sistem **Kelas Tetap/Stasioner** tidak lagi dibingungkan oleh indikator konflik merah yang sebenarnya tidak relevan bagi model operasional mereka, sehingga fokus analisis bergeser sepenuhnya pada bentrokan jadwal guru yang kritis.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Opsi Pengabaian Bentrok Ruangan Dinamis (Sistem Kelas Tetap)]
 ### Perubahan Frontend & UX:
 - **Checkbox Abaikan Bentrok Ruangan**: Menambahkan opsi toggle interaktif "Abaikan Bentrok Ruangan" pada modal penambahan jadwal manual di tab Kisi Jadwal (`/components/GridTab.tsx`). Opsi ini diaktifkan secara default (`true`) untuk menyelaraskan dengan sistem operasional sekolah di Indonesia yang mayoritas menggunakan pola **Kelas Tetap/Stasioner** (di mana siswa menetap di kelas masing-masing dan guru yang bergerak, sehingga bentrok ruang tidak relevan).

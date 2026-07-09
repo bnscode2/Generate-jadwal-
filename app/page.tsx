@@ -99,6 +99,15 @@ export default function AdministrativeDashboard() {
   const [algorithm, setAlgorithm] = useState<'csp' | 'genetic'>('csp');
   const [allowPartial, setAllowPartial] = useState<boolean>(true);
   const [ignoreRoomConflicts, setIgnoreRoomConflicts] = useState<boolean>(true);
+
+  // Filter out room conflicts from display when ignoreRoomConflicts is enabled
+  const filteredConflicts = useMemo(() => {
+    if (ignoreRoomConflicts) {
+      return conflicts.filter(c => c.tipe_konflik !== 'ruangan_bentrok');
+    }
+    return conflicts;
+  }, [conflicts, ignoreRoomConflicts]);
+
   const [connMode, setConnMode] = useState<'mock' | 'supabase'>('mock');
   const [logMessages, setLogMessages] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -2433,9 +2442,9 @@ export default function AdministrativeDashboard() {
             >
               <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${activeTab === 'konflik' ? 'text-amber-600' : 'text-slate-400'}`} />
               <span className="text-left leading-tight pr-6">Validasi Konflik</span>
-              {conflicts.length > 0 && (
+              {filteredConflicts.length > 0 && (
                 <span className="absolute right-3 top-3.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500 text-white font-mono">
-                  {conflicts.length}
+                  {filteredConflicts.length}
                 </span>
               )}
             </button>
@@ -2602,7 +2611,7 @@ export default function AdministrativeDashboard() {
               kelas={kelas}
               mapel={mapel}
               jadwal={jadwal}
-              conflicts={conflicts}
+              conflicts={filteredConflicts}
               pengampu={pengampu}
               setActiveTab={handleSetActiveTab}
               handleClearJadwal={handleClearJadwal}
@@ -2697,7 +2706,7 @@ export default function AdministrativeDashboard() {
               ruangan={ruangan}
               jamPelajaran={jamPelajaran}
               jadwal={jadwal}
-              conflicts={conflicts}
+              conflicts={filteredConflicts}
               filterType={filterType}
               setFilterType={setFilterType}
               filterId={filterId}
@@ -2741,7 +2750,7 @@ export default function AdministrativeDashboard() {
           )}
 
           {activeTab === 'konflik' && (
-            <KonflikTab conflicts={conflicts} />
+            <KonflikTab conflicts={filteredConflicts} />
           )}
 
           {activeTab === 'beban_kerja' && (
@@ -2755,7 +2764,7 @@ export default function AdministrativeDashboard() {
           {activeTab === 'versions' && (
             <VersionsTab 
               jadwal={jadwal}
-              conflicts={conflicts}
+              conflicts={filteredConflicts}
               stats={stats}
               onLoadVersion={(v) => {
                 loadDatabase(true);
