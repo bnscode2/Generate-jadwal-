@@ -429,7 +429,7 @@ export class LocalDB {
     return this.getStored<Jadwal[]>('sch_jadwal', []);
   }
   static getHariAktif(): Hari[] {
-    return this.getStored<Hari[]>('sch_hari_aktif', ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']);
+    return this.getStored<Hari[]>('sch_hari_aktif', ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']);
   }
   static getBatasJamHari(): Record<Hari, number> {
     return this.getStored<Record<Hari, number>>('sch_batas_jam_hari', {
@@ -437,9 +437,9 @@ export class LocalDB {
       'Selasa': 8,
       'Rabu': 8,
       'Kamis': 8,
-      'Jumat': 8,
-      'Sabtu': 8,
-      'Minggu': 8,
+      'Jumat': 5,
+      'Sabtu': 0,
+      'Minggu': 0,
     });
   }
 
@@ -511,6 +511,16 @@ export class LocalDB {
     localStorage.setItem(prefix + 'sch_pengampu', JSON.stringify(MOCK_PENGAMPU));
     localStorage.setItem(prefix + 'sch_preferensi', JSON.stringify(MOCK_PREFERENSI));
     localStorage.setItem(prefix + 'sch_jadwal', JSON.stringify([]));
+    localStorage.setItem(prefix + 'sch_hari_aktif', JSON.stringify(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']));
+    localStorage.setItem(prefix + 'sch_batas_jam_hari', JSON.stringify({
+      'Senin': 8,
+      'Selasa': 8,
+      'Rabu': 8,
+      'Kamis': 8,
+      'Jumat': 5,
+      'Sabtu': 0,
+      'Minggu': 0
+    }));
     this.recalculateConflicts();
   }
 

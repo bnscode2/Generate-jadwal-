@@ -32,15 +32,15 @@ export const MOCK_GURU: Guru[] = [
 ];
 
 export const MOCK_MAPEL: MataPelajaran[] = [
-  { id: 'm-1', kode_mapel: 'MAT', nama_mapel: 'Matematika', jumlah_jam_per_minggu: 4 },
-  { id: 'm-2', kode_mapel: 'IND', nama_mapel: 'Bahasa Indonesia', jumlah_jam_per_minggu: 4 },
+  { id: 'm-1', kode_mapel: 'MAT', nama_mapel: 'Matematika', jumlah_jam_per_minggu: 5 },
+  { id: 'm-2', kode_mapel: 'IND', nama_mapel: 'Bahasa Indonesia', jumlah_jam_per_minggu: 5 },
   { id: 'm-3', kode_mapel: 'IPA', nama_mapel: 'Ilmu Pengetahuan Alam', jumlah_jam_per_minggu: 4 },
-  { id: 'm-4', kode_mapel: 'ING', nama_mapel: 'Bahasa Inggris', jumlah_jam_per_minggu: 3 },
+  { id: 'm-4', kode_mapel: 'ING', nama_mapel: 'Bahasa Inggris', jumlah_jam_per_minggu: 4 },
   { id: 'm-5', kode_mapel: 'IPS', nama_mapel: 'Ilmu Pengetahuan Sosial', jumlah_jam_per_minggu: 3 },
   { id: 'm-6', kode_mapel: 'PJK', nama_mapel: 'Pendidikan Jasmani, Olahraga & Kesehatan', jumlah_jam_per_minggu: 3 },
   { id: 'm-7', kode_mapel: 'SEN', nama_mapel: 'Seni Budaya', jumlah_jam_per_minggu: 2 },
   { id: 'm-8', kode_mapel: 'AGM', nama_mapel: 'Pendidikan Agama & Budi Pekerti', jumlah_jam_per_minggu: 3 },
-  { id: 'm-9', kode_mapel: 'PPN', nama_mapel: 'Pendidikan Pancasila', jumlah_jam_per_minggu: 2 },
+  { id: 'm-9', kode_mapel: 'PPN', nama_mapel: 'Pendidikan Pancasila', jumlah_jam_per_minggu: 3 },
   { id: 'm-10', kode_mapel: 'INF', nama_mapel: 'Informatika', jumlah_jam_per_minggu: 2 },
   { id: 'm-12', kode_mapel: 'MLO', nama_mapel: 'Bahasa Daerah (Muatan Lokal)', jumlah_jam_per_minggu: 2 },
   { id: 'm-13', kode_mapel: 'BK', nama_mapel: 'Bimbingan Konseling', jumlah_jam_per_minggu: 1 }
@@ -93,10 +93,10 @@ export const MOCK_JAM_PELAJARAN: JamPelajaran[] = [
 export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
   // --- KELAS VII A ---
   { id: 'a-7a-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-1', jumlah_jam: 3 },
-  { id: 'a-7a-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-1', jumlah_jam: 2 },
-  { id: 'a-7a-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-1', jumlah_jam: 4 },
-  { id: 'a-7a-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-1', jumlah_jam: 4 },
-  { id: 'a-7a-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-1', jumlah_jam: 3 },
+  { id: 'a-7a-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-1', jumlah_jam: 3 },
+  { id: 'a-7a-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-1', jumlah_jam: 5 },
+  { id: 'a-7a-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-1', jumlah_jam: 5 },
+  { id: 'a-7a-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-1', jumlah_jam: 4 },
   { id: 'a-7a-6', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-1', jumlah_jam: 4 },
   { id: 'a-7a-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-1', jumlah_jam: 3 },
   { id: 'a-7a-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-1', jumlah_jam: 3 },
@@ -107,10 +107,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS VII B ---
   { id: 'a-7b-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-2', jumlah_jam: 3 },
-  { id: 'a-7b-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-2', jumlah_jam: 2 },
-  { id: 'a-7b-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-2', jumlah_jam: 4 },
-  { id: 'a-7b-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-2', jumlah_jam: 4 },
-  { id: 'a-7b-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-2', jumlah_jam: 3 },
+  { id: 'a-7b-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-2', jumlah_jam: 3 },
+  { id: 'a-7b-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-2', jumlah_jam: 5 },
+  { id: 'a-7b-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-2', jumlah_jam: 5 },
+  { id: 'a-7b-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-2', jumlah_jam: 4 },
   { id: 'a-7b-6', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-2', jumlah_jam: 4 },
   { id: 'a-7b-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-2', jumlah_jam: 3 },
   { id: 'a-7b-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-2', jumlah_jam: 3 },
@@ -121,10 +121,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS VII C ---
   { id: 'a-7c-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-3', jumlah_jam: 3 },
-  { id: 'a-7c-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-3', jumlah_jam: 2 },
-  { id: 'a-7c-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-3', jumlah_jam: 4 },
-  { id: 'a-7c-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-3', jumlah_jam: 4 },
-  { id: 'a-7c-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-3', jumlah_jam: 3 },
+  { id: 'a-7c-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-3', jumlah_jam: 3 },
+  { id: 'a-7c-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-3', jumlah_jam: 5 },
+  { id: 'a-7c-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-3', jumlah_jam: 5 },
+  { id: 'a-7c-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-3', jumlah_jam: 4 },
   { id: 'a-7c-6', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-3', jumlah_jam: 4 },
   { id: 'a-7c-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-3', jumlah_jam: 3 },
   { id: 'a-7c-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-3', jumlah_jam: 3 },
@@ -135,10 +135,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS VII D ---
   { id: 'a-7d-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-4', jumlah_jam: 3 },
-  { id: 'a-7d-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-4', jumlah_jam: 2 },
-  { id: 'a-7d-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-4', jumlah_jam: 4 },
-  { id: 'a-7d-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-4', jumlah_jam: 4 },
-  { id: 'a-7d-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-4', jumlah_jam: 3 },
+  { id: 'a-7d-2', guru_id: 'g-9', mapel_id: 'm-9', kelas_id: 'c-4', jumlah_jam: 3 },
+  { id: 'a-7d-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-4', jumlah_jam: 5 },
+  { id: 'a-7d-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-4', jumlah_jam: 5 },
+  { id: 'a-7d-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-4', jumlah_jam: 4 },
   { id: 'a-7d-6', guru_id: 'g-16', mapel_id: 'm-3', kelas_id: 'c-4', jumlah_jam: 4 },
   { id: 'a-7d-7', guru_id: 'g-23', mapel_id: 'm-5', kelas_id: 'c-4', jumlah_jam: 3 },
   { id: 'a-7d-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-4', jumlah_jam: 3 },
@@ -149,10 +149,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS VIII A ---
   { id: 'a-8a-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-5', jumlah_jam: 3 },
-  { id: 'a-8a-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-5', jumlah_jam: 2 },
-  { id: 'a-8a-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-5', jumlah_jam: 4 },
-  { id: 'a-8a-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-5', jumlah_jam: 4 },
-  { id: 'a-8a-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-5', jumlah_jam: 3 },
+  { id: 'a-8a-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-5', jumlah_jam: 3 },
+  { id: 'a-8a-3', guru_id: 'g-2', mapel_id: 'm-2', kelas_id: 'c-5', jumlah_jam: 5 },
+  { id: 'a-8a-4', guru_id: 'g-1', mapel_id: 'm-1', kelas_id: 'c-5', jumlah_jam: 5 },
+  { id: 'a-8a-5', guru_id: 'g-4', mapel_id: 'm-4', kelas_id: 'c-5', jumlah_jam: 4 },
   { id: 'a-8a-6', guru_id: 'g-3', mapel_id: 'm-3', kelas_id: 'c-5', jumlah_jam: 4 },
   { id: 'a-8a-7', guru_id: 'g-5', mapel_id: 'm-5', kelas_id: 'c-5', jumlah_jam: 3 },
   { id: 'a-8a-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-5', jumlah_jam: 3 },
@@ -163,10 +163,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS VIII B ---
   { id: 'a-8b-1', guru_id: 'g-8', mapel_id: 'm-8', kelas_id: 'c-6', jumlah_jam: 3 },
-  { id: 'a-8b-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-6', jumlah_jam: 2 },
-  { id: 'a-8b-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-6', jumlah_jam: 4 },
-  { id: 'a-8b-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-6', jumlah_jam: 4 },
-  { id: 'a-8b-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-6', jumlah_jam: 3 },
+  { id: 'a-8b-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-6', jumlah_jam: 3 },
+  { id: 'a-8b-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-6', jumlah_jam: 5 },
+  { id: 'a-8b-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-6', jumlah_jam: 5 },
+  { id: 'a-8b-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-6', jumlah_jam: 4 },
   { id: 'a-8b-6', guru_id: 'g-16', mapel_id: 'm-3', kelas_id: 'c-6', jumlah_jam: 4 },
   { id: 'a-8b-7', guru_id: 'g-23', mapel_id: 'm-5', kelas_id: 'c-6', jumlah_jam: 3 },
   { id: 'a-8b-8', guru_id: 'g-6', mapel_id: 'm-6', kelas_id: 'c-6', jumlah_jam: 3 },
@@ -177,10 +177,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS VIII C ---
   { id: 'a-8c-1', guru_id: 'g-27', mapel_id: 'm-8', kelas_id: 'c-7', jumlah_jam: 3 },
-  { id: 'a-8c-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-7', jumlah_jam: 2 },
-  { id: 'a-8c-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-7', jumlah_jam: 4 },
-  { id: 'a-8c-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-7', jumlah_jam: 4 },
-  { id: 'a-8c-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-7', jumlah_jam: 3 },
+  { id: 'a-8c-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-7', jumlah_jam: 3 },
+  { id: 'a-8c-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-7', jumlah_jam: 5 },
+  { id: 'a-8c-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-7', jumlah_jam: 5 },
+  { id: 'a-8c-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-7', jumlah_jam: 4 },
   { id: 'a-8c-6', guru_id: 'g-16', mapel_id: 'm-3', kelas_id: 'c-7', jumlah_jam: 4 },
   { id: 'a-8c-7', guru_id: 'g-23', mapel_id: 'm-5', kelas_id: 'c-7', jumlah_jam: 3 },
   { id: 'a-8c-8', guru_id: 'g-25', mapel_id: 'm-6', kelas_id: 'c-7', jumlah_jam: 3 },
@@ -191,10 +191,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS VIII D ---
   { id: 'a-8d-1', guru_id: 'g-27', mapel_id: 'm-8', kelas_id: 'c-8', jumlah_jam: 3 },
-  { id: 'a-8d-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-8', jumlah_jam: 2 },
-  { id: 'a-8d-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-8', jumlah_jam: 4 },
-  { id: 'a-8d-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-8', jumlah_jam: 4 },
-  { id: 'a-8d-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-8', jumlah_jam: 3 },
+  { id: 'a-8d-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-8', jumlah_jam: 3 },
+  { id: 'a-8d-3', guru_id: 'g-18', mapel_id: 'm-2', kelas_id: 'c-8', jumlah_jam: 5 },
+  { id: 'a-8d-4', guru_id: 'g-15', mapel_id: 'm-1', kelas_id: 'c-8', jumlah_jam: 5 },
+  { id: 'a-8d-5', guru_id: 'g-21', mapel_id: 'm-4', kelas_id: 'c-8', jumlah_jam: 4 },
   { id: 'a-8d-6', guru_id: 'g-16', mapel_id: 'm-3', kelas_id: 'c-8', jumlah_jam: 4 },
   { id: 'a-8d-7', guru_id: 'g-23', mapel_id: 'm-5', kelas_id: 'c-8', jumlah_jam: 3 },
   { id: 'a-8d-8', guru_id: 'g-25', mapel_id: 'm-6', kelas_id: 'c-8', jumlah_jam: 3 },
@@ -205,10 +205,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS IX A ---
   { id: 'a-9a-1', guru_id: 'g-27', mapel_id: 'm-8', kelas_id: 'c-9', jumlah_jam: 3 },
-  { id: 'a-9a-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-9', jumlah_jam: 2 },
-  { id: 'a-9a-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-9', jumlah_jam: 4 },
-  { id: 'a-9a-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-9', jumlah_jam: 4 },
-  { id: 'a-9a-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-9', jumlah_jam: 3 },
+  { id: 'a-9a-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-9', jumlah_jam: 3 },
+  { id: 'a-9a-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-9', jumlah_jam: 5 },
+  { id: 'a-9a-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-9', jumlah_jam: 5 },
+  { id: 'a-9a-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-9', jumlah_jam: 4 },
   { id: 'a-9a-6', guru_id: 'g-20', mapel_id: 'm-3', kelas_id: 'c-9', jumlah_jam: 4 },
   { id: 'a-9a-7', guru_id: 'g-24', mapel_id: 'm-5', kelas_id: 'c-9', jumlah_jam: 3 },
   { id: 'a-9a-8', guru_id: 'g-25', mapel_id: 'm-6', kelas_id: 'c-9', jumlah_jam: 3 },
@@ -219,10 +219,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS IX B ---
   { id: 'a-9b-1', guru_id: 'g-27', mapel_id: 'm-8', kelas_id: 'c-10', jumlah_jam: 3 },
-  { id: 'a-9b-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-10', jumlah_jam: 2 },
-  { id: 'a-9b-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-10', jumlah_jam: 4 },
-  { id: 'a-9b-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-10', jumlah_jam: 4 },
-  { id: 'a-9b-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-10', jumlah_jam: 3 },
+  { id: 'a-9b-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-10', jumlah_jam: 3 },
+  { id: 'a-9b-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-10', jumlah_jam: 5 },
+  { id: 'a-9b-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-10', jumlah_jam: 5 },
+  { id: 'a-9b-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-10', jumlah_jam: 4 },
   { id: 'a-9b-6', guru_id: 'g-20', mapel_id: 'm-3', kelas_id: 'c-10', jumlah_jam: 4 },
   { id: 'a-9b-7', guru_id: 'g-24', mapel_id: 'm-5', kelas_id: 'c-10', jumlah_jam: 3 },
   { id: 'a-9b-8', guru_id: 'g-25', mapel_id: 'm-6', kelas_id: 'c-10', jumlah_jam: 3 },
@@ -233,10 +233,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS IX C ---
   { id: 'a-9c-1', guru_id: 'g-27', mapel_id: 'm-8', kelas_id: 'c-11', jumlah_jam: 3 },
-  { id: 'a-9c-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-11', jumlah_jam: 2 },
-  { id: 'a-9c-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-11', jumlah_jam: 4 },
-  { id: 'a-9c-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-11', jumlah_jam: 4 },
-  { id: 'a-9c-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-11', jumlah_jam: 3 },
+  { id: 'a-9c-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-11', jumlah_jam: 3 },
+  { id: 'a-9c-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-11', jumlah_jam: 5 },
+  { id: 'a-9c-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-11', jumlah_jam: 5 },
+  { id: 'a-9c-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-11', jumlah_jam: 4 },
   { id: 'a-9c-6', guru_id: 'g-20', mapel_id: 'm-3', kelas_id: 'c-11', jumlah_jam: 4 },
   { id: 'a-9c-7', guru_id: 'g-24', mapel_id: 'm-5', kelas_id: 'c-11', jumlah_jam: 3 },
   { id: 'a-9c-8', guru_id: 'g-25', mapel_id: 'm-6', kelas_id: 'c-11', jumlah_jam: 3 },
@@ -247,10 +247,10 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 
   // --- KELAS IX D ---
   { id: 'a-9d-1', guru_id: 'g-27', mapel_id: 'm-8', kelas_id: 'c-12', jumlah_jam: 3 },
-  { id: 'a-9d-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-12', jumlah_jam: 2 },
-  { id: 'a-9d-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-12', jumlah_jam: 4 },
-  { id: 'a-9d-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-12', jumlah_jam: 4 },
-  { id: 'a-9d-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-12', jumlah_jam: 3 },
+  { id: 'a-9d-2', guru_id: 'g-10', mapel_id: 'm-9', kelas_id: 'c-12', jumlah_jam: 3 },
+  { id: 'a-9d-3', guru_id: 'g-19', mapel_id: 'm-2', kelas_id: 'c-12', jumlah_jam: 5 },
+  { id: 'a-9d-4', guru_id: 'g-17', mapel_id: 'm-1', kelas_id: 'c-12', jumlah_jam: 5 },
+  { id: 'a-9d-5', guru_id: 'g-22', mapel_id: 'm-4', kelas_id: 'c-12', jumlah_jam: 4 },
   { id: 'a-9d-6', guru_id: 'g-20', mapel_id: 'm-3', kelas_id: 'c-12', jumlah_jam: 4 },
   { id: 'a-9d-7', guru_id: 'g-24', mapel_id: 'm-5', kelas_id: 'c-12', jumlah_jam: 3 },
   { id: 'a-9d-8', guru_id: 'g-25', mapel_id: 'm-6', kelas_id: 'c-12', jumlah_jam: 3 },
@@ -261,12 +261,56 @@ export const MOCK_PENGAMPU: PengampuMataPelajaran[] = [
 ];
 
 export const MOCK_PREFERENSI: PreferensiGuru[] = [
-  { id: 'p-g-1', guru_id: 'g-1', hari_tidak_bersedia: ['Senin'], jam_tidak_bersedia: [1, 2], hari_favorit: ['Selasa', 'Rabu'], jam_favorit: [3, 4], max_jam_per_hari: 6 },
-  { id: 'p-g-2', guru_id: 'g-2', hari_tidak_bersedia: ['Jumat'], jam_tidak_bersedia: [7, 8], hari_favorit: ['Kamis', 'Sabtu'], jam_favorit: [1, 2], max_jam_per_hari: 6 },
-  { id: 'p-g-3', guru_id: 'g-3', hari_tidak_bersedia: [], jam_tidak_bersedia: [], hari_favorit: ['Senin', 'Selasa'], jam_favorit: [2, 3], max_jam_per_hari: 6 },
-  { id: 'p-g-4', guru_id: 'g-4', hari_tidak_bersedia: ['Rabu'], jam_tidak_bersedia: [5, 6], hari_favorit: ['Senin', 'Jumat'], jam_favorit: [3, 4], max_jam_per_hari: 6 },
-  { id: 'p-g-5', guru_id: 'g-5', hari_tidak_bersedia: [], jam_tidak_bersedia: [], hari_favorit: ['Kamis', 'Jumat'], jam_favorit: [1, 2], max_jam_per_hari: 6 },
-  { id: 'p-g-6', guru_id: 'g-6', hari_tidak_bersedia: ['Sabtu'], jam_tidak_bersedia: [7, 8], hari_favorit: ['Senin', 'Selasa'], jam_favorit: [1, 2, 3], max_jam_per_hari: 4 },
-  { id: 'p-g-7', guru_id: 'g-7', hari_tidak_bersedia: [], jam_tidak_bersedia: [], hari_favorit: ['Rabu', 'Kamis'], jam_favorit: [4, 5], max_jam_per_hari: 6 },
-  { id: 'p-g-8', guru_id: 'g-8', hari_tidak_bersedia: ['Jumat'], jam_tidak_bersedia: [5, 6, 7, 8], hari_favorit: ['Senin', 'Selasa'], jam_favorit: [1, 2, 3], max_jam_per_hari: 6 }
+  {
+    id: 'p-g-1',
+    guru_id: 'g-1',
+    hari_tidak_bersedia: [],
+    jam_tidak_bersedia: [],
+    hari_favorit: ['Selasa', 'Rabu'],
+    jam_favorit: [3, 4],
+    max_jam_per_hari: 6,
+    slot_tidak_bersedia: [
+      { hari: 'Senin', jam_ke: 7 },
+      { hari: 'Senin', jam_ke: 8 }
+    ]
+  },
+  {
+    id: 'p-g-2',
+    guru_id: 'g-2',
+    hari_tidak_bersedia: [],
+    jam_tidak_bersedia: [],
+    hari_favorit: ['Kamis'],
+    jam_favorit: [1, 2],
+    max_jam_per_hari: 6,
+    slot_tidak_bersedia: [
+      { hari: 'Rabu', jam_ke: 1 },
+      { hari: 'Rabu', jam_ke: 2 }
+    ]
+  },
+  {
+    id: 'p-g-3',
+    guru_id: 'g-3',
+    hari_tidak_bersedia: [],
+    jam_tidak_bersedia: [],
+    hari_favorit: ['Senin', 'Selasa'],
+    jam_favorit: [2, 3],
+    max_jam_per_hari: 6,
+    slot_tidak_bersedia: [
+      { hari: 'Kamis', jam_ke: 5 },
+      { hari: 'Kamis', jam_ke: 6 }
+    ]
+  },
+  {
+    id: 'p-g-4',
+    guru_id: 'g-4',
+    hari_tidak_bersedia: [],
+    jam_tidak_bersedia: [],
+    hari_favorit: ['Senin', 'Jumat'],
+    jam_favorit: [3, 4],
+    max_jam_per_hari: 6,
+    slot_tidak_bersedia: [
+      { hari: 'Selasa', jam_ke: 7 },
+      { hari: 'Selasa', jam_ke: 8 }
+    ]
+  }
 ];
