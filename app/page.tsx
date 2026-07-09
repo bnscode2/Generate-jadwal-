@@ -98,6 +98,7 @@ export default function AdministrativeDashboard() {
   // Simulation settings
   const [algorithm, setAlgorithm] = useState<'csp' | 'genetic'>('csp');
   const [allowPartial, setAllowPartial] = useState<boolean>(true);
+  const [ignoreRoomConflicts, setIgnoreRoomConflicts] = useState<boolean>(true);
   const [connMode, setConnMode] = useState<'mock' | 'supabase'>('mock');
   const [logMessages, setLogMessages] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -1645,6 +1646,7 @@ export default function AdministrativeDashboard() {
           batasJamHari,
           algorithm,
           allowPartial,
+          ignoreRoomConflicts,
           isPro: currentUser?.is_pro
         });
 
@@ -1679,12 +1681,12 @@ export default function AdministrativeDashboard() {
           result = solver.solveCSP((msg, percent) => {
             setLogMessages(prev => [msg, ...prev]);
             if (percent !== undefined) setGenerationProgress(percent);
-          }, allowPartial);
+          }, allowPartial, ignoreRoomConflicts);
         } else {
           result = solver.solveGenetic((msg, percent) => {
             setLogMessages(prev => [msg, ...prev]);
             if (percent !== undefined) setGenerationProgress(percent);
-          }, currentUser?.is_pro);
+          }, currentUser?.is_pro, ignoreRoomConflicts);
         }
 
         if (result.schedules.length > 0) {
@@ -2672,10 +2674,13 @@ export default function AdministrativeDashboard() {
               guru={guru}
               kelas={kelas}
               pengampu={pengampu}
+              preferensi={preferensi}
               algorithm={algorithm}
               setAlgorithm={setAlgorithm}
               allowPartial={allowPartial}
               setAllowPartial={setAllowPartial}
+              ignoreRoomConflicts={ignoreRoomConflicts}
+              setIgnoreRoomConflicts={setIgnoreRoomConflicts}
               isGenerating={isGenerating}
               stats={stats}
               handleGenerateAutomatedTimetable={handleGenerateAutomatedTimetable}

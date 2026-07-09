@@ -1,5 +1,32 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Penyempurnaan Pencarian Jadwal Parsial (Cerdas & Iteratif) & Tips Diagnostik Guru]
+### Perubahan Algoritma Penjadwalan:
+- **Metode Skip Cerdas (Smart Skip Heuristic)**: Menyempurnakan mesin backtracking `solveCSP` di `/lib/scheduler.ts` agar tidak mudah menyerah atau menghasilkan jadwal yang kosong. Saat `allowPartial` aktif, jika sistem mendeteksi slot buntu (*conflict bottleneck*) pada suatu mata pelajaran, sistem akan secara cerdas melompati (*skip*) mata pelajaran bermasalah tersebut daripada melakukan pembatalan (*unassign*) besar-besaran, lalu melanjutkan pengisian mata pelajaran lainnya secara maksimal.
+- **Peningkatan Kapasitas Eksplorasi (Max 500k Steps & Time Guard)**: Meningkatkan batas langkah eksplorasi backtracking dari 25.000 menjadi 500.000 langkah, dikombinasikan dengan pembatas waktu dinamis maksimal 4,5 detik. Ini memberi mesin kesempatan mencari kombinasi grid yang jauh lebih padat dan penuh tanpa mengorbankan performa UI (karena berjalan di Web Worker).
+
+### Perubahan Frontend & UX:
+- **Sistem Tips & Diagnostik Terberat**: Menambahkan algoritma kalkulasi "Skor Batasan Guru" di `/components/GenerateTab.tsx` yang secara otomatis menganalisis preferensi seluruh guru. Jika jadwal yang dihasilkan berstatus parsial (< 100%), sistem akan mendiagnosis dan merekomendasikan top 3 guru dengan batasan libur/jam paling ketat yang memblokir pembuatan jadwal, lengkap dengan rincian jam beban kerja dan alasannya.
+- **Pemberian Properti Terkait**: Menghubungkan state `preferensi` dari `/app/page.tsx` ke dalam panel `<GenerateTab />`.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
+## [09 Juli 2026 - Fitur Abaikan Bentrok Ruangan (Optional Classroom & Ignore Room Conflicts)]
+### Perubahan Algoritma Penjadwalan & Backend:
+- **Parameter Abaikan Bentrok Ruangan**: Menambahkan parameter `ignoreRoomConflicts` (nilai bawaan: `true`) pada fungsi `solveCSP`, `solveRelaxedCSP`, dan `solveGenetic` di dalam berkas `/lib/scheduler.ts`.
+- **Bypass Hambatan Ruangan**: Memodifikasi aturan pemeriksaan keras (*hard constraint*) agar pemeriksaan bentrok penggunaan ruangan (`roomUsage` / `roomSet` / `roomActiveSlots`) dapat diabaikan jika parameter `ignoreRoomConflicts` aktif. Hal ini mencegah kegagalan penyusunan jadwal yang disebabkan oleh keterbatasan ruangan.
+- **Penyelarasan Web Worker**: Memperbarui `/lib/scheduler.worker.ts` agar dapat mendestrukturisasi properti `ignoreRoomConflicts` dari muatan pesan dan meneruskannya ke mesin penjadwalan.
+
+### Perubahan Frontend & UX:
+- **Selektor Opsi Ruangan Opsional**: Mengintegrasikan panel opsi interaktif kustom dengan kotak centang (*checkbox*) emerald di dalam tab Penyusun Otomatis (`/components/GenerateTab.tsx`) untuk mengaktifkan atau menonaktifkan Mode Abaikan Bentrok Ruangan secara fleksibel.
+- **Penempatan Ruangan Otomatis**: Jika opsi ini aktif (direkomendasikan), sistem akan langsung memplot mata pelajaran pada ruang kelas yang bersangkutan (misal Kelas 7A langsung ditempatkan di Ruangan Kelas 7A) secara paralel tanpa memicu peringatan bentrok ("merah") atau kegagalan pencarian solusi.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Fitur Penyusunan Jadwal Pelajaran Parsial Best-Effort (CSP)]
 ### Perubahan Algoritma Penjadwalan & Backend:
 - **Penyusunan Jadwal Parsial (Best-Effort CSP)**: Menyempurnakan mesin solver backtracking di `solveCSP` (`/lib/scheduler.ts`) untuk melacak dan mendokumentasikan keadaan pemetaan terbaik (`bestAssignmentMap`) yang sepenuhnya bebas dari bentrokan. Jika kombinasi sempurna 100% tidak ditemukan karena batasan yang terlalu padat, sistem tidak lagi memaksa fallback bentrok, melainkan mengembalikan hasil optimal dari keadaan parsial terbaik tersebut.

@@ -15,6 +15,7 @@ ctx.onmessage = function (e: MessageEvent) {
     batasJamHari,
     algorithm,
     allowPartial,
+    ignoreRoomConflicts,
     isPro
   } = e.data;
 
@@ -38,9 +39,9 @@ ctx.onmessage = function (e: MessageEvent) {
 
     let result;
     if (algorithm === 'csp') {
-      result = solver.solveCSP(callback, allowPartial);
+      result = solver.solveCSP(callback, allowPartial, ignoreRoomConflicts);
     } else {
-      result = solver.solveGenetic(callback, isPro);
+      result = solver.solveGenetic(callback, isPro, ignoreRoomConflicts);
     }
 
     ctx.postMessage({ type: 'success', result });

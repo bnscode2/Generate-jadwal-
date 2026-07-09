@@ -150,7 +150,7 @@ export class CalendarScheduler {
   }
 
   // --- ALGORTIMA 1: CSP BACKTRACKING WITH MRV & FORWARD CHECKING ---
-  public solveCSP(onProgress?: (msg: string, percent?: number) => void, allowPartial: boolean = false): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
+  public solveCSP(onProgress?: (msg: string, percent?: number) => void, allowPartial: boolean = false, ignoreRoomConflicts: boolean = true): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
     const startTime = performance.now();
     const variables = this.generateVariables();
     const periodsList = this.periods.map(p => p.jam_ke);
@@ -212,7 +212,7 @@ export class CalendarScheduler {
         if (classUsage.has(cKey)) return false;
 
         // 3. Hard constraint: Room collision
-        if (roomUsage.has(rKey)) return false;
+        if (!ignoreRoomConflicts && roomUsage.has(rKey)) return false;
 
         // 4. Hard constraint: Teacher preference (blocked day/period/slot)
         const pref = prefMap.get(v.guru_id);
@@ -303,30 +303,32 @@ export class CalendarScheduler {
     };
 
     let steps = 0;
-    const assignedSet = new Set<string>();
+    const processedSet = new Set<string>(); // Melacak variabel yang sudah diproses (sukses diplot maupun dilompati)
+    const skippedSet = new Set<string>();   // Melacak variabel yang dilompati di mode parsial
     let maxAssigned = 0;
     let bestAssignmentMap = new Map<string, DomainValue>();
     let maxAssignedCount = 0;
 
     const backtrack = (): boolean => {
       steps++;
-      if (assignedSet.size > maxAssigned) {
-        maxAssigned = assignedSet.size;
+      if (assignmentMap.size > maxAssigned) {
+        maxAssigned = assignmentMap.size;
         const percent = Math.min(99, Math.round((maxAssigned / variables.length) * 100));
         onProgress?.(`Menyusun jadwal (CSP)... Berhasil memetakan ${maxAssigned} dari ${variables.length} slot mata pelajaran.`, percent);
       }
-      if (assignedSet.size > maxAssignedCount) {
-        maxAssignedCount = assignedSet.size;
+      if (assignmentMap.size > maxAssignedCount) {
+        maxAssignedCount = assignmentMap.size;
         bestAssignmentMap = new Map(assignmentMap);
       }
-      if (steps > 25000) {
-        // Safeguard to prevent page lock due to over-constraint
+      
+      // Batasi langkah dan durasi waktu pencarian agar tidak menggantung (maksimal 4.5 detik pencarian intensif)
+      if (steps > 500000 || (steps % 1000 === 0 && performance.now() - startTime > 4500)) {
         return false;
       }
 
-      const nextVar = getNextVariableMRV(assignedSet);
+      const nextVar = getNextVariableMRV(processedSet);
       if (!nextVar) {
-        // All variables assigned!
+        // Semua variabel berhasil dipetakan (atau dilewati sebagai slot kosong secara sengaja)
         return true;
       }
 
@@ -355,11 +357,13 @@ export class CalendarScheduler {
         return scoreB - scoreA; // Descending points order
       });
 
+      let foundValid = false;
       for (const val of domainValues) {
         if (isValid(nextVar, val)) {
+          foundValid = true;
           // Assign
           assignmentMap.set(nextVar.id, val);
-          assignedSet.add(nextVar.id);
+          processedSet.add(nextVar.id);
 
           for (let offset = 0; offset < nextVar.block_length; offset++) {
             const jam_ke = val.jam_ke + offset;
@@ -384,7 +388,7 @@ export class CalendarScheduler {
 
           // Backtrack (Unassign)
           assignmentMap.delete(nextVar.id);
-          assignedSet.delete(nextVar.id);
+          processedSet.delete(nextVar.id);
 
           for (let offset = 0; offset < nextVar.block_length; offset++) {
             const jam_ke = val.jam_ke + offset;
@@ -401,6 +405,22 @@ export class CalendarScheduler {
         }
       }
 
+      // INTEGRASI PENYUSUNAN PARSIAL CERDAS (Jika allowPartial=true):
+      // Apabila pelajaran ini tidak menemukan slot waktu kosong karena bentrok preferensi guru,
+      // kita lompati pelajaran ini daripada membatalkan (unassign) seluruh jadwal yang sudah rapi sebelumnya.
+      if (!foundValid && allowPartial) {
+        processedSet.add(nextVar.id);
+        skippedSet.add(nextVar.id);
+
+        if (backtrack()) {
+          return true;
+        }
+
+        // Undo jika backtrack tingkat atas membutuhkan evaluasi ulang
+        processedSet.delete(nextVar.id);
+        skippedSet.delete(nextVar.id);
+      }
+
       return false;
     };
 
@@ -409,6 +429,7 @@ export class CalendarScheduler {
     let isPartialResult = false;
 
     if (success) {
+      isPartialResult = assignmentMap.size < variables.length;
       let scheduleIndex = 1;
       for (const [vId, val] of assignmentMap.entries()) {
         const originalVar = variables.find(v => v.id === vId)!;
@@ -426,7 +447,12 @@ export class CalendarScheduler {
           });
         }
       }
-      onProgress?.(`CSP Sukses! Jadwal berhasil dibuat dalam ${steps} iterasi.`);
+      if (isPartialResult) {
+        const mappedPercent = Math.round((assignmentMap.size / variables.length) * 100);
+        onProgress?.(`⚠️ CSP selesai dengan hasil parsial (${mappedPercent}%). Mengoptimalkan penempatan ${assignmentMap.size} dari ${variables.length} slot tanpa bentrok. Sisa slot bisa Anda isi secara manual di tab Grid.`);
+      } else {
+        onProgress?.(`CSP Sukses! Jadwal berhasil dibuat dalam ${steps} iterasi.`);
+      }
     } else if (allowPartial && bestAssignmentMap.size > 0) {
       isPartialResult = true;
       let scheduleIndex = 1;
@@ -449,7 +475,7 @@ export class CalendarScheduler {
       onProgress?.(`⚠️ CSP selesai dengan hasil parsial (${mappedPercent}%). Mengoptimalkan penempatan ${bestAssignmentMap.size} dari ${variables.length} slot tanpa bentrok. Sisa slot bisa Anda isi secara manual di tab Grid.`);
     } else {
       onProgress?.(`CSP gagal menemukan solusi non-bentrok penuh dalam batas iterasi. Menjalankan fallback rileksasi...`);
-      return this.solveRelaxedCSP(onProgress, startTime);
+      return this.solveRelaxedCSP(onProgress, startTime, ignoreRoomConflicts);
     }
 
     const endTime = performance.now();
@@ -478,7 +504,7 @@ export class CalendarScheduler {
   }
 
   // A relaxed CSP backtracking solver to handle highly constrained schools
-  private solveRelaxedCSP(onProgress?: (msg: string, percent?: number) => void, startTime: number = performance.now()): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
+  private solveRelaxedCSP(onProgress?: (msg: string, percent?: number) => void, startTime: number = performance.now(), ignoreRoomConflicts: boolean = true): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
     const variables = this.generateVariables();
     const periodsList = this.periods.map(p => p.jam_ke);
     const assignmentMap = new Map<string, DomainValue>();
@@ -505,7 +531,7 @@ export class CalendarScheduler {
 
         if (teacherUsage.has(tKey)) return false;
         if (classUsage.has(cKey)) return false;
-        if (roomUsage.has(rKey)) return false;
+        if (!ignoreRoomConflicts && roomUsage.has(rKey)) return false;
 
         // Subject preference (blocked day/period/slot)
         const sObj = mapelMap.get(v.mapel_id);
@@ -600,7 +626,7 @@ export class CalendarScheduler {
 
                 if (teacherUsage.has(tKey)) penalty += 1000;
                 if (classUsage.has(cKey)) penalty += 1000;
-                if (roomUsage.has(rKey)) penalty += 500;
+                if (!ignoreRoomConflicts && roomUsage.has(rKey)) penalty += 500;
               }
 
               // Favor earlier periods slightly to have a nicely packed schedule
@@ -661,7 +687,7 @@ export class CalendarScheduler {
   }
 
   // --- ALGORITMA 2: GENETIC ALGORITHM (OPSIONAL TAMBAHAN UNTUK DATA BESAR) ---
-  public solveGenetic(onProgress?: (msg: string, percent?: number) => void, isPro: boolean = true): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
+  public solveGenetic(onProgress?: (msg: string, percent?: number) => void, isPro: boolean = true, ignoreRoomConflicts: boolean = true): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
     const startTime = performance.now();
     const variables = this.generateVariables();
     const periodsList = this.periods.map(p => p.jam_ke);
@@ -744,7 +770,7 @@ export class CalendarScheduler {
           if (classSet.has(cKey)) score -= 300;
           classSet.add(cKey);
 
-          if (roomSet.has(rKey)) score -= 300;
+          if (!ignoreRoomConflicts && roomSet.has(rKey)) score -= 300;
           roomSet.add(rKey);
 
           // Daily limits for teachers
@@ -896,7 +922,7 @@ export class CalendarScheduler {
         const cKey = `${val.hari}_${jk}_${originalVar.kelas_id}`;
         const rKey = `${val.hari}_${jk}_${val.ruangan_id}`;
 
-        if (teacherActiveSlots.has(tKey) || classActiveSlots.has(cKey) || roomActiveSlots.has(rKey)) {
+        if (teacherActiveSlots.has(tKey) || classActiveSlots.has(cKey) || (!ignoreRoomConflicts && roomActiveSlots.has(rKey))) {
           hasConflict = true;
           break;
         }

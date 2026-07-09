@@ -2,16 +2,19 @@
 
 import React from 'react';
 import { Play, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { Guru, Kelas, PengampuMataPelajaran } from '../lib/types';
+import { Guru, Kelas, PengampuMataPelajaran, PreferensiGuru } from '../lib/types';
 
 interface GenerateTabProps {
   guru: Guru[];
   kelas: Kelas[];
   pengampu: PengampuMataPelajaran[];
+  preferensi: PreferensiGuru[];
   algorithm: 'csp' | 'genetic';
   setAlgorithm: (alg: 'csp' | 'genetic') => void;
   allowPartial: boolean;
   setAllowPartial: (allow: boolean) => void;
+  ignoreRoomConflicts: boolean;
+  setIgnoreRoomConflicts: (ignore: boolean) => void;
   isGenerating: boolean;
   stats: { 
     executionTimeMs: number; 
@@ -29,10 +32,13 @@ export default function GenerateTab({
   guru,
   kelas,
   pengampu,
+  preferensi = [],
   algorithm,
   setAlgorithm,
   allowPartial,
   setAllowPartial,
+  ignoreRoomConflicts,
+  setIgnoreRoomConflicts,
   isGenerating,
   stats,
   handleGenerateAutomatedTimetable,
@@ -87,28 +93,50 @@ export default function GenerateTab({
 
         </div>
 
-        {/* OPTION FOR PARTIAL TIMETABLE (CSP ONLY) */}
-        {algorithm === 'csp' && (
-          <div className="bg-amber-50/40 border border-amber-250 rounded-xl p-4 text-left">
+        {/* EXTRA GENERATION SETTINGS */}
+        <div className="space-y-3">
+          {algorithm === 'csp' && (
+            <div className="bg-amber-50/40 border border-amber-250 rounded-xl p-4 text-left">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="allow-partial-checkbox"
+                  checked={allowPartial}
+                  onChange={(e) => setAllowPartial(e.target.checked)}
+                  className="mt-1 accent-indigo-650 cursor-pointer h-4 w-4 rounded"
+                />
+                <div>
+                  <label htmlFor="allow-partial-checkbox" className="font-bold text-xs text-slate-800 cursor-pointer block select-none">
+                    Izinkan Hasil Jadwal Parsial (Selesai Meskipun Tidak 100% Mengisi Grid)
+                  </label>
+                  <p className="text-[11px] text-slate-550 mt-1 leading-relaxed">
+                    Jika diaktifkan, apabila sistem tidak menemukan kombinasi penuh 100% karena kendala yang sangat padat, sistem akan <b>tetap mengembalikan jadwal terbaik tanpa bentrok</b>. Sisa slot kosong dapat Anda lengkapi secara manual dengan mengklik sel kosong di tab Grid. Ini sangat mempermudah kerja guru karena preferensi yang bisa masuk akan otomatis terplot dengan rapi.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-emerald-50/40 border border-emerald-250 rounded-xl p-4 text-left">
             <div className="flex items-start gap-3">
               <input
                 type="checkbox"
-                id="allow-partial-checkbox"
-                checked={allowPartial}
-                onChange={(e) => setAllowPartial(e.target.checked)}
+                id="ignore-room-conflicts-checkbox"
+                checked={ignoreRoomConflicts}
+                onChange={(e) => setIgnoreRoomConflicts(e.target.checked)}
                 className="mt-1 accent-indigo-650 cursor-pointer h-4 w-4 rounded"
               />
               <div>
-                <label htmlFor="allow-partial-checkbox" className="font-bold text-xs text-slate-800 cursor-pointer block select-none">
-                  Izinkan Hasil Jadwal Parsial (Selesai Meskipun Tidak 100% Mengisi Grid)
+                <label htmlFor="ignore-room-conflicts-checkbox" className="font-bold text-xs text-slate-800 cursor-pointer block select-none">
+                  Abaikan Bentrok Penggunaan Ruangan (Sangat Direkomendasikan)
                 </label>
                 <p className="text-[11px] text-slate-550 mt-1 leading-relaxed">
-                  Jika diaktifkan, apabila sistem tidak menemukan kombinasi penuh 100% karena kendala yang sangat padat, sistem akan <b>tetap mengembalikan jadwal terbaik tanpa bentrok</b>. Sisa slot kosong dapat Anda lengkapi secara manual dengan mengklik sel kosong di tab Grid. Ini sangat mempermudah kerja guru karena preferensi yang bisa masuk akan otomatis terplot dengan rapi.
+                  Jika diaktifkan, bentrok ruangan tidak akan dianggap sebagai pelanggaran aturan keras (*hard constraint*). Setiap kelas (misalnya Kelas 7A) akan secara otomatis diplot pada ruang kelasnya masing-masing tanpa dibatasi ketersediaan ruangan bersama, sehingga <b>proses pembuatan jadwal berjalan jauh lebih mulus, cepat, dan anti-merah</b>.
                 </p>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* RUN COMMAND BUTTON CONTROL */}
         <div className="border-t border-slate-200 pt-6 flex flex-col items-center justify-center text-center gap-6">
@@ -226,6 +254,102 @@ export default function GenerateTab({
                         <span>
                           Catatan: Jadwal terisi 100%, namun terdapat beberapa bentrokan karena total beban jam mengajar guru melampaui kapasitas sekolah. Selesaikan bentrok di tab <b>Validasi Konflik</b> menggunakan saran penyelesaian dan pembagian (split) beban mengajar.
                         </span>
+                      </div>
+                    ) : stats.totalLessonsPlotted && stats.totalLessonsNeeded && stats.totalLessonsPlotted < stats.totalLessonsNeeded ? (
+                      <div className="space-y-4 text-left">
+                        <div className="text-amber-700 font-bold bg-amber-50 border border-amber-100 p-2.5 rounded-md mt-2 flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>
+                            Hasil Parsial ({Math.round((stats.totalLessonsPlotted / stats.totalLessonsNeeded) * 100)}%): Sistem berhasil menempatkan {stats.totalLessonsPlotted} dari {stats.totalLessonsNeeded} JP secara aman tanpa bentrok. Sisa slot kosong dapat Anda isi secara manual di tab <b>Grid</b> dengan mengklik kotak kosong.
+                          </span>
+                        </div>
+
+                        {(() => {
+                          const list: {
+                            guru: Guru;
+                            pref: PreferensiGuru;
+                            score: number;
+                            reasons: string[];
+                            totalJP: number;
+                          }[] = [];
+
+                          for (const p of preferensi) {
+                            const g = guru.find(x => x.id === p.guru_id);
+                            if (!g || !g.status_aktif) continue;
+
+                            const totalJP = pengampu
+                              .filter(x => x.guru_id === g.id)
+                              .reduce((sum, x) => sum + x.jumlah_jam, 0);
+
+                            const reasons: string[] = [];
+                            let restrictionScore = 0;
+
+                            if (p.hari_tidak_bersedia && p.hari_tidak_bersedia.length > 0) {
+                              restrictionScore += p.hari_tidak_bersedia.length * 20;
+                              reasons.push(`Berhalangan mengajar pada hari: ${p.hari_tidak_bersedia.join(', ')}`);
+                            }
+
+                            if (p.jam_tidak_bersedia && p.jam_tidak_bersedia.length > 0) {
+                              restrictionScore += p.jam_tidak_bersedia.length * 3;
+                              reasons.push(`Berhalangan pada jam pelajaran: ${p.jam_tidak_bersedia.map(j => `ke-${j}`).join(', ')}`);
+                            }
+
+                            if (p.slot_tidak_bersedia && p.slot_tidak_bersedia.length > 0) {
+                              restrictionScore += p.slot_tidak_bersedia.length * 5;
+                              reasons.push(`Memiliki ${p.slot_tidak_bersedia.length} slot berhalangan khusus`);
+                            }
+
+                            if (p.max_jam_per_hari && p.max_jam_per_hari < 6) {
+                              const strictness = 6 - p.max_jam_per_hari;
+                              restrictionScore += strictness * 15;
+                              reasons.push(`Maksimum mengajar dibatasi hanya ${p.max_jam_per_hari} JP per hari`);
+                            }
+
+                            if (totalJP > 15 && restrictionScore > 15) {
+                              restrictionScore += 25;
+                            }
+
+                            if (restrictionScore > 0) {
+                              list.push({
+                                guru: g,
+                                pref: p,
+                                score: restrictionScore,
+                                reasons,
+                                totalJP
+                              });
+                            }
+                          }
+
+                          const restrictiveTeachers = list.sort((a, b) => b.score - a.score).slice(0, 3);
+
+                          if (restrictiveTeachers.length === 0) return null;
+
+                          return (
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-left">
+                              <span className="font-bold text-xs text-slate-800 block mb-1">💡 Tips & Rekomendasi Pengisian Penuh 100%:</span>
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
+                                Sistem tidak dapat menempatkan sisa slot karena beberapa guru memiliki batasan preferensi berhalangan mengajar yang sangat ketat. Cobalah untuk melonggarkan batasan atau hari libur guru-guru berikut di tab <b>Daftar Guru</b> agar jadwal dapat terisi penuh 100%:
+                              </p>
+                              <div className="space-y-3 mt-3">
+                                {restrictiveTeachers.map((rt, idx) => (
+                                  <div key={idx} className="border-l-3 border-indigo-500 pl-3 py-1 bg-white border border-slate-150 rounded-r-lg shadow-2xs">
+                                    <div className="flex justify-between items-center">
+                                      <span className="font-bold text-slate-800 text-xs">{rt.guru.nama}</span>
+                                      <span className="text-indigo-700 bg-indigo-50 border border-indigo-100 font-mono text-[10px] font-bold px-2 py-0.5 rounded">
+                                        Beban Kerja: {rt.totalJP} JP
+                                      </span>
+                                    </div>
+                                    <ul className="list-disc pl-4 mt-2 space-y-1 text-slate-600 text-[11px]">
+                                      {rt.reasons.map((r, rIdx) => (
+                                        <li key={rIdx}>{r}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <div className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 p-2.5 rounded-md mt-2 flex items-start gap-2">
