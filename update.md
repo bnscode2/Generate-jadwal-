@@ -1,5 +1,19 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Fitur Penyusunan Jadwal Pelajaran Parsial Best-Effort (CSP)]
+### Perubahan Algoritma Penjadwalan & Backend:
+- **Penyusunan Jadwal Parsial (Best-Effort CSP)**: Menyempurnakan mesin solver backtracking di `solveCSP` (`/lib/scheduler.ts`) untuk melacak dan mendokumentasikan keadaan pemetaan terbaik (`bestAssignmentMap`) yang sepenuhnya bebas dari bentrokan. Jika kombinasi sempurna 100% tidak ditemukan karena batasan yang terlalu padat, sistem tidak lagi memaksa fallback bentrok, melainkan mengembalikan hasil optimal dari keadaan parsial terbaik tersebut.
+- **Dukungan Asynchronous Web Worker**: Memperbarui `/lib/scheduler.worker.ts` untuk memproses parameter `allowPartial` dan meneruskannya ke mesin kalkulasi scheduler.
+
+### Perubahan Frontend & UX:
+- **Selektor Kontrol Jadwal Parsial**: Menambahkan panel opsi interaktif kustom dengan kotak centang (*checkbox*) di dalam tab Penyusun Otomatis (`/components/GenerateTab.tsx`) untuk mengaktifkan atau menonaktifkan Mode Jadwal Parsial secara dinamis.
+- **Sinergi Alur Pengisian Semi-Manual**: Memungkinkan guru atau admin untuk mendapatkan jadwal awal yang mematuhi preferensi guru terberat secara instan tanpa bentrok, lalu dengan mudah mengisi sisa slot kosong secara manual melalui grid interaktif di tab Kisi Jadwal (`/components/GridTab.tsx`).
+- **Dashboard Statistik Responsif**: Memperbarui presentase capaian plotting pada metrik laporan hasil agar secara akurat merepresentasikan jumlah jam yang berhasil terplot (misal: "84 / 120 JP").
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Perbaikan Bug Preferensi Slot Berhalangan Khusus Guru (Slot Jam & Hari Spesifik)]
 ### Perubahan Database & Backend (Supabase):
 - **Penambahan Kolom Database**: Menambahkan kolom `slot_tidak_bersedia` bertipe `JSONB` dengan nilai bawaan `'[]'::jsonb` ke dalam skema tabel `public.teacher_preferences` di file `/schema.sql` and `/scheme.sql`.

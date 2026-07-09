@@ -150,7 +150,7 @@ export class CalendarScheduler {
   }
 
   // --- ALGORTIMA 1: CSP BACKTRACKING WITH MRV & FORWARD CHECKING ---
-  public solveCSP(onProgress?: (msg: string, percent?: number) => void): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
+  public solveCSP(onProgress?: (msg: string, percent?: number) => void, allowPartial: boolean = false): { schedules: Jadwal[]; score: number; executionTimeMs: number } {
     const startTime = performance.now();
     const variables = this.generateVariables();
     const periodsList = this.periods.map(p => p.jam_ke);
@@ -305,6 +305,8 @@ export class CalendarScheduler {
     let steps = 0;
     const assignedSet = new Set<string>();
     let maxAssigned = 0;
+    let bestAssignmentMap = new Map<string, DomainValue>();
+    let maxAssignedCount = 0;
 
     const backtrack = (): boolean => {
       steps++;
@@ -312,6 +314,10 @@ export class CalendarScheduler {
         maxAssigned = assignedSet.size;
         const percent = Math.min(99, Math.round((maxAssigned / variables.length) * 100));
         onProgress?.(`Menyusun jadwal (CSP)... Berhasil memetakan ${maxAssigned} dari ${variables.length} slot mata pelajaran.`, percent);
+      }
+      if (assignedSet.size > maxAssignedCount) {
+        maxAssignedCount = assignedSet.size;
+        bestAssignmentMap = new Map(assignmentMap);
       }
       if (steps > 25000) {
         // Safeguard to prevent page lock due to over-constraint
@@ -400,6 +406,7 @@ export class CalendarScheduler {
 
     const success = backtrack();
     const finalSchedules: Jadwal[] = [];
+    let isPartialResult = false;
 
     if (success) {
       let scheduleIndex = 1;
@@ -420,15 +427,52 @@ export class CalendarScheduler {
         }
       }
       onProgress?.(`CSP Sukses! Jadwal berhasil dibuat dalam ${steps} iterasi.`);
+    } else if (allowPartial && bestAssignmentMap.size > 0) {
+      isPartialResult = true;
+      let scheduleIndex = 1;
+      for (const [vId, val] of bestAssignmentMap.entries()) {
+        const originalVar = variables.find(v => v.id === vId)!;
+        for (let offset = 0; offset < originalVar.block_length; offset++) {
+          finalSchedules.push({
+            id: `sch-gen-partial-${scheduleIndex++}`,
+            assignment_id: originalVar.assignmentId,
+            guru_id: originalVar.guru_id,
+            mapel_id: originalVar.mapel_id,
+            kelas_id: originalVar.kelas_id,
+            ruangan_id: val.ruangan_id,
+            hari: val.hari,
+            jam_ke: val.jam_ke + offset
+          });
+        }
+      }
+      const mappedPercent = Math.round((bestAssignmentMap.size / variables.length) * 100);
+      onProgress?.(`⚠️ CSP selesai dengan hasil parsial (${mappedPercent}%). Mengoptimalkan penempatan ${bestAssignmentMap.size} dari ${variables.length} slot tanpa bentrok. Sisa slot bisa Anda isi secara manual di tab Grid.`);
     } else {
       onProgress?.(`CSP gagal menemukan solusi non-bentrok penuh dalam batas iterasi. Menjalankan fallback rileksasi...`);
       return this.solveRelaxedCSP(onProgress, startTime);
     }
 
     const endTime = performance.now();
+    // For partial results, we calculate score based on the bestAssignmentMap instead of assignmentMap
+    const calculatePartialSoftConstraintScore = (): number => {
+      let score = 1000;
+      for (const [vId, val] of bestAssignmentMap.entries()) {
+        const matchingVar = variables.find(v => v.id === vId);
+        if (!matchingVar) continue;
+        const pref = prefMap.get(matchingVar.guru_id);
+        if (pref) {
+          if (pref.hari_favorit.includes(val.hari)) score += 15;
+          for (let offset = 0; offset < matchingVar.block_length; offset++) {
+            if (pref.jam_favorit.includes(val.jam_ke + offset)) score += 15;
+          }
+        }
+      }
+      return score;
+    };
+
     return {
       schedules: finalSchedules,
-      score: calculateSoftConstraintScore(),
+      score: isPartialResult ? calculatePartialSoftConstraintScore() : calculateSoftConstraintScore(),
       executionTimeMs: Math.round(endTime - startTime)
     };
   }

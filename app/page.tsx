@@ -97,6 +97,7 @@ export default function AdministrativeDashboard() {
 
   // Simulation settings
   const [algorithm, setAlgorithm] = useState<'csp' | 'genetic'>('csp');
+  const [allowPartial, setAllowPartial] = useState<boolean>(true);
   const [connMode, setConnMode] = useState<'mock' | 'supabase'>('mock');
   const [logMessages, setLogMessages] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -1643,6 +1644,7 @@ export default function AdministrativeDashboard() {
           hariAktif,
           batasJamHari,
           algorithm,
+          allowPartial,
           isPro: currentUser?.is_pro
         });
 
@@ -1677,7 +1679,7 @@ export default function AdministrativeDashboard() {
           result = solver.solveCSP((msg, percent) => {
             setLogMessages(prev => [msg, ...prev]);
             if (percent !== undefined) setGenerationProgress(percent);
-          });
+          }, allowPartial);
         } else {
           result = solver.solveGenetic((msg, percent) => {
             setLogMessages(prev => [msg, ...prev]);
@@ -2672,6 +2674,8 @@ export default function AdministrativeDashboard() {
               pengampu={pengampu}
               algorithm={algorithm}
               setAlgorithm={setAlgorithm}
+              allowPartial={allowPartial}
+              setAllowPartial={setAllowPartial}
               isGenerating={isGenerating}
               stats={stats}
               handleGenerateAutomatedTimetable={handleGenerateAutomatedTimetable}

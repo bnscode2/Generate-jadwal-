@@ -14,6 +14,7 @@ ctx.onmessage = function (e: MessageEvent) {
     hariAktif,
     batasJamHari,
     algorithm,
+    allowPartial,
     isPro
   } = e.data;
 
@@ -37,7 +38,7 @@ ctx.onmessage = function (e: MessageEvent) {
 
     let result;
     if (algorithm === 'csp') {
-      result = solver.solveCSP(callback);
+      result = solver.solveCSP(callback, allowPartial);
     } else {
       result = solver.solveGenetic(callback, isPro);
     }

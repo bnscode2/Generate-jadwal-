@@ -10,6 +10,8 @@ interface GenerateTabProps {
   pengampu: PengampuMataPelajaran[];
   algorithm: 'csp' | 'genetic';
   setAlgorithm: (alg: 'csp' | 'genetic') => void;
+  allowPartial: boolean;
+  setAllowPartial: (allow: boolean) => void;
   isGenerating: boolean;
   stats: { 
     executionTimeMs: number; 
@@ -29,6 +31,8 @@ export default function GenerateTab({
   pengampu,
   algorithm,
   setAlgorithm,
+  allowPartial,
+  setAllowPartial,
   isGenerating,
   stats,
   handleGenerateAutomatedTimetable,
@@ -82,6 +86,29 @@ export default function GenerateTab({
           </label>
 
         </div>
+
+        {/* OPTION FOR PARTIAL TIMETABLE (CSP ONLY) */}
+        {algorithm === 'csp' && (
+          <div className="bg-amber-50/40 border border-amber-250 rounded-xl p-4 text-left">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="allow-partial-checkbox"
+                checked={allowPartial}
+                onChange={(e) => setAllowPartial(e.target.checked)}
+                className="mt-1 accent-indigo-650 cursor-pointer h-4 w-4 rounded"
+              />
+              <div>
+                <label htmlFor="allow-partial-checkbox" className="font-bold text-xs text-slate-800 cursor-pointer block select-none">
+                  Izinkan Hasil Jadwal Parsial (Selesai Meskipun Tidak 100% Mengisi Grid)
+                </label>
+                <p className="text-[11px] text-slate-550 mt-1 leading-relaxed">
+                  Jika diaktifkan, apabila sistem tidak menemukan kombinasi penuh 100% karena kendala yang sangat padat, sistem akan <b>tetap mengembalikan jadwal terbaik tanpa bentrok</b>. Sisa slot kosong dapat Anda lengkapi secara manual dengan mengklik sel kosong di tab Grid. Ini sangat mempermudah kerja guru karena preferensi yang bisa masuk akan otomatis terplot dengan rapi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* RUN COMMAND BUTTON CONTROL */}
         <div className="border-t border-slate-200 pt-6 flex flex-col items-center justify-center text-center gap-6">
