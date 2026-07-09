@@ -272,8 +272,8 @@ export default function AdministrativeDashboard() {
         
         // Let's also sync data down automatically if they just logged in!
         try {
-          // Check if local database is NOT empty but cloud database is completely empty
-          const hasLocalData = LocalDB.getGuru().length > 0 || LocalDB.getMapel().length > 0 || LocalDB.getKelas().length > 0;
+          // Check if local database is NOT empty but cloud database is completely empty (Exclude sandbox data)
+          const hasLocalData = !LocalDB.isDemoMode() && (LocalDB.getGuru().length > 0 || LocalDB.getMapel().length > 0 || LocalDB.getKelas().length > 0);
           
           let pushedInsteadOfPulled = false;
           if (hasLocalData) {
@@ -877,11 +877,9 @@ export default function AdministrativeDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reload database when user switches
+  // Reload database when user switches or on initial load
   useEffect(() => {
-    if (currentUser) {
-      loadDatabase();
-    }
+    loadDatabase();
   }, [currentUser]);
 
   // Update default filter options when master data loads
@@ -976,6 +974,13 @@ export default function AdministrativeDashboard() {
 
     setSelectedCell(null);
     setIsTransitioningMode(false);
+
+    // Auto-redirect to Tutorial tab if database is empty (0 data)
+    const isDatabaseEmptyNow = LocalDB.getGuru().length === 0 && LocalDB.getMapel().length === 0 && LocalDB.getKelas().length === 0;
+    if (isDatabaseEmptyNow) {
+      setActiveTab('tutorial');
+      setLogMessages(prev => ['ℹ️ Mengalihkan secara otomatis ke Tab Tutorial karena basis data kosong. Silakan pelajari panduan input data di sini!', ...prev]);
+    }
   };
 
   const executeSwitchToDemoMode = async () => {
@@ -1001,6 +1006,12 @@ export default function AdministrativeDashboard() {
     setLogMessages(prev => ['Seluruh data master (Guru, Mapel, Kelas, Ruangan, Pengampu, Preferensi) & Jadwal berhasil dibersihkan. Sistem kini aktif dalam Mode Asli.', ...prev]);
     setSelectedCell(null);
     setConfirmModal(null);
+
+    // Auto-redirect to Tutorial tab if database is empty (0 data)
+    const isDatabaseEmptyNow = LocalDB.getGuru().length === 0 && LocalDB.getMapel().length === 0 && LocalDB.getKelas().length === 0;
+    if (isDatabaseEmptyNow) {
+      setActiveTab('tutorial');
+    }
   };
 
   const executeClearJadwal = () => {

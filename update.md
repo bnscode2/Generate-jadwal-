@@ -1,5 +1,17 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Resolusi Bug Kebocoran Sandbox Baru, Perbaikan Muat Awal & Auto-Redirect Tutorial]
+### Perubahan Antarmuka & UX (Frontend):
+- **Otomatisasi Pemuatan Basis Data Awal (On Mount)**: Memodifikasi hook `useEffect` pemuat database utama agar selalu berjalan di awal peluncuran aplikasi (*on mount*) baik bagi pengguna tamu (*guest*) maupun pengguna yang sudah terautentikasi. Ini menyelesaikan masalah visual di mana data master tidak termuat jika pengguna tidak memiliki data sesi aktif.
+- **Otomatisasi Pengalihan ke Tutorial (Auto-Redirect)**: Menambahkan deteksi pengalihan otomatis ke tab **Tutorial & FAQ** ketika basis data terdeteksi kosong (0 data) setelah pengguna beralih ke Mode Asli (Mulai Bersih) atau mengosongkan seluruh master data di panel pengaturan. Pengalihan ini memandu guru secara responsif ke instruksi tata cara input data jadwal yang ramah.
+
+### Perubahan Database & Logika Sinkronisasi (Backend):
+- **Pencegahan Kebocoran Data Sandbox ke Supabase Cloud**: Memperbaiki validasi pra-sinkronisasi saat pengguna baru pertama kali mendaftar/masuk via Google. Menambahkan pengkondisian `!LocalDB.isDemoMode()` pada pengecekan data lokal aktif. Hal ini menjamin bahwa data simulasi (sandbox) yang dimuat secara default di sisi klien tidak akan pernah salah diunggah (terbocor) ke database cloud Supabase milik pengguna baru.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Banner Edukasi Mode Sandbox Profesional]
 ### Perubahan Antarmuka & UX (Frontend):
 - **Sticky Banner Sandbox Mode**: Mengimplementasikan banner edukasi & tawaran beralih yang sangat profesional di bagian atas panel utama (`main area`) ketika sistem mendeteksi user aktif berada dalam **Mode Sandbox (Uji Coba)**. 
