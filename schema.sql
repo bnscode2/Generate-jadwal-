@@ -235,6 +235,7 @@ CREATE TABLE IF NOT EXISTS public.teacher_preferences (
     hari_favorit VARCHAR(20)[] DEFAULT '{}',        -- Array hari favorit
     jam_favorit INTEGER[] DEFAULT '{}',            -- Array jam_ke favorit
     max_jam_per_hari INTEGER DEFAULT 6,
+    slot_tidak_bersedia JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_teacher_pref_per_user UNIQUE (user_id, guru_id)
 );

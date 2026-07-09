@@ -1,5 +1,17 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Perbaikan Bug Preferensi Slot Berhalangan Khusus Guru (Slot Jam & Hari Spesifik)]
+### Perubahan Database & Backend (Supabase):
+- **Penambahan Kolom Database**: Menambahkan kolom `slot_tidak_bersedia` bertipe `JSONB` dengan nilai bawaan `'[]'::jsonb` ke dalam skema tabel `public.teacher_preferences` di file `/schema.sql` and `/scheme.sql`.
+- **Penyelarasan Sinkronisasi Cloud**: Memperbarui `/lib/supabaseSync.ts` agar menyertakan data array `slot_tidak_bersedia` saat melakukan sinkronisasi preferensi guru baik melalui sinkronisasi massal (`mappedPreferences`), pemuatan data dari cloud (`localPreferences`), maupun sinkronisasi instan per-item (`syncPreference`).
+
+### Perubahan Frontend & UX:
+- **Penyimpanan Matang & Konsisten**: Memastikan preferensi halangan khusus guru (blokir slot hari dan jam pelajaran spesifik) yang dikonfigurasi lewat modal di tab Guru (`/components/GuruTab.tsx`) berhasil tersimpan secara permanen di LocalStorage maupun Cloud Supabase, tanpa terhapus atau kembali ke draf kosong saat sinkronisasi ulang dilakukan.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [08 Juli 2026 - Resolusi Bug `schedules_pkey` Duplikat (User-Scoped Deterministic Salt Hashing)]
 ### Perubahan Database & Backend (Supabase):
 - **Isolasi UUID Antar Pengguna**: Menyempurnakan mekanisme pemetaan ID lokal ke UUID di `IDMapper.getUUID` (`/lib/supabaseSync.ts`). Sekarang, sistem menyuntikkan `username` pengguna yang aktif sebagai **salt utama** dalam algoritma hashing deterministik (`usr_${username}_`).

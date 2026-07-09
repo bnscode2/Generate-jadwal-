@@ -262,6 +262,7 @@ export class SupabaseSyncService {
         hari_favorit: p.hari_favorit || [],
         jam_favorit: p.jam_favorit || [],
         max_jam_per_hari: p.max_jam_per_hari,
+        slot_tidak_bersedia: p.slot_tidak_bersedia || [],
         ...(userId ? { user_id: userId } : {})
       }));
       await syncTable('teacher_preferences', mappedPreferences);
@@ -514,7 +515,8 @@ export class SupabaseSyncService {
         jam_tidak_bersedia: p.jam_tidak_bersedia || [],
         hari_favorit: p.hari_favorit || [],
         jam_favorit: p.jam_favorit || [],
-        max_jam_per_hari: p.max_jam_per_hari || 6
+        max_jam_per_hari: p.max_jam_per_hari || 6,
+        slot_tidak_bersedia: p.slot_tidak_bersedia || []
       }));
 
       const localAssignments: PengampuMataPelajaran[] = assignmentsData.map((a: any) => ({
@@ -682,7 +684,8 @@ export class SupabaseSyncService {
       jam_tidak_bersedia: p.jam_tidak_bersedia,
       hari_favorit: p.hari_favorit || [],
       jam_favorit: p.jam_favorit || [],
-      max_jam_per_hari: p.max_jam_per_hari
+      max_jam_per_hari: p.max_jam_per_hari,
+      slot_tidak_bersedia: p.slot_tidak_bersedia || []
     };
     await this.syncSingleItem('teacher_preferences', action, payload);
   }
