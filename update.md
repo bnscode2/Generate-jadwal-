@@ -1,5 +1,15 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Fitur Penjadwalan Manual Beruntun (Multi-Slot JP) & Validasi Konflik Ketat]
+### Perubahan Frontend & UX:
+- **Selektor Durasi Berurutan (Multi-Slot JP)**: Menambahkan kontrol drop-down interaktif "Durasi / Jumlah JP" pada modal penambahan jadwal manual di tab Kisi Jadwal (`/components/GridTab.tsx`). Fitur ini memungkinkan guru atau admin untuk memasukkan alokasi jam pelajaran (misal 2 JP atau lebih) secara berurutan dalam satu tindakan klik saja.
+- **Batasan Durasi Dinamis**: Sistem secara pintar menghitung batas maksimum slot berurutan yang diperbolehkan berdasarkan sisa jam alokasi mengajar pengampu (*unfulfilled quota*) dan sisa period/jam pelajaran yang tersedia sebelum akhir hari sekolah, mencegah pengisian berlebih secara otomatis.
+- **Validasi Konflik Ketat & Pencegahan Bentrok**: Mengganti sistem konfirmasi toleransi konvensional dengan validasi pencegahan tabrakan jadwal yang sangat disiplin. Jika ada bagian dari slot berurutan tersebut yang bentrok dengan jadwal guru lain, kelas lain, atau ruangan lain, sistem akan memblokir penyimpanan, menampilkan detail bentrok per-jam pelajaran secara spesifik, dan memaksa pengguna untuk memilih alternatif lain yang bebas bentrok.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Penyempurnaan Pencarian Jadwal Parsial (Cerdas & Iteratif) & Tips Diagnostik Guru]
 ### Perubahan Algoritma Penjadwalan:
 - **Metode Skip Cerdas (Smart Skip Heuristic)**: Menyempurnakan mesin backtracking `solveCSP` di `/lib/scheduler.ts` agar tidak mudah menyerah atau menghasilkan jadwal yang kosong. Saat `allowPartial` aktif, jika sistem mendeteksi slot buntu (*conflict bottleneck*) pada suatu mata pelajaran, sistem akan secara cerdas melompati (*skip*) mata pelajaran bermasalah tersebut daripada melakukan pembatalan (*unassign*) besar-besaran, lalu melanjutkan pengisian mata pelajaran lainnya secara maksimal.

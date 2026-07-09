@@ -411,6 +411,7 @@ export default function GridTab({
   const [customMapelId, setCustomMapelId] = useState<string>('');
   const [manualRuanganId, setManualRuanganId] = useState<string>('');
   const [quickRoomEdit, setQuickRoomEdit] = useState<boolean>(false);
+  const [manualNumSlots, setManualNumSlots] = useState<number>(1);
 
   const onCellClicked = (hari: Hari, jamKe: number, scheduleId: string | null | undefined) => {
     if (selectedCell) {
@@ -421,6 +422,7 @@ export default function GridTab({
       setActiveEditCell({ hari, jam_ke: jamKe, scheduleId });
       setQuickRoomEdit(false);
       setShowDeleteConfirm(false);
+      setManualNumSlots(1);
       
       // Filter relevant assignments
       let preselectedPengampu = '';
@@ -513,46 +515,63 @@ export default function GridTab({
       targetMapelId = customMapelId;
     }
 
-    // Validation: check if teacher is already busy at this time (hari, jam_ke)
-    const teacherConflict = jadwal.find(s => s.hari === hari && s.jam_ke === jam_ke && s.guru_id === targetGuruId);
-    if (teacherConflict) {
-      const otherClass = kelas.find(c => c.id === teacherConflict.kelas_id)?.nama_kelas || 'kelas lain';
-      if (!confirm(`⚠️ Peringatan: Guru yang dipilih sudah mengajar di kelas ${otherClass} pada hari ${hari} Jam ke-${jam_ke}.\n\nTetap simpan jadwal ini (mengabaikan bentrok)?`)) {
-        return;
-      }
+    const conflictsList: string[] = [];
+    const maxJamKe = jamPelajaran.length > 0 ? Math.max(...jamPelajaran.map(jp => jp.jam_ke)) : 8;
+
+    if (jam_ke + manualNumSlots - 1 > maxJamKe) {
+      alert(`⚠️ Gagal: Jumlah JP (${manualNumSlots} Slot) melebihi batas jam pelajaran harian (Maksimal Jam ke-${maxJamKe}).`);
+      return;
     }
 
-    // Validation: check if class is already busy at this time
-    const classConflict = jadwal.find(s => s.hari === hari && s.jam_ke === jam_ke && s.kelas_id === targetKelasId);
-    if (classConflict) {
-      const otherSubject = mapel.find(m => m.id === classConflict.mapel_id)?.nama_mapel || 'mapel lain';
-      if (!confirm(`⚠️ Peringatan: Kelas yang dipilih sudah diisi oleh pelajaran ${otherSubject} pada hari ${hari} Jam ke-${jam_ke}.\n\nTetap simpan jadwal ini (mengabaikan bentrok)?`)) {
-        return;
+    // Accumulate slots to insert
+    const slotsToInsert: Jadwal[] = [];
+
+    for (let i = 0; i < manualNumSlots; i++) {
+      const currentJamKe = jam_ke + i;
+
+      // 1. Teacher conflict
+      const tConf = jadwal.find(s => s.hari === hari && s.jam_ke === currentJamKe && s.guru_id === targetGuruId);
+      if (tConf) {
+        const otherClass = kelas.find(c => c.id === tConf.kelas_id)?.nama_kelas || 'kelas lain';
+        const teacherName = guru.find(g => g.id === targetGuruId)?.nama.split(',')[0] || 'Guru';
+        conflictsList.push(`• Guru [${teacherName}] sudah mengajar di kelas ${otherClass} pada Jam ke-${currentJamKe}.`);
       }
+
+      // 2. Class conflict
+      const cConf = jadwal.find(s => s.hari === hari && s.jam_ke === currentJamKe && s.kelas_id === targetKelasId);
+      if (cConf) {
+        const otherSubject = mapel.find(m => m.id === cConf.mapel_id)?.nama_mapel || 'mapel lain';
+        const className = kelas.find(c => c.id === targetKelasId)?.nama_kelas || 'Kelas';
+        conflictsList.push(`• Kelas [${className}] sudah diisi oleh pelajaran ${otherSubject} pada Jam ke-${currentJamKe}.`);
+      }
+
+      // 3. Room conflict
+      const rConf = jadwal.find(s => s.hari === hari && s.jam_ke === currentJamKe && s.ruangan_id === targetRuanganId);
+      if (rConf) {
+        const conflictingClass = kelas.find(c => c.id === rConf.kelas_id)?.nama_kelas || 'kelas';
+        const roomName = ruangan.find(r => r.id === targetRuanganId)?.nama_ruangan || 'Ruangan';
+        conflictsList.push(`• Ruangan [${roomName}] sedang digunakan oleh kelas ${conflictingClass} pada Jam ke-${currentJamKe}.`);
+      }
+
+      // Generate a unique ID per slot
+      slotsToInsert.push({
+        id: `manual-s-${Date.now()}-${i}`,
+        assignment_id: manualAddMode === 'pengampu' ? selectedPengampuId : `custom-p-${Date.now()}-${i}`,
+        kelas_id: targetKelasId,
+        guru_id: targetGuruId,
+        mapel_id: targetMapelId,
+        ruangan_id: targetRuanganId,
+        hari,
+        jam_ke: currentJamKe
+      });
     }
 
-    // Validation: check if room is already occupied at this time
-    const roomConflict = jadwal.find(s => s.hari === hari && s.jam_ke === jam_ke && s.ruangan_id === targetRuanganId);
-    if (roomConflict) {
-      const conflictingClass = kelas.find(c => c.id === roomConflict.kelas_id)?.nama_kelas || 'kelas';
-      if (!confirm(`⚠️ Peringatan: Ruangan yang dipilih sedang digunakan oleh kelas ${conflictingClass} pada hari ${hari} Jam ke-${jam_ke}.\n\nTetap simpan jadwal ini (mengabaikan bentrok)?`)) {
-        return;
-      }
+    if (conflictsList.length > 0) {
+      alert(`🚨 TIDAK BISA DILANJUTKAN (BENTROK TERDETEKSI):\n\n${conflictsList.join('\n')}\n\nSilakan pilih jam pelajaran lain atau kurangi jumlah slot.`);
+      return;
     }
 
-    // Create new schedule slot
-    const newSlot: Jadwal = {
-      id: `manual-s-${Date.now()}`,
-      assignment_id: manualAddMode === 'pengampu' ? selectedPengampuId : `custom-p-${Date.now()}`,
-      kelas_id: targetKelasId,
-      guru_id: targetGuruId,
-      mapel_id: targetMapelId,
-      ruangan_id: targetRuanganId,
-      hari,
-      jam_ke
-    };
-
-    const updatedJadwal = [...jadwal, newSlot];
+    const updatedJadwal = [...jadwal, ...slotsToInsert];
     LocalDB.saveJadwal(updatedJadwal);
     
     if (onRefresh) onRefresh();
@@ -560,7 +579,11 @@ export default function GridTab({
       const subjectName = mapel.find(m => m.id === targetMapelId)?.nama_mapel || 'Mapel';
       const teacherName = guru.find(g => g.id === targetGuruId)?.nama.split(',')[0] || 'Guru';
       const className = kelas.find(c => c.id === targetKelasId)?.nama_kelas || 'Kelas';
-      addLogMessage(`📝 Berhasil menambahkan jadwal manual: ${subjectName} oleh ${teacherName} di Kelas ${className} (${hari}, Jam Ke-${jam_ke}).`);
+      if (manualNumSlots === 1) {
+        addLogMessage(`📝 Berhasil menambahkan jadwal manual: ${subjectName} oleh ${teacherName} di Kelas ${className} (${hari}, Jam Ke-${jam_ke}).`);
+      } else {
+        addLogMessage(`📝 Berhasil menambahkan jadwal manual beruntun: ${subjectName} oleh ${teacherName} di Kelas ${className} (${hari}, Jam Ke-${jam_ke} s/d Jam Ke-${jam_ke + manualNumSlots - 1}, total ${manualNumSlots} JP).`);
+      }
     }
 
     setActiveEditCell(null);
@@ -2556,18 +2579,54 @@ export default function GridTab({
                     </div>
                   )}
 
-                  {/* Pilihan Ruangan (Berlaku untuk kedua mode) */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Ruangan Lokasi:</label>
-                    <select
-                      value={manualRuanganId}
-                      onChange={(e) => setManualRuanganId(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500"
-                    >
-                      {ruangan.map(rm => (
-                        <option key={rm.id} value={rm.id}>{rm.nama_ruangan} {filterType === 'ruangan' && filterId === rm.id ? '(Aktif)' : ''}</option>
-                      ))}
-                    </select>
+                  {/* Pilihan Slot JP & Ruangan */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Durasi / Jumlah JP:</label>
+                      <select
+                        value={manualNumSlots}
+                        onChange={(e) => setManualNumSlots(Number(e.target.value))}
+                        className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500 font-semibold text-slate-700"
+                      >
+                        {(() => {
+                          const maxJamKe = jamPelajaran.length > 0 ? Math.max(...jamPelajaran.map(jp => jp.jam_ke)) : 8;
+                          const maxAllowedByTime = activeEditCell ? (maxJamKe - activeEditCell.jam_ke + 1) : 1;
+                          
+                          let maxJP = 1;
+                          if (manualAddMode === 'pengampu') {
+                            const selectedP = pengampu.find(p => p.id === selectedPengampuId);
+                            if (selectedP) {
+                              const currentCount = jadwal.filter(s => s.kelas_id === selectedP.kelas_id && s.guru_id === selectedP.guru_id && s.mapel_id === selectedP.mapel_id).length;
+                              const remainingCount = selectedP.jumlah_jam - currentCount;
+                              maxJP = Math.max(1, Math.min(remainingCount, maxAllowedByTime));
+                            } else {
+                              maxJP = Math.max(1, maxAllowedByTime);
+                            }
+                          } else {
+                            maxJP = Math.max(1, Math.min(4, maxAllowedByTime));
+                          }
+
+                          const options = [];
+                          for (let i = 1; i <= maxJP; i++) {
+                            options.push(<option key={i} value={i}>{i} JP (Berurutan)</option>);
+                          }
+                          return options;
+                        })()}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Ruangan Lokasi:</label>
+                      <select
+                        value={manualRuanganId}
+                        onChange={(e) => setManualRuanganId(e.target.value)}
+                        className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-indigo-500 font-semibold text-slate-700"
+                      >
+                        {ruangan.map(rm => (
+                          <option key={rm.id} value={rm.id}>{rm.nama_ruangan} {filterType === 'ruangan' && filterId === rm.id ? '(Aktif)' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}
