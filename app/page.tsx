@@ -167,7 +167,7 @@ export default function AdministrativeDashboard() {
   const [selectedGoogleName, setSelectedGoogleName] = useState<string>('');
   const [customGoogleEmail, setCustomGoogleEmail] = useState<string>('');
   const [customGoogleName, setCustomGoogleName] = useState<string>('');
-  const [googleSchoolName, setGoogleSchoolName] = useState<string>('SMAN 1 AI INDONESIA');
+  const [googleSchoolName, setGoogleSchoolName] = useState<string>('SMP Negeri 1 AI Indonesia');
 
   const checkSupabaseSession = async () => {
     if (!isSupabaseModeActive()) return;
@@ -195,7 +195,7 @@ export default function AdministrativeDashboard() {
             dbProfile = data;
           } else if (!error && !data) {
             // Profile does not exist, let's create a default profile on the fly!
-            const defaultSchoolName = sbUser.user_metadata?.school_name || sbUser.user_metadata?.nama_sekolah || 'SMAN 1 AI INDONESIA';
+            const defaultSchoolName = sbUser.user_metadata?.school_name || sbUser.user_metadata?.nama_sekolah || 'SMP Negeri 1 AI Indonesia';
             const defaultRole = sbUser.email?.toLowerCase() === 'balkhi05@gmail.com' ? 'admin' : 'user';
             
             const { data: newProfile, error: insertError } = await supabase
@@ -224,7 +224,7 @@ export default function AdministrativeDashboard() {
         const isPro = dbProfile ? !!dbProfile.is_pro : false;
         const serialKey = dbProfile ? dbProfile.serial_key : null;
         const activatedAt = dbProfile ? dbProfile.activated_at : null;
-        const schoolName = dbProfile?.nama_sekolah || sbUser.user_metadata?.school_name || sbUser.user_metadata?.nama_sekolah || 'SMAN 1 AI INDONESIA';
+        const schoolName = dbProfile?.nama_sekolah || sbUser.user_metadata?.school_name || sbUser.user_metadata?.nama_sekolah || 'SMP Negeri 1 AI Indonesia';
         const userRole = dbProfile?.role || (sbUser.email?.toLowerCase() === 'balkhi05@gmail.com' ? 'admin' : 'user');
         
         // Mapped user in format LocalDB expects
@@ -363,7 +363,7 @@ export default function AdministrativeDashboard() {
       setAuthError('');
     } else {
       // First time, ask for School Name
-      setGoogleSchoolName('SMAN 1 AI INDONESIA');
+      setGoogleSchoolName('SMP Negeri 1 AI Indonesia');
       setGoogleStep('school');
     }
   };
@@ -973,8 +973,8 @@ export default function AdministrativeDashboard() {
     LocalDB.setDemoMode(true);
     loadDatabase(true);
 
-    setLogMessages(prev => ['Sistem berhasil beralih ke Mode Demo dengan data simulasi sekolah SMAN AI.', ...prev]);
-    setTransitionStepText('Memuat data simulasi sekolah SMAN 1 AI...');
+    setLogMessages(prev => ['Sistem berhasil beralih ke Mode Demo dengan data simulasi sekolah SMP AI.', ...prev]);
+    setTransitionStepText('Memuat data simulasi sekolah SMP Negeri 1 AI...');
     await new Promise(resolve => setTimeout(resolve, 600));
 
     setSelectedCell(null);
@@ -1935,7 +1935,7 @@ export default function AdministrativeDashboard() {
                       </span>
                       <input
                         type="text"
-                        placeholder="Contoh: SMAN 1 Jakarta"
+                        placeholder="Contoh: SMP Negeri 1 Jakarta"
                         value={authNamaSekolah}
                         onChange={(e) => setAuthNamaSekolah(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
@@ -2198,7 +2198,7 @@ export default function AdministrativeDashboard() {
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nama Sekolah / Instansi</label>
                     <input
                       type="text"
-                      placeholder="Contoh: SMAN 1 AI INDONESIA"
+                      placeholder="Contoh: SMP Negeri 1 AI Indonesia"
                       value={googleSchoolName}
                       onChange={(e) => setGoogleSchoolName(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
@@ -2259,7 +2259,7 @@ export default function AdministrativeDashboard() {
               )}
               {isDemoMode ? (
                 <span className="inline-flex items-center">
-                  <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md font-bold font-sans flex items-center gap-1.5" title="Sistem terisi data sekolah simulasi SMAN 1 AI">
+                  <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md font-bold font-sans flex items-center gap-1.5" title="Sistem terisi data sekolah simulasi SMP Negeri 1 AI">
                     <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
                     Mode Sandbox
                   </span>
@@ -2305,7 +2305,7 @@ export default function AdministrativeDashboard() {
                 )
               )}
             </h1>
-            <p className="text-[11px] text-slate-400 font-medium">Penyusunan Jadwal Tanpa Bentrok • {currentUser?.nama_sekolah || (typeof window !== 'undefined' ? LocalDB.getSchoolProfile()?.nama_sekolah : '') || 'SMAN 1 AI'} (Akun: @{currentUser?.username})</p>
+            <p className="text-[11px] text-slate-400 font-medium">Penyusunan Jadwal Tanpa Bentrok • {currentUser?.nama_sekolah || (typeof window !== 'undefined' ? LocalDB.getSchoolProfile()?.nama_sekolah : '') || 'SMP Negeri 1 AI'} (Akun: @{currentUser?.username})</p>
           </div>
         </div>
       </header>
@@ -2488,7 +2488,7 @@ export default function AdministrativeDashboard() {
                   Mode Sandbox (Aktif)
                 </div>
                 <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                  Sistem terisi data sekolah simulasi SMAN 1 AI untuk memudahkan uji coba instan.
+                  Sistem terisi data sekolah simulasi SMP Negeri 1 AI untuk memudahkan uji coba instan.
                 </p>
                 <button
                   onClick={handleSwitchToRealMode}

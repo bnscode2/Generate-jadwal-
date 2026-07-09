@@ -58,7 +58,7 @@ export class LocalDB {
   // --- AUTH & SUBSCRIPTION SERVICES ---
   static getUsers(): any[] {
     return this.getStored<any[]>('sch_users_list', [
-      { username: 'admin', password: 'password123', nama_sekolah: 'SMAN 1 AI INDONESIA', role: 'Administrator', is_pro: true }
+      { username: 'admin', password: 'password123', nama_sekolah: 'SMP Negeri 1 AI Indonesia', role: 'Administrator', is_pro: true }
     ]);
   }
 
@@ -369,7 +369,7 @@ export class LocalDB {
     tahun_ajaran: string;
   } {
     const user = this.getCurrentUser();
-    const defaultName = user?.nama_sekolah || 'SMAN 1 AI INDONESIA';
+    const defaultName = user?.nama_sekolah || 'SMP Negeri 1 AI Indonesia';
     return this.getStored<any>('sch_school_profile', {
       nama_sekolah: defaultName,
       logo_sekolah: null,
