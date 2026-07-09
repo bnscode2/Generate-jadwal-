@@ -20,6 +20,7 @@ interface VersionsTabProps {
   onLoadVersion: (version: ScheduleVersion) => void;
   onRefresh: () => void;
   addLogMessage: (msg: string) => void;
+  currentUser?: any;
 }
 
 export default function VersionsTab({
@@ -28,12 +29,16 @@ export default function VersionsTab({
   stats,
   onLoadVersion,
   onRefresh,
-  addLogMessage
+  addLogMessage,
+  currentUser
 }: VersionsTabProps) {
+  const isPro = LocalDB.getCurrentUser()?.is_pro || currentUser?.is_pro || false;
+
   const [versions, setVersions] = useState<ScheduleVersion[]>(() => {
     if (typeof window === 'undefined') return [];
     return LocalDB.getScheduleVersions();
   });
+
   const [versionName, setVersionName] = useState<string>('');
   const [versionDesc, setVersionDesc] = useState<string>('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -43,6 +48,11 @@ export default function VersionsTab({
 
   const handleSaveVersion = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPro) {
+      alert('Fitur Penyimpanan Multi-Versi hanya tersedia untuk Akun PRO.');
+      return;
+    }
+
     if (jadwal.length === 0) {
       alert('Tidak ada jadwal aktif yang bisa disimpan. Silakan generate jadwal terlebih dahulu.');
       return;
@@ -75,11 +85,28 @@ export default function VersionsTab({
     
     addLogMessage(`💾 Berhasil menyimpan Versi Jadwal baru: "${trimmedName}" (${jadwal.length} slot, ${conflicts.length} konflik)`);
     
+    if (isSupabaseModeActive()) {
+      setIsSyncing(true);
+      try {
+        await SupabaseSyncService.syncVersion(newVersion, 'upsert');
+        addLogMessage(`☁️ Berhasil mensinkronisasikan versi "${trimmedName}" ke Cloud.`);
+      } catch (err: any) {
+        addLogMessage(`⚠️ Gagal menyimpan draf ke Cloud: ${err.message}`);
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+
     setVersionName('');
     setVersionDesc('');
   };
 
   const handleLoadVersion = async (v: ScheduleVersion) => {
+    if (!isPro) {
+      alert('Fitur memuat versi jadwal hanya tersedia untuk Akun PRO.');
+      return;
+    }
+
     const confirmMsg = `Apakah Anda yakin ingin memuat "${v.name}"?\nJadwal aktif saat ini akan digantikan oleh versi ini.`;
     if (!confirm(confirmMsg)) {
       return;
@@ -115,7 +142,12 @@ export default function VersionsTab({
     }
   };
 
-  const handleDeleteVersion = (id: string, name: string) => {
+  const handleDeleteVersion = async (id: string, name: string) => {
+    if (!isPro) {
+      alert('Fitur menghapus versi jadwal hanya tersedia untuk Akun PRO.');
+      return;
+    }
+
     if (!confirm(`Apakah Anda yakin ingin menghapus Versi Jadwal "${name}" secara permanen?`)) {
       return;
     }
@@ -124,28 +156,44 @@ export default function VersionsTab({
     LocalDB.saveScheduleVersions(updated);
     setVersions(updated);
     addLogMessage(`🗑️ Berhasil menghapus Versi Jadwal: "${name}"`);
+
+    if (isSupabaseModeActive()) {
+      setIsSyncing(true);
+      try {
+        await SupabaseSyncService.syncVersion({ id } as any, 'delete');
+        addLogMessage(`☁️ Berhasil menghapus draf "${name}" dari Cloud.`);
+      } catch (err: any) {
+        addLogMessage(`⚠️ Gagal menghapus draf dari Cloud: ${err.message}`);
+      } finally {
+        setIsSyncing(false);
+      }
+    }
   };
 
   const handleStartEdit = (v: ScheduleVersion) => {
+    if (!isPro) return;
     setEditingId(v.id);
     setEditName(v.name);
     setEditDesc(v.description || '');
   };
 
-  const handleSaveEdit = (id: string) => {
+  const handleSaveEdit = async (id: string) => {
+    if (!isPro) return;
     const trimmedName = editName.trim();
     if (!trimmedName) {
       alert('Nama versi tidak boleh kosong.');
       return;
     }
 
+    let updatedVersion: ScheduleVersion | null = null;
     const updated = versions.map(v => {
       if (v.id === id) {
-        return {
+        updatedVersion = {
           ...v,
           name: trimmedName,
           description: editDesc.trim() || undefined
         };
+        return updatedVersion;
       }
       return v;
     });
@@ -154,6 +202,18 @@ export default function VersionsTab({
     setVersions(updated);
     setEditingId(null);
     addLogMessage(`✏️ Berhasil memperbarui informasi Versi Jadwal: "${trimmedName}"`);
+
+    if (updatedVersion && isSupabaseModeActive()) {
+      setIsSyncing(true);
+      try {
+        await SupabaseSyncService.syncVersion(updatedVersion, 'upsert');
+        addLogMessage(`☁️ Berhasil mensinkronisasikan perubahan draf "${trimmedName}" ke Cloud.`);
+      } catch (err: any) {
+        addLogMessage(`⚠️ Gagal memperbarui draf di Cloud: ${err.message}`);
+      } finally {
+        setIsSyncing(false);
+      }
+    }
   };
 
   const formatDate = (isoStr: string) => {
@@ -180,9 +240,34 @@ export default function VersionsTab({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start font-sans">
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 items-start font-sans relative ${!isPro ? 'min-h-[450px]' : ''}`}>
+        {/* Lock Overlay */}
+        {!isPro && (
+          <div className="absolute inset-0 bg-slate-50/75 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center text-center p-6 z-20 border border-slate-200 shadow-lg max-w-md mx-auto my-4">
+            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 mb-3 animate-bounce">
+              <Layers className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-extrabold text-slate-800">Penyimpanan Multi-Versi &amp; Cloud (Fitur PRO)</h3>
+            <p className="text-[11px] text-slate-500 max-w-xs mt-1.5 leading-relaxed">
+              Dapatkan kenyamanan lebih dengan kemampuan untuk menyimpan draf pengerjaan jadwal Anda ke dalam berbagai versi payload, serta menyinkronkan seluruh versi tersebut secara otomatis ke Cloud (Supabase).
+            </p>
+            <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl p-4 mt-4 space-y-1.5 text-left w-full max-w-xs">
+              <span className="text-[9px] font-black text-indigo-700 uppercase tracking-wider font-mono block">Benefit Akun PRO:</span>
+              <ul className="text-[10px] text-slate-650 space-y-1 list-disc pl-4 font-semibold">
+                <li>Simpan draf jadwal aktif sebanyak-banyaknya tanpa batas.</li>
+                <li>Beralih versi draf secara instan hanya dengan sekali klik.</li>
+                <li>Sinkronisasi Cloud otomatis: Simpan draf Anda dengan aman di database Supabase.</li>
+                <li>Keamanan data terjamin meskipun Anda membersihkan cache browser.</li>
+              </ul>
+            </div>
+            <p className="text-[9px] text-indigo-600 font-bold mt-4 uppercase tracking-wider font-mono">
+              Silakan aktifkan Lisensi PRO Anda di menu Aktivasi Akun
+            </p>
+          </div>
+        )}
+
         {/* LEFT COLUMN: SAVE CURRENT SCHEDULE */}
-        <div className="lg:col-span-5 bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-5">
+        <div className={`lg:col-span-5 bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-5 ${!isPro ? 'opacity-25 pointer-events-none select-none blur-[2px]' : ''}`}>
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <Layers className="w-5 h-5 text-indigo-600" />
             <h3 className="font-bold text-slate-800">Simpan Jadwal Aktif</h3>
@@ -256,7 +341,7 @@ export default function VersionsTab({
         </div>
 
         {/* RIGHT COLUMN: LIST OF SAVED VERSIONS */}
-        <div className="lg:col-span-7 bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-5">
+        <div className={`lg:col-span-7 bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-5 ${!isPro ? 'opacity-25 pointer-events-none select-none blur-[2px]' : ''}`}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <Database className="w-5 h-5 text-indigo-600" />

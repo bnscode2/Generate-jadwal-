@@ -320,6 +320,28 @@ CREATE POLICY "Pengguna hanya dapat mengelola data konflik milik sendiri"
 
 
 -- =========================================================================
+-- 11. TABLE: schedule_versions (Multi-Versi & Penyimpanan Payload Jadwal)
+-- Menampung berbagai versi jadwal yang disimpan oleh pengguna PRO
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.schedule_versions (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    schedules JSONB NOT NULL DEFAULT '[]'::jsonb,
+    stats JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+ALTER TABLE public.schedule_versions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Pengguna hanya dapat mengelola data versi milik sendiri"
+    ON public.schedule_versions FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+
+-- =========================================================================
 -- INDEKS OPTIMASI UNTUK PENINGKATAN KECEPATAN PENJADWALAN & MULTI-TENANCY
 -- =========================================================================
 CREATE INDEX IF NOT EXISTS idx_schedules_lookup_v2 ON public.schedules (user_id, hari, jam_ke);

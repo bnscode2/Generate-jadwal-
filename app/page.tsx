@@ -2800,6 +2800,7 @@ export default function AdministrativeDashboard() {
               jadwal={jadwal}
               conflicts={filteredConflicts}
               stats={stats}
+              currentUser={currentUser}
               onLoadVersion={(v) => {
                 loadDatabase(true);
                 setStats({

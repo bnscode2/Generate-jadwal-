@@ -1,6 +1,6 @@
 import { getSupabaseClient, isSupabaseModeActive, getAuthenticatedUserWithTimeout } from './supabaseClient';
 import { LocalDB } from './db';
-import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal } from './types';
+import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal, ScheduleVersion } from './types';
 
 // Helper to check if string is a valid UUID
 function isValidUUID(id: string): boolean {
@@ -341,6 +341,26 @@ export class SupabaseSyncService {
       await syncTable('schedule_conflicts', mappedConflicts);
       logs.push(`Berhasil menyelaraskan ${mappedConflicts.length} data Deteksi Konflik.`);
 
+      // 10. Schedule Versions (PRO Feature Cloud Saving)
+      if (onProgress) onProgress(98, 'Menyelaraskan data Versi Jadwal...');
+      const versions = LocalDB.getScheduleVersions();
+      const mappedVersions = versions.map(v => ({
+        id: v.id,
+        name: v.name,
+        description: v.description || null,
+        created_at: v.createdAt,
+        schedules: v.schedules,
+        stats: v.stats,
+        ...(userId ? { user_id: userId } : {})
+      }));
+      try {
+        await syncTable('schedule_versions', mappedVersions);
+        logs.push(`Berhasil menyelaraskan ${mappedVersions.length} data Versi Jadwal.`);
+      } catch (verErr: any) {
+        console.warn('Gagal menyelaraskan schedule_versions:', verErr.message);
+        logs.push(`⚠️ Peringatan: Gagal menyelaraskan data Versi Jadwal ke Cloud: ${verErr.message}`);
+      }
+
       if (onProgress) onProgress(100, 'Seluruh data berhasil diselaraskan ke Cloud database!');
       logs.push('SINKRONISASI UNGGAH BERHASIL! Seluruh data lokal kini tersimpan dengan aman di Supabase cloud.');
       return { success: true, message: 'Seluruh data berhasil diunggah ke Supabase!', logs };
@@ -470,6 +490,17 @@ export class SupabaseSyncService {
       const schedulesData = await fetchTable('schedules');
       logs.push(`Terunduh ${schedulesData.length} data Jadwal Pelajaran.`);
 
+      // Download schedule versions (PRO Feature Cloud Saving)
+      if (onProgress) onProgress(94, 'Mengunduh data Versi Jadwal...');
+      let versionsData: any[] = [];
+      try {
+        versionsData = await fetchTable('schedule_versions');
+        logs.push(`Terunduh ${versionsData.length} data Versi Jadwal.`);
+      } catch (err: any) {
+        console.warn('Gagal membaca tabel schedule_versions:', err.message);
+        logs.push(`⚠️ Peringatan: Gagal membaca tabel schedule_versions dari Cloud: ${err.message}`);
+      }
+
       // Petakan kembali ke format LocalDB
       if (onProgress) onProgress(96, 'Memetakan data dan merekonstruksi basis data lokal...');
       const localTeachers: Guru[] = teachersData.map((t: any) => ({
@@ -538,6 +569,15 @@ export class SupabaseSyncService {
         jam_ke: s.jam_ke
       }));
 
+      const localVersions: ScheduleVersion[] = versionsData.map((v: any) => ({
+        id: v.id,
+        name: v.name,
+        description: v.description || undefined,
+        createdAt: v.created_at || new Date().toISOString(),
+        schedules: v.schedules || [],
+        stats: v.stats || {}
+      }));
+
       // Check if new data is different from current local database
       const currentTeachers = LocalDB.getGuru();
       const currentSubjects = LocalDB.getMapel();
@@ -547,6 +587,7 @@ export class SupabaseSyncService {
       const currentPreferences = LocalDB.getPreferensi();
       const currentAssignments = LocalDB.getPengampu();
       const currentSchedules = LocalDB.getJadwal();
+      const currentVersions = LocalDB.getScheduleVersions();
 
       // Simple normalizer to prevent false-positives
       const normalize = (val: any) => {
@@ -566,7 +607,8 @@ export class SupabaseSyncService {
         normalize(localPeriods) !== normalize(currentPeriods) ||
         normalize(localPreferences) !== normalize(currentPreferences) ||
         normalize(localAssignments) !== normalize(currentAssignments) ||
-        normalize(localSchedules) !== normalize(currentSchedules);
+        normalize(localSchedules) !== normalize(currentSchedules) ||
+        normalize(localVersions) !== normalize(currentVersions);
 
       if (!hasChanges) {
         if (onProgress) onProgress(100, 'Selesai! Data Anda sudah up-to-date.');
@@ -583,6 +625,7 @@ export class SupabaseSyncService {
       LocalDB.savePreferensiDirect(localPreferences);
       LocalDB.savePengampuDirect(localAssignments);
       LocalDB.saveJadwal(localSchedules); // can keep saveJadwal or use a direct save then recalculate conflicts manually
+      LocalDB.saveScheduleVersions(localVersions);
       
       // Hitung konflik sekali saja di akhir untuk seluruh batch data
       LocalDB.recalculateConflicts();
@@ -790,5 +833,17 @@ export class SupabaseSyncService {
       console.error('Error pushSchedulesOnly:', err);
       return { success: false, message: err.message || String(err) };
     }
+  }
+
+  static async syncVersion(v: ScheduleVersion, action: 'upsert' | 'delete'): Promise<void> {
+    const payload = action === 'delete' ? { id: v.id } : {
+      id: v.id,
+      name: v.name,
+      description: v.description || null,
+      created_at: v.createdAt,
+      schedules: v.schedules,
+      stats: v.stats
+    };
+    await this.syncSingleItem('schedule_versions', action, payload);
   }
 }

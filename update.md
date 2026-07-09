@@ -1,5 +1,18 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Penyimpanan Multi-Versi & Cloud Sync Khusus Akun PRO]
+### Perubahan Antarmuka & UX (Frontend):
+- **Tampilan Terkunci Premium (Lock Overlay)**: Menambahkan overlay premium interaktif yang mengaburkan, menonaktifkan, dan melock fitur Multi-Versi di tab **Penyimpanan Versi** untuk pengguna trial/free, lengkap dengan penjelasan detail benefit dan ajakan aktivasi lisensi PRO.
+- **Sinkronisasi Instan Latar Belakang**: Ketika akun PRO membuat draf versi baru, mengubah nama/deskripsi, atau menghapus draf di tab Penyimpanan Versi, draf tersebut secara otomatis diselaraskan langsung ke database cloud Supabase di latar belakang dengan indikasi status visual yang aman.
+
+### Perubahan Database & Logika Sinkronisasi (Backend):
+- **Skema Database Baru**: Menambahkan rancangan tabel `schedule_versions` di `/schema.sql` dan `/lib/database-schema.ts` lengkap dengan pengamanan baris data (Row Level Security - RLS) agar data versi draf terisolasi aman per pengguna (`user_id`).
+- **Integrasi Penuh Sync Service**: Mengintegrasikan `schedule_versions` ke dalam alur unggah (`pushAll`) dan unduh (`pullAll`) di `SupabaseSyncService` (`/lib/supabaseSync.ts`). Menambahkan metode kustom `syncVersion` untuk mendukung update real-time dinamis.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Tampilan Detail Informasi Konflik pada Dialog Atur Jadwal Manual]
 ### Perubahan Antarmuka & UX (Frontend):
 - **Integrasi Panel Informasi Konflik**: Menambahkan panel pendeteksi konflik khusus di bagian paling atas dialog **Atur Jadwal Manual** ketika pengguna mengeklik sel jadwal yang memiliki status bentrok (*Konflik Aktif*).
