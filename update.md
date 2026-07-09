@@ -1,5 +1,14 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Opsi Pengabaian Bentrok Ruangan Dinamis (Sistem Kelas Tetap)]
+### Perubahan Frontend & UX:
+- **Checkbox Abaikan Bentrok Ruangan**: Menambahkan opsi toggle interaktif "Abaikan Bentrok Ruangan" pada modal penambahan jadwal manual di tab Kisi Jadwal (`/components/GridTab.tsx`). Opsi ini diaktifkan secara default (`true`) untuk menyelaraskan dengan sistem operasional sekolah di Indonesia yang mayoritas menggunakan pola **Kelas Tetap/Stasioner** (di mana siswa menetap di kelas masing-masing dan guru yang bergerak, sehingga bentrok ruang tidak relevan).
+- **Validasi Kondisional Cerdas**: Mengonfigurasi logika simpan jadwal manual agar melewati atau melewatkan pemeriksaan bentrok ruang saat opsi pengabaian dicentang, sementara pemeriksaan bentrok jadwal guru dan bentrok jadwal kelas tetap berjalan secara ketat demi keakuratan mutlak.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Fitur Penjadwalan Manual Beruntun (Multi-Slot JP) & Validasi Konflik Ketat]
 ### Perubahan Frontend & UX:
 - **Selektor Durasi Berurutan (Multi-Slot JP)**: Menambahkan kontrol drop-down interaktif "Durasi / Jumlah JP" pada modal penambahan jadwal manual di tab Kisi Jadwal (`/components/GridTab.tsx`). Fitur ini memungkinkan guru atau admin untuk memasukkan alokasi jam pelajaran (misal 2 JP atau lebih) secara berurutan dalam satu tindakan klik saja.

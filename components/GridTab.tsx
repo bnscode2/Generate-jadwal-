@@ -412,6 +412,7 @@ export default function GridTab({
   const [manualRuanganId, setManualRuanganId] = useState<string>('');
   const [quickRoomEdit, setQuickRoomEdit] = useState<boolean>(false);
   const [manualNumSlots, setManualNumSlots] = useState<number>(1);
+  const [manualIgnoreRoomConflicts, setManualIgnoreRoomConflicts] = useState<boolean>(true);
 
   const onCellClicked = (hari: Hari, jamKe: number, scheduleId: string | null | undefined) => {
     if (selectedCell) {
@@ -423,6 +424,7 @@ export default function GridTab({
       setQuickRoomEdit(false);
       setShowDeleteConfirm(false);
       setManualNumSlots(1);
+      setManualIgnoreRoomConflicts(true);
       
       // Filter relevant assignments
       let preselectedPengampu = '';
@@ -546,11 +548,13 @@ export default function GridTab({
       }
 
       // 3. Room conflict
-      const rConf = jadwal.find(s => s.hari === hari && s.jam_ke === currentJamKe && s.ruangan_id === targetRuanganId);
-      if (rConf) {
-        const conflictingClass = kelas.find(c => c.id === rConf.kelas_id)?.nama_kelas || 'kelas';
-        const roomName = ruangan.find(r => r.id === targetRuanganId)?.nama_ruangan || 'Ruangan';
-        conflictsList.push(`• Ruangan [${roomName}] sedang digunakan oleh kelas ${conflictingClass} pada Jam ke-${currentJamKe}.`);
+      if (!manualIgnoreRoomConflicts) {
+        const rConf = jadwal.find(s => s.hari === hari && s.jam_ke === currentJamKe && s.ruangan_id === targetRuanganId);
+        if (rConf) {
+          const conflictingClass = kelas.find(c => c.id === rConf.kelas_id)?.nama_kelas || 'kelas';
+          const roomName = ruangan.find(r => r.id === targetRuanganId)?.nama_ruangan || 'Ruangan';
+          conflictsList.push(`• Ruangan [${roomName}] sedang digunakan oleh kelas ${conflictingClass} pada Jam ke-${currentJamKe}.`);
+        }
       }
 
       // Generate a unique ID per slot
@@ -2627,6 +2631,21 @@ export default function GridTab({
                         ))}
                       </select>
                     </div>
+                  </div>
+
+                  {/* Checkbox Abaikan Bentrok Ruangan */}
+                  <div className="mt-3.5 flex items-center gap-2.5 bg-amber-50/50 border border-amber-200/60 p-2.5 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="manualIgnoreRoomConflicts"
+                      checked={manualIgnoreRoomConflicts}
+                      onChange={(e) => setManualIgnoreRoomConflicts(e.target.checked)}
+                      className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="manualIgnoreRoomConflicts" className="text-[10px] font-semibold text-slate-600 cursor-pointer leading-tight select-none">
+                      <span className="block font-bold text-slate-800">Abaikan Bentrok Ruangan</span>
+                      <span className="text-[9px] text-slate-500 font-medium">Sangat disarankan jika sekolah Anda menggunakan kelas tetap/stasioner.</span>
+                    </label>
                   </div>
                 </div>
               )}
