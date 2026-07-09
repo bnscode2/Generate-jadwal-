@@ -1,4 +1,4 @@
-import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, Hari } from './types';
+import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, Hari, PreferensiKelas } from './types';
 
 // Representation of a block that needs to be scheduled
 interface ScheduleVariable {
@@ -72,6 +72,7 @@ export class CalendarScheduler {
   private periods: JamPelajaran[];
   private assignments: PengampuMataPelajaran[];
   private preferences: PreferensiGuru[];
+  private classPreferences: PreferensiKelas[];
 
   private days: Hari[];
   private batasJamHari?: Record<Hari, number>;
@@ -85,7 +86,8 @@ export class CalendarScheduler {
     assignments: PengampuMataPelajaran[],
     preferences: PreferensiGuru[],
     activeDays?: Hari[],
-    batasJamHari?: Record<Hari, number>
+    batasJamHari?: Record<Hari, number>,
+    classPreferences?: PreferensiKelas[]
   ) {
     this.teachers = teachers.filter(t => t.status_aktif);
     this.subjects = subjects;
@@ -94,6 +96,7 @@ export class CalendarScheduler {
     this.periods = periods;
     this.assignments = assignments;
     this.preferences = preferences;
+    this.classPreferences = classPreferences || [];
     this.days = activeDays && activeDays.length > 0 ? activeDays : ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     this.batasJamHari = batasJamHari;
   }
@@ -187,6 +190,12 @@ export class CalendarScheduler {
       mapelMap.set(m.id, m);
     }
 
+    // Precompute Class Preferences
+    const classPrefMap = new Map<string, PreferensiKelas>();
+    for (const cp of this.classPreferences) {
+      classPrefMap.set(cp.kelas_id, cp);
+    }
+
     // Is current assignment valid?
     const isValid = (v: ScheduleVariable, val: DomainValue): boolean => {
       // Ensure the whole block fits consecutively in the schedule periods
@@ -226,6 +235,17 @@ export class CalendarScheduler {
         const sObj = mapelMap.get(v.mapel_id);
         if (sObj && sObj.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
           return false;
+        }
+
+        // 4.6 Hard constraint: Class preference (blocked day/period/slot)
+        const cPref = classPrefMap.get(v.kelas_id);
+        if (cPref) {
+          if (cPref.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
+            return false;
+          }
+          if (cPref.max_jam_per_hari && jam_ke > cPref.max_jam_per_hari) {
+            return false;
+          }
         }
       }
 
@@ -515,6 +535,12 @@ export class CalendarScheduler {
       mapelMap.set(m.id, m);
     }
 
+    // Precompute Class Preferences
+    const classPrefMap = new Map<string, PreferensiKelas>();
+    for (const cp of this.classPreferences) {
+      classPrefMap.set(cp.kelas_id, cp);
+    }
+
     // Use simplified collision detection to guarantee we pack schools
     const teacherUsage = new Set<string>(); 
     const classUsage = new Set<string>();   
@@ -537,6 +563,17 @@ export class CalendarScheduler {
         const sObj = mapelMap.get(v.mapel_id);
         if (sObj && sObj.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
           return false;
+        }
+
+        // Class preference (blocked day/period/slot)
+        const cPref = classPrefMap.get(v.kelas_id);
+        if (cPref) {
+          if (cPref.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
+            return false;
+          }
+          if (cPref.max_jam_per_hari && jam_ke > cPref.max_jam_per_hari) {
+            return false;
+          }
         }
       }
 
@@ -795,6 +832,17 @@ export class CalendarScheduler {
           const subjObj = this.subjects.find(s => s.id === v.mapel_id);
           if (subjObj && subjObj.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
             score -= 400; // Strong penalty if a subject is scheduled in its blocked slot
+          }
+
+          // Check against class preference
+          const classPref = this.classPreferences.find(cp => cp.kelas_id === v.kelas_id);
+          if (classPref) {
+            if (classPref.slot_tidak_bersedia?.some(s => s.hari === val.hari && s.jam_ke === jam_ke)) {
+              score -= 400; // Strong penalty if a class is scheduled in its blocked slot
+            }
+            if (classPref.max_jam_per_hari && jam_ke > classPref.max_jam_per_hari) {
+              score -= 400; // Strong penalty if class scheduled past max limit
+            }
           }
         }
 

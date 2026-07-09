@@ -19,6 +19,8 @@ ctx.onmessage = function (e: MessageEvent) {
     isPro
   } = e.data;
 
+  const preferensiKelas = e.data.preferensiKelas || e.data.preferensi_kelas || [];
+
   try {
     const solver = new CalendarScheduler(
       guru,
@@ -29,7 +31,8 @@ ctx.onmessage = function (e: MessageEvent) {
       pengampu,
       preferensi,
       hariAktif,
-      batasJamHari
+      batasJamHari,
+      preferensiKelas
     );
 
     // Helper to send progress logs back to the main thread

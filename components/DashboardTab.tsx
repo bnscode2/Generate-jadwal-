@@ -47,6 +47,7 @@ export default function DashboardTab({
   loadDatabase,
   setLogMessages
 }: DashboardTabProps) {
+  const isPro = LocalDB.getCurrentUser()?.is_pro;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<boolean>(false);
@@ -111,6 +112,11 @@ export default function DashboardTab({
 
   // Import system backup from JSON
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isPro = LocalDB.getCurrentUser()?.is_pro;
+    if (!isPro) {
+      alert('Fitur Impor Cadangan (Upload Payload) hanya tersedia untuk Akun PRO.');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -174,11 +180,22 @@ export default function DashboardTab({
           </button>
           
           <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition cursor-pointer"
-            title="Impor file cadangan JSON untuk memulihkan seluruh konfigurasi"
+            onClick={isPro ? () => fileInputRef.current?.click() : undefined}
+            disabled={!isPro}
+            className={`flex items-center gap-1.5 px-3 py-2 border rounded-lg text-xs font-semibold transition whitespace-nowrap shadow-xs ${
+              isPro 
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 cursor-pointer' 
+                : 'bg-slate-50/50 text-slate-400 border-slate-200/60 cursor-not-allowed opacity-75'
+            }`}
+            title={isPro ? "Impor file cadangan JSON untuk memulihkan seluruh konfigurasi" : "Fitur Impor Cadangan hanya tersedia untuk Akun PRO"}
           >
-            <Upload className="w-3.5 h-3.5" /> Impor Cadangan
+            <Upload className={`w-3.5 h-3.5 ${isPro ? 'text-slate-500' : 'text-slate-400'}`} />
+            <span>Impor Cadangan</span>
+            {!isPro && (
+              <span className="ml-1 text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black">
+                PRO
+              </span>
+            )}
           </button>
           <input 
             type="file" 

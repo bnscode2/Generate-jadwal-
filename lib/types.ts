@@ -92,3 +92,11 @@ export interface ScheduleVersion {
   };
 }
 
+export interface PreferensiKelas {
+  id: string;
+  kelas_id: string;
+  slot_tidak_bersedia?: { hari: Hari; jam_ke: number }[];
+  max_jam_per_hari?: number; // limit class study hours per day
+}
+
+

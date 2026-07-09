@@ -1,4 +1,4 @@
-import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal, Hari, ScheduleVersion } from './types';
+import { Guru, MataPelajaran, Kelas, Ruangan, JamPelajaran, PengampuMataPelajaran, PreferensiGuru, Jadwal, KonflikJadwal, Hari, ScheduleVersion, PreferensiKelas } from './types';
 import { MOCK_GURU, MOCK_MAPEL, MOCK_KELAS, MOCK_RUANGAN, MOCK_JAM_PELAJARAN, MOCK_PENGAMPU, MOCK_PREFERENSI } from './mock-db-data';
 
 export interface SystemSettings {
@@ -425,6 +425,9 @@ export class LocalDB {
   static getPreferensi(): PreferensiGuru[] {
     return this.getStored<PreferensiGuru[]>('sch_preferensi', this.isDemoMode() ? MOCK_PREFERENSI : []);
   }
+  static getPreferensiKelas(): PreferensiKelas[] {
+    return this.getStored<PreferensiKelas[]>('sch_preferensi_kelas', []);
+  }
   static getJadwal(): Jadwal[] {
     return this.getStored<Jadwal[]>('sch_jadwal', []);
   }
@@ -451,6 +454,7 @@ export class LocalDB {
   static saveJamPelajaran(data: JamPelajaran[]) { this.setStored('sch_jam_pelajaran', data); this.recalculateConflicts(); }
   static savePengampu(data: PengampuMataPelajaran[]) { this.setStored('sch_pengampu', data); this.recalculateConflicts(); }
   static savePreferensi(data: PreferensiGuru[]) { this.setStored('sch_preferensi', data); this.recalculateConflicts(); }
+  static savePreferensiKelas(data: PreferensiKelas[]) { this.setStored('sch_preferensi_kelas', data); this.recalculateConflicts(); }
   static saveJadwal(data: Jadwal[]) { this.setStored('sch_jadwal', data); this.recalculateConflicts(); }
   static saveHariAktif(data: Hari[]) { this.setStored('sch_hari_aktif', data); this.recalculateConflicts(); }
   static saveBatasJamHari(data: Record<Hari, number>) { this.setStored('sch_batas_jam_hari', data); this.recalculateConflicts(); }
@@ -471,6 +475,7 @@ export class LocalDB {
   static saveJamPelajaranDirect(data: JamPelajaran[]) { this.setStored('sch_jam_pelajaran', data); }
   static savePengampuDirect(data: PengampuMataPelajaran[]) { this.setStored('sch_pengampu', data); }
   static savePreferensiDirect(data: PreferensiGuru[]) { this.setStored('sch_preferensi', data); }
+  static savePreferensiKelasDirect(data: PreferensiKelas[]) { this.setStored('sch_preferensi_kelas', data); }
 
   // --- GLOBAL PLATFORM SETTINGS ---
   static getSystemSettings(): SystemSettings {
@@ -708,6 +713,32 @@ export class LocalDB {
           jam_ke: s.jam_ke,
           entities_involved: [subj.nama_mapel]
         });
+      }
+
+      // Check class preferences (blocked slot & max_jam_per_hari)
+      const classPrefs = this.getPreferensiKelas();
+      const cPref = classPrefs.find(cp => cp.kelas_id === s.kelas_id);
+      if (cPref) {
+        if (cPref.slot_tidak_bersedia?.some(slot => slot.hari === s.hari && slot.jam_ke === s.jam_ke)) {
+          conflicts.push({
+            id: `conf-class-pref-slot-${s.id}-${conflictIdCounter++}`,
+            tipe_konflik: 'preferensi_bentrok',
+            deskripsi: `Kelas ${cMap.get(s.kelas_id) || s.kelas_id} dijadwalkan pelajaran pada hari ${s.hari} Jam Ke-${s.jam_ke} yang bertentangan dengan preferensi khusus berhalangan kelas tersebut.`,
+            hari: s.hari,
+            jam_ke: s.jam_ke,
+            entities_involved: [cMap.get(s.kelas_id) || s.kelas_id]
+          });
+        }
+        if (cPref.max_jam_per_hari && s.jam_ke > cPref.max_jam_per_hari) {
+          conflicts.push({
+            id: `conf-class-pref-limit-${s.id}-${conflictIdCounter++}`,
+            tipe_konflik: 'preferensi_bentrok',
+            deskripsi: `Jadwal Kelas ${cMap.get(s.kelas_id) || s.kelas_id} pada hari ${s.hari} Jam Ke-${s.jam_ke} melebihi batas jam belajar harian maksimal kelas tersebut (Hanya sampai Jam Ke-${cPref.max_jam_per_hari}).`,
+            hari: s.hari,
+            jam_ke: s.jam_ke,
+            entities_involved: [cMap.get(s.kelas_id) || s.kelas_id]
+          });
+        }
       }
     }
 

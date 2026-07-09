@@ -710,6 +710,10 @@ export default function GridTab({
 
   const relevantConflictsList = getRelevantConflicts();
 
+  const activeCellConflicts = activeEditCell
+    ? conflicts.filter(c => c.hari === activeEditCell.hari && c.jam_ke === activeEditCell.jam_ke)
+    : [];
+
   // 3. Hitung progres pemenuhan jam untuk masing-masing kelas secara dinamis
   const classProgressList = kelas.map(c => {
     const classAssignments = pengampu.filter(p => p.kelas_id === c.id);
@@ -830,12 +834,22 @@ export default function GridTab({
             )}
           </button>
           <button 
-            onClick={() => setShowPrintModal(true)}
-            className="flex items-center justify-center gap-2 px-4 h-10 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-sm shadow-indigo-100 hover:shadow-md hover:scale-[1.01] active:scale-95 whitespace-nowrap w-full lg:w-auto"
-            title="Cetak/Print PDF Jadwal dengan Format Profesional"
+            onClick={isPro ? () => setShowPrintModal(true) : undefined}
+            disabled={!isPro}
+            className={`flex items-center justify-center gap-2 px-4 h-10 font-bold rounded-xl text-xs transition-all whitespace-nowrap w-full lg:w-auto shadow-sm active:scale-95 ${
+              isPro 
+                ? 'bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white cursor-pointer hover:shadow-md hover:scale-[1.01]' 
+                : 'bg-slate-50/50 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-75'
+            }`}
+            title={isPro ? "Cetak/Print PDF Jadwal dengan Format Profesional" : "Fitur Cetak PDF hanya tersedia untuk Akun PRO"}
           >
             <Printer className="w-4 h-4 shrink-0" />
             <span>Cetak PDF Profesional</span>
+            {!isPro && (
+              <span className="ml-1 text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-extrabold tracking-wide">
+                PRO
+              </span>
+            )}
           </button>
         </div>
 
@@ -2229,11 +2243,13 @@ export default function GridTab({
 
               <button
                 type="button"
-                onClick={handleExecutePrint}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md hover:shadow-lg"
+                onClick={isPro ? handleExecutePrint : undefined}
+                disabled={!isPro}
+                className={`px-5 py-2 font-bold border rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs ${isPro ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 cursor-pointer' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'}`}
+                title={isPro ? "Mulai Cetak / Simpan PDF" : "Fitur Cetak PDF hanya tersedia untuk Akun PRO"}
               >
                 <Printer className="w-4 h-4" />
-                Mulai Cetak / Simpan PDF
+                Mulai Cetak / Simpan PDF {!isPro && <span className="ml-1 text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black">PRO</span>}
               </button>
             </div>
           </div>
@@ -2266,6 +2282,44 @@ export default function GridTab({
 
             {/* Content Scrollable */}
             <div className="p-6 overflow-y-auto space-y-5">
+              
+              {/* Deteksi Konflik & Peringatan Aktif */}
+              {activeCellConflicts.length > 0 && (
+                <div className="p-4 bg-rose-50 border border-rose-200/85 rounded-xl space-y-2.5 shadow-xs animate-fade-in text-left">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
+                    <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider">
+                      Deteksi Konflik / Peringatan Aktif ({activeCellConflicts.length})
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                    {activeCellConflicts.map((c) => (
+                      <div key={c.id} className="text-xs bg-white border border-rose-100 rounded-lg p-2.5 space-y-1 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider font-mono ${
+                            c.tipe_konflik === 'guru_bentrok' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+                            c.tipe_konflik === 'kelas_bentrok' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                            c.tipe_konflik === 'ruangan_bentrok' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                            'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}>
+                            {c.tipe_konflik.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <p className="text-slate-700 text-[11px] leading-relaxed font-medium">{c.deskripsi}</p>
+                        {c.entities_involved && c.entities_involved.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {c.entities_involved.map((ent, idx) => (
+                              <span key={idx} className="bg-slate-100 text-slate-600 font-mono text-[9px] px-1.5 py-0.5 rounded font-bold">
+                                {ent}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {/* IF CELL IS OCCUPIED (EDIT/UPDATE MODE) */}
               {activeEditCell.scheduleId ? (() => {

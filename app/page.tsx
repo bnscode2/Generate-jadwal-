@@ -44,7 +44,8 @@ import {
   Jadwal, 
   KonflikJadwal, 
   Hari,
-  ScheduleVersion
+  ScheduleVersion,
+  PreferensiKelas
 } from '../lib/types';
 
 import { LocalDB } from '../lib/db';
@@ -82,6 +83,7 @@ export default function AdministrativeDashboard() {
   const [jamPelajaran, setJamPelajaran] = useState<JamPelajaran[]>([]);
   const [pengampu, setPengampu] = useState<PengampuMataPelajaran[]>([]);
   const [preferensi, setPreferensi] = useState<PreferensiGuru[]>([]);
+  const [preferensiKelas, setPreferensiKelas] = useState<PreferensiKelas[]>([]);
   const [jadwal, setJadwal] = useState<Jadwal[]>([]);
   const [conflicts, setConflicts] = useState<KonflikJadwal[]>([]);
   const [hariAktif, setHariAktif] = useState<Hari[]>([]);
@@ -544,6 +546,7 @@ export default function AdministrativeDashboard() {
     setJamPelajaran(LocalDB.getJamPelajaran());
     setPengampu(LocalDB.getPengampu());
     setPreferensi(LocalDB.getPreferensi());
+    setPreferensiKelas(LocalDB.getPreferensiKelas());
     setJadwal(LocalDB.getJadwal());
     setConflicts(LocalDB.getConflicts());
     setHariAktif(LocalDB.getHariAktif());
@@ -1348,6 +1351,23 @@ export default function AdministrativeDashboard() {
     }
   };
 
+  const handleUpdateKelas = async (updatedKelas: Kelas) => {
+    const updated = kelas.map(c => c.id === updatedKelas.id ? updatedKelas : c);
+    LocalDB.saveKelas(updated);
+    setHasUnsavedChanges(true);
+    loadDatabase(true);
+
+    if (isSupabaseModeActive() && currentUser) {
+      try {
+        await SupabaseSyncService.syncClass(updatedKelas, 'upsert');
+        setLogMessages(prev => [`☁️ [Real-time] Pembaruan kelas "${updatedKelas.nama_kelas}" diselaraskan ke Supabase Cloud!`, ...prev]);
+      } catch (err: any) {
+        console.error("Gagal sinkronisasi update kelas ke cloud:", err);
+        setLogMessages(prev => [`⚠️ Peringatan: Gagal mensinkronisasikan pembaruan kelas ke Cloud (${err.message}). Data disimpan lokal.`, ...prev]);
+      }
+    }
+  };
+
   const handleDeleteKelas = (id: string) => {
     const target = kelas.find(c => c.id === id);
     const targetName = target ? target.nama_kelas : 'Kelas';
@@ -1651,6 +1671,7 @@ export default function AdministrativeDashboard() {
           jamPelajaran,
           pengampu,
           preferensi,
+          preferensiKelas,
           hariAktif,
           batasJamHari,
           algorithm,
@@ -1682,7 +1703,8 @@ export default function AdministrativeDashboard() {
           pengampu,
           preferensi,
           hariAktif,
-          batasJamHari
+          batasJamHari,
+          preferensiKelas
         );
 
         let result;
@@ -1878,6 +1900,10 @@ export default function AdministrativeDashboard() {
   };
 
   const handlePrintPDF = () => {
+    if (!currentUser?.is_pro) {
+      alert("Fitur Cetak PDF hanya tersedia untuk Akun PRO.");
+      return;
+    }
     window.print();
   };
 
@@ -2662,6 +2688,14 @@ export default function AdministrativeDashboard() {
               handleDeleteKelas={handleDeleteKelas}
               handleAddRuangan={handleAddRuangan}
               handleDeleteRuangan={handleDeleteRuangan}
+              handleUpdateKelas={handleUpdateKelas}
+              preferensiKelas={preferensiKelas}
+              onSavePreferensiKelas={(prefList) => {
+                LocalDB.savePreferensiKelas(prefList);
+                loadDatabase(true);
+              }}
+              hariAktif={hariAktif}
+              jamPelajaran={jamPelajaran}
             />
           )}
 

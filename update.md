@@ -1,5 +1,45 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Tampilan Detail Informasi Konflik pada Dialog Atur Jadwal Manual]
+### Perubahan Antarmuka & UX (Frontend):
+- **Integrasi Panel Informasi Konflik**: Menambahkan panel pendeteksi konflik khusus di bagian paling atas dialog **Atur Jadwal Manual** ketika pengguna mengeklik sel jadwal yang memiliki status bentrok (*Konflik Aktif*).
+- **Detail Lebih Informatif**: Panel menampilkan daftar lengkap seluruh konflik yang terjadi pada slot (Hari & Jam Pelajaran) tersebut, termasuk tipe konflik (guru bentrok, kelas bentrok, ruangan bentrok, dll.), penjelasan deskripsi bentrok, serta tag entitas-entitas yang terlibat.
+
+### Perubahan Backend & Logika Sistem (Backend):
+- **Penyaringan Konflik Berdasarkan Sel**: Mengimplementasikan logika penyaringan dinamis `activeCellConflicts` yang mencocokkan hari dan jam pelajaran dari sel yang sedang diinteraksi oleh pengguna dengan repositori konflik global.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
+## [09 Juli 2026 - Cetak PDF & Impor Cadangan Khusus Akun PRO]
+### Perubahan Antarmuka & UX (Frontend):
+- **Kunci Fitur Cetak PDF Profesional**: Membatasi fitur "Cetak PDF Profesional" di Tab Grid dan "Cetak Laporan" di Tab Beban Kerja agar hanya dapat diakses oleh pengguna berstatus **PRO**. Pada akun FREE/TRIAL, tombol ini akan ditampilkan dengan lencana visual `PRO` berwarna indigo, status dinonaktifkan (*disabled*), dan instruksi *tooltip* yang ramah.
+- **Kunci Fitur Impor Cadangan (Upload Payload)**: Membatasi tombol "Impor Cadangan" (Unggah payload sistem JSON) di Dashboard Ringkasan agar hanya dapat dijalankan oleh pemegang akun **PRO**. Dilengkapi dengan proteksi preventif saat pemilihan file agar data cadangan tidak dapat diimpor tanpa lisensi yang sesuai.
+
+### Perubahan Backend & Logika Sistem (Backend):
+- **Proteksi Event Handler**: Memasang pengaman ganda pada fungsi `handlePrintPDF` di `app/page.tsx` dan `handleImportBackup` di `DashboardTab.tsx` untuk membatalkan eksekusi cetak / pembacaan berkas secara instan apabila status `is_pro` bernilai salah.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
+## [09 Juli 2026 - Preferensi Belajar Kelas (Max Jam Pelajaran & Hari vs Jam Blokir) & Edit Nama Kelas]
+### Perubahan Antarmuka & UX (Frontend):
+- **Fitur Preferensi Kelas Interaktif**: Menambahkan modal kustom **Konstruksi Aturan Preferensi Kelas** yang dipicu melalui tombol pengaturan di samping setiap baris kelas. Modal ini menyediakan:
+  - Selektor batas maksimal jam belajar harian kelas (pilihan jam pelajaran ke-X).
+  - Grid matriks interaktif (Hari vs Jam Pelajaran) dengan lencana toggle centang hijau (aktif) dan silang merah (blokir) yang meniru persis preferensi guru, memberikan kontrol penuh untuk meliburkan kelas pada slot-slot spesifik.
+- **Tombol Edit Nama & Detail Kelas**: Menambahkan tombol edit nama kelas (ikon pensil) pada tabel kelas. Tombol ini secara dinamis mengubah formulir pendaftaran kelas di sisi kiri menjadi formulir edit beranimasi, mendukung pembaharuan nama kelas, tingkat kurikulum, dan wali kelas secara seamless.
+
+### Perubahan Database & Algoritma Penjadwalan (Backend):
+- **Aturan Batasan Kelas Dinamis**: Mendefinisikan tipe data `PreferensiKelas` di `types.ts` dan menambahkan metode penyimpanan/pemuatan mandiri di `LocalDB` (`lib/db.ts`).
+- **Integrasi Mesin Solver**: Memperbarui logika backtracking CSP (`solveCSP` & `solveRelaxedCSP`) dan algoritma genetika (`solveGenetic`) di `lib/scheduler.ts` agar memperhitungkan batas jam belajar dan slot berhalangan kelas sebagai batasan keras (*hard constraints*).
+- **Deteksi Konflik Otomatis**: Memperbarui `recalculateConflicts` di `lib/db.ts` untuk mendaftarkan bentrok ketersediaan kelas dan kelebihan jam belajar ke dalam daftar konflik jadwal.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Penyaringan & Pengabaian Bentrok Ruangan Secara Menyeluruh]
 ### Perubahan Alur Kerja & Sistem Validasi:
 - **Penyaringan Bentrok Ruangan Real-Time**: Menyinkronkan variabel status preferensi `ignoreRoomConflicts` (Abaikan Bentrok Ruangan) secara global ke seluruh dashboard, tab diagnosa, indikator tab samping, serta kisi kalender jadwal.

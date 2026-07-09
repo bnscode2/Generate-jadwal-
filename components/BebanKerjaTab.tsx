@@ -23,6 +23,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Guru, PengampuMataPelajaran, Jadwal } from '../lib/types';
+import { LocalDB } from '../lib/db';
 
 interface BebanKerjaTabProps {
   guru: Guru[];
@@ -48,6 +49,7 @@ const PILIHAN_TUGAS_TAMBAHAN: TugasTambahan[] = [
 ];
 
 export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabProps) {
+  const isPro = LocalDB.getCurrentUser()?.is_pro;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'semua' | 'kurang' | 'ideal' | 'overload'>('semua');
   
@@ -235,11 +237,22 @@ export default function BebanKerjaTab({ guru, pengampu, jadwal }: BebanKerjaTabP
           </button>
 
           <button
-            onClick={handlePrint}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl text-xs transition shadow-sm hover:shadow-md cursor-pointer flex items-center gap-1.5"
+            onClick={isPro ? handlePrint : undefined}
+            disabled={!isPro}
+            className={`px-3.5 py-2 font-extrabold rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm whitespace-nowrap ${
+              isPro
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer hover:shadow-md'
+                : 'bg-slate-50/50 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-75'
+            }`}
+            title={isPro ? "Cetak Laporan beban kerja" : "Fitur Cetak Laporan hanya tersedia untuk Akun PRO"}
           >
             <Printer className="w-4 h-4" />
-            Cetak Laporan
+            <span>Cetak Laporan</span>
+            {!isPro && (
+              <span className="ml-1 text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-extrabold tracking-wide">
+                PRO
+              </span>
+            )}
           </button>
         </div>
       </div>
