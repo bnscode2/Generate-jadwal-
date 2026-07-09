@@ -1,5 +1,19 @@
 # Log Pembaruan Sistem - Jadwalify
 
+## [09 Juli 2026 - Aturan Lisensi PRO 1 Tahun & Tampilan Indigo Gelap Premium]
+### Perubahan Antarmuka & UX (Frontend):
+- **Skema Lisensi Baru (Masa Aktif 1 Tahun)**: Memperbarui ketentuan lisensi PRO dari seumur hidup (lifetime) menjadi masa aktif 1 tahun (365 hari) penuh untuk mendukung keberlanjutan lisensi tahunan sekolah.
+- **Indikator Masa Aktif Real-Time**: Menyediakan modul countdown real-time yang menghitung secara presisi sisa hari, jam, menit, dan detik masa aktif lisensi PRO pengguna secara live dengan efek pulse hijau yang dinamis.
+- **Visual Premium Indigo Gelap (Deep Navy/Indigo)**: Mengubah warna background utama section dari hitam murni (`bg-[#050505]`) menjadi warna indigo gelap berkelas (`bg-[#0c0a21]`) yang lebih elegan dan serasi dengan gradien cahaya.
+- **Pembaruan Daftar Fitur PRO Terkini**: Menambahkan informasi terbaru seputar keunggulan fitur PRO, termasuk dukungan "Penyimpanan Multi-Versi & Cloud Draft" serta optimasi algoritma genetika tanpa batas.
+
+### Perubahan Database & Logika Sinkronisasi (Backend):
+- **FAQ Lisensi Terkini**: Memperbaharui informasi Frequently Asked Questions (FAQ) mengenai masa berlaku lisensi selama 1 tahun, cara perpanjangan, serta keamanan pembayaran QRIS yang instan.
+
+### Status:
+- **LULUS LINTING** (0 error, 5 warning standar).
+- **LULUS KOMPILASI** (Build sukses).
+
 ## [09 Juli 2026 - Penyimpanan Multi-Versi & Cloud Sync Khusus Akun PRO]
 ### Perubahan Antarmuka & UX (Frontend):
 - **Tampilan Terkunci Premium (Lock Overlay)**: Menambahkan overlay premium interaktif yang mengaburkan, menonaktifkan, dan melock fitur Multi-Versi di tab **Penyimpanan Versi** untuk pengguna trial/free, lengkap dengan penjelasan detail benefit dan ajakan aktivasi lisensi PRO.

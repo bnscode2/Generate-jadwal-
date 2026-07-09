@@ -232,6 +232,36 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
 
   const isPro = currentUser?.is_pro;
 
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+
+  // Real-time countdown calculation (1 year duration)
+  useEffect(() => {
+    if (!isPro || !currentUser?.activated_at) return;
+
+    const updateCountdown = () => {
+      const activatedTime = new Date(currentUser.activated_at).getTime();
+      const expiryTime = activatedTime + 365 * 24 * 60 * 60 * 1000; // 1 year in ms
+      const now = Date.now();
+      const diff = expiryTime - now;
+
+      if (diff <= 0) {
+        setTimeRemaining('Masa Aktif Berakhir (Telah Kedaluwarsa)');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeRemaining(`${days} hari, ${hours} jam, ${minutes} menit, ${seconds} detik`);
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [isPro, currentUser?.activated_at]);
+
   const legoVariant = {
     hidden: { opacity: 0, y: 20, scale: 0.9 },
     visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 350, damping: 25 } }
@@ -253,7 +283,7 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
           {isPro ? (
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold" id="pro-badge">
               <ShieldCheck className="w-4 h-4 text-emerald-600 animate-pulse" />
-              PROFESIONAL (PRO) AKTIF
+              PROFESIONAL (PRO) AKTIF (1 TAHUN)
             </div>
           ) : (
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold animate-pulse" id="trial-badge">
@@ -266,9 +296,9 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
 
       {isPro ? (
         // ==========================================
-        // DISPLAY USER ACTIVE PRO LICENSE - GLASSY
+        // DISPLAY USER ACTIVE PRO LICENSE - DARK INDIGO GLASSY
         // ==========================================
-        <div className="bg-[#050505] text-white rounded-[32px] p-1 shadow-2xl relative overflow-hidden border border-white/5">
+        <div className="bg-[#0c0a21] text-white rounded-[32px] p-1 shadow-2xl relative overflow-hidden border border-indigo-900/40">
           {/* Noise effect */}
           <div className="absolute inset-0 z-0 opacity-[0.02] mix-blend-overlay pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
           {/* Animated blurred light backdrop */}
@@ -277,28 +307,38 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
           <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center justify-between">
             <div className="space-y-4 max-w-xl text-center md:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded-full">
-                <Sparkles className="w-3.5 h-3.5" />
-                Aktivasi Permanen Sukses
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Aktivasi Lisensi PRO Berhasil
               </div>
               <h3 className="text-3xl font-black tracking-tight text-white">
                 Jadwalify Professional
               </h3>
               <p className="text-sm text-white/60 leading-relaxed">
-                Sekolah Anda telah terdaftar sebagai pengguna resmi **Jadwalify PRO Lifetime**. Selamat menggunakan semua fitur penataan jadwal otomatis berbasis Algoritma Genetika tanpa batas dan format ekspor PDF siap cetak.
+                Sekolah Anda telah terdaftar sebagai pengguna resmi **Jadwalify PRO (1 Tahun)**. Selamat menikmati kemudahan menyusun jadwal bebas bentrok menggunakan algoritma genetika pintar, ekspor excel, draf multi-versi, serta cetak PDF resmi siap pakai.
               </p>
+
+              {/* Real-time countdown box */}
+              <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-5 space-y-2 max-w-md text-left">
+                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400 block font-mono">Status Masa Aktif Real-Time:</span>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping shrink-0" />
+                  <span className="text-sm font-black text-white font-mono tracking-wide">{timeRemaining || 'Memuat...'}</span>
+                </div>
+                <p className="text-[10px] text-white/40 leading-relaxed">Masa aktif lisensi Anda berlaku selama 1 tahun (365 hari) penuh terhitung sejak tanggal aktivasi terverifikasi di server.</p>
+              </div>
               
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
                 <div className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
-                  <span>Generasi Fitness Tanpa Batas</span>
+                  <span>Fitness Genetika Tanpa Batas</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
-                  <span>Ekspor PDF Premium / LPJ</span>
+                  <span>Multi-Versi &amp; Cloud Draft</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
-                  <span>Sinkronisasi Cloud Real-Time</span>
+                  <span>Cetak PDF Premium Siap LPJ</span>
                 </div>
               </div>
             </div>
@@ -325,7 +365,13 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2.5">
                   <span className="text-white/40">Tipe</span>
-                  <span className="font-bold text-emerald-400">PRO LIFETIME</span>
+                  <span className="font-bold text-emerald-400">PRO (1 TAHUN)</span>
+                </div>
+                <div className="flex justify-between border-b border-white/5 pb-2.5">
+                  <span className="text-white/40">Sisa Waktu</span>
+                  <span className="font-bold text-indigo-300 text-[10px] truncate max-w-[140px] text-right" title={timeRemaining}>
+                    {timeRemaining ? timeRemaining.split(',')[0] : '365 hari'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/40">Aktivasi</span>
@@ -347,9 +393,9 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
         </div>
       ) : (
         // ==========================================
-        // 3-TIER PRICING GLASS LAYOUT FOR TRIAL
+        // 3-TIER PRICING GLASS LAYOUT FOR TRIAL - DARK INDIGO
         // ==========================================
-        <div className="bg-[#050505] text-white rounded-[32px] p-6 md:p-12 shadow-2xl relative overflow-hidden border border-white/5" id="pricing-glass-section">
+        <div className="bg-[#0c0a21] text-white rounded-[32px] p-6 md:p-12 shadow-2xl relative overflow-hidden border border-indigo-900/40" id="pricing-glass-section">
           {/* Noise effect */}
           <div className="absolute inset-0 z-0 opacity-[0.03] mix-blend-overlay pointer-events-none" style={{ backgroundImage: NOISE_PATTERN }} />
           {/* Ambient Spotlight */}
@@ -361,11 +407,11 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
               Paket Lisensi Jadwalify
             </div>
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white">
-              Satu Kali Bayar, Aktif Selamanya.
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white animate-fade-in">
+              Masa Aktif 1 Tahun Penuh.
             </h2>
             <p className="text-sm md:text-base text-white/50 leading-relaxed">
-              Pilih opsi aktivasi terbaik untuk sekolah Anda. Nikmati kemudahan ekspor data, koordinasi otomatis super lancar, dan optimasi jadwal tanpa batas.
+              Pilih opsi aktivasi terbaik untuk sekolah Anda. Nikmati kemudahan ekspor data, koordinasi otomatis super lancar, optimasi genetika, dan penyimpanan multi-versi cloud draf tanpa batas.
             </p>
           </div>
 
@@ -402,7 +448,7 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
                 </div>
                 
                 <p className="text-white/40 text-xs leading-relaxed mb-6 min-h-[36px]">
-                  Fungsionalitas terbatas untuk keperluan uji coba awal di sekolah.
+                  Fungsionalitas terbatas untuk keperluan uji coba awal di sekolah Anda.
                 </p>
                 
                 <div className="w-full h-px bg-white/10 mb-6" />
@@ -415,11 +461,15 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
                   </div>
                   <div className="flex items-start gap-2.5">
                     <span className="shrink-0 text-red-400 font-bold text-xs mt-0.5">✕</span>
-                    <span className="text-white/50 text-[13px] leading-tight">Format Ekspor PDF Terbatas (Watermark)</span>
+                    <span className="text-white/50 text-[13px] leading-tight">Format Cetak PDF Terbatas (Watermark)</span>
                   </div>
                   <div className="flex items-start gap-2.5">
                     <span className="shrink-0 text-red-400 font-bold text-xs mt-0.5">✕</span>
-                    <span className="text-white/50 text-[13px] leading-tight">Tidak Ada Sinkronisasi Cloud</span>
+                    <span className="text-white/50 text-[13px] leading-tight">Tidak Ada Penyimpanan Multi-Versi</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="shrink-0 text-red-400 font-bold text-xs mt-0.5">✕</span>
+                    <span className="text-white/50 text-[13px] leading-tight">Tidak Ada Sinkronisasi Cloud Supabase</span>
                   </div>
                   <div className="flex items-start gap-2.5">
                     <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-white/10 border border-white/10">
@@ -495,9 +545,8 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
                     </span>
                   </div>
                 </div>
-                
-                <p className="text-white/40 text-xs leading-relaxed mb-6 min-h-[36px]">
-                  Lisensi resmi institusi sekali bayar untuk kepemilikan seumur hidup (lifetime).
+                       <p className="text-white/40 text-xs leading-relaxed mb-6 min-h-[36px]">
+                  Lisensi resmi institusi selama 1 (satu) tahun penuh untuk kemudahan penjadwalan tanpa batas.
                 </p>
                 
                 <div className="w-full h-px bg-white/10 mb-6" />
@@ -567,25 +616,31 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
                         <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
                           <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
                         </div>
-                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Generasi Fitness Tanpa Batas</span>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Optimasi Genetika Tanpa Batas</span>
                       </div>
                       <div className="flex items-start gap-2.5">
                         <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
                           <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
                         </div>
-                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Format Cetak PDF Premium (LPJ)</span>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Cetak PDF Premium Siap LPJ</span>
                       </div>
                       <div className="flex items-start gap-2.5">
                         <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
                           <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
                         </div>
-                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Sinkronisasi Cloud Real-Time</span>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Penyimpanan Multi-Versi &amp; Cloud Draft</span>
                       </div>
                       <div className="flex items-start gap-2.5">
                         <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
                           <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
                         </div>
-                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Lisensi Permanen Seumur Hidup</span>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Sinkronisasi Cloud Supabase Real-Time</span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <div className="shrink-0 flex items-center justify-center w-4 h-4 mt-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
+                          <Check className="w-2.5 h-2.5 text-indigo-400" strokeWidth={3} />
+                        </div>
+                        <span className="text-white/80 text-[13px] leading-tight font-semibold">Masa Aktif 1 Tahun Penuh (365 Hari)</span>
                       </div>
                     </motion.div>
                   )}
@@ -725,8 +780,8 @@ export default function ActivationTab({ currentUser, setCurrentUser, setLogMessa
                 <p className="leading-relaxed">Ya, sangat aman. Kode QRIS di-generate secara unik untuk transaksi Anda secara real-time. Begitu terbayar, sistem mendeteksinya langsung dalam hitungan detik dan mengaktifkan akun Anda secara instan.</p>
               </div>
               <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-sm hover:border-white/10 transition">
-                <h4 className="font-bold text-white text-sm mb-2">Apakah Lisensi PRO berlaku selamanya?</h4>
-                <p className="leading-relaxed">Ya, sekali diaktifkan, lisensi PRO berlaku seumur hidup (lifetime) untuk akun sekolah Anda tanpa biaya bulanan atau tahunan tambahan.</p>
+                <h4 className="font-bold text-white text-sm mb-2">Berapa lama masa aktif Lisensi PRO?</h4>
+                <p className="leading-relaxed">Lisensi PRO berlaku selama 1 tahun (365 hari) sejak tanggal aktivasi terverifikasi. Setelah 1 tahun, Anda dapat melakukan perpanjangan lisensi dengan mudah untuk tahun ajaran berikutnya.</p>
               </div>
               <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-sm hover:border-white/10 transition">
                 <h4 className="font-bold text-white text-sm mb-2">Dapatkah dibuka di beberapa perangkat?</h4>
