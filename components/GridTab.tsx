@@ -148,7 +148,7 @@ export default function GridTab({
           setPromoType('success');
         } else {
           setPromoTitle('🎉 Cloud Sync Berhasil (Mode Trial)!');
-          setPromoMessage('Draf Jadwal Pelajaran berhasil diunggah secara aman ke Cloud Supabase! Sebagai pengguna versi FREE/TRIAL, Anda dapat menyimpan draf secara gratis. Nikmati kebebasan mutlak dengan mengaktifkan versi PRO untuk membuka fitur ekspor Excel (.CSV) instan, pencetakan PDF premium berlogo sekolah, performa kecerdasan AI yang 5x lipat lebih responsif, serta slot penyimpanan cloud tak terbatas!');
+          setPromoMessage('Draf Jadwal Pelajaran berhasil diunggah secara aman ke Cloud Supabase! Sebagai pengguna versi FREE/TRIAL, Anda dapat menyimpan draf secara gratis. Nikmati kebebasan mutlak dengan mengaktifkan versi PRO untuk membuka fitur ekspor Excel (.xlsx) instan, pencetakan PDF premium berlogo sekolah, performa kecerdasan AI yang 5x lipat lebih responsif, serta slot penyimpanan cloud tak terbatas!');
           setPromoType('success');
         }
         setShowProPromoModal(true);
@@ -220,61 +220,542 @@ export default function GridTab({
     }, 150);
   };
 
-  const exportMasterScheduleExcel = () => {
-    const daysArr: Hari[] = hariAktif;
-    const classesArr = kelas;
-    
-    let csvContent = `\ufeffJADWAL INDUK KOLEKTIF - ${printSchoolName.toUpperCase()}\n`;
-    csvContent += `Tahun Ajaran: ${printAcademicYear}\n\n`;
-    csvContent += `Hari,Jam Ke,Waktu,${classesArr.map(c => `Kelas ${c.nama_kelas}`).join(',')}\n`;
+  const exportMasterScheduleExcel = async () => {
+    try {
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Jadwal Pelajaran');
 
-    for (const day of daysArr) {
-      for (const p of jamPelajaran) {
-        let row = `${day},${p.jam_ke},${p.jam_mulai} - ${p.jam_selesai}`;
-        for (const c of classesArr) {
-          const slots = jadwal.filter(s => s.hari === day && s.jam_ke === p.jam_ke && s.kelas_id === c.id);
-          if (slots.length > 0) {
-            const slotDetails = slots.map(sc => {
-              const m = mapel.find(sub => sub.id === sc.mapel_id);
-              const g = guru.find(tea => tea.id === sc.guru_id);
-              const mCode = m ? m.kode_mapel : 'Mapel';
-              const gCode = g ? getInitialGuru(g.nama) : 'Guru';
-              return `${mCode}/${gCode}`;
-            }).join(' | ');
-            row += `,"${slotDetails}"`;
-          } else {
-            row += `,"-"`;
+      // Set grid lines visible
+      worksheet.views = [{ showGridLines: true }];
+
+      // Load School Profile details
+      const schoolProfile = LocalDB.getSchoolProfile();
+      const schoolName = (schoolProfile?.nama_sekolah || printSchoolName || 'SMP Negeri 1 AI').toUpperCase();
+      const schoolYear = (schoolProfile?.tahun_ajaran || printAcademicYear || 'TAHUN AJARAN 2026/2027').toUpperCase();
+
+      // Sort classes by tingkat and nama_kelas
+      const getTingkatValue = (tingkat: string): number => {
+        const parsed = parseInt(tingkat.replace(/\D/g, ''), 10);
+        if (!isNaN(parsed)) return parsed;
+        // Roman numeral conversions
+        const romanMap: Record<string, number> = { 
+          'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5, 'vi': 6, 
+          'vii': 7, 'viii': 8, 'ix': 9, 'x': 10, 'xi': 11, 'xii': 12, 'xiii': 13 
+        };
+        const clean = tingkat.trim().toLowerCase();
+        return romanMap[clean] || 99;
+      };
+
+      // Group classes
+      const mtsClasses: Kelas[] = [];
+      const maClasses: Kelas[] = [];
+      const otherClasses: Kelas[] = [];
+
+      kelas.forEach(c => {
+        const val = getTingkatValue(c.tingkat);
+        if (val >= 7 && val <= 9) {
+          mtsClasses.push(c);
+        } else if (val >= 10 && val <= 12) {
+          maClasses.push(c);
+        } else {
+          otherClasses.push(c);
+        }
+      });
+
+      // Sort each group
+      const sortFn = (a: Kelas, b: Kelas) => {
+        const valA = getTingkatValue(a.tingkat);
+        const valB = getTingkatValue(b.tingkat);
+        if (valA !== valB) return valA - valB;
+        return a.nama_kelas.localeCompare(b.nama_kelas, undefined, { numeric: true, sensitivity: 'base' });
+      };
+
+      mtsClasses.sort(sortFn);
+      maClasses.sort(sortFn);
+      otherClasses.sort(sortFn);
+
+      const sortedClasses = [...mtsClasses, ...maClasses, ...otherClasses];
+
+      if (sortedClasses.length === 0) {
+        alert("Tidak ada data kelas untuk diekspor. Sediakan minimal satu kelas di Master Data.");
+        return;
+      }
+
+      // Dynamic group headers based on school name
+      const schoolClean = schoolProfile?.nama_sekolah?.replace(/^(MTs\s*\/\s*MA|MTs|MA|SMP|SMA)\s+/i, '') || 'Madrasah';
+      const mtsLabel = schoolProfile?.nama_sekolah?.toLowerCase().includes('ribath') 
+        ? "MTs Ribath Nurul Hidayah" 
+        : `SMP/MTs ${schoolClean}`;
+      const maLabel = schoolProfile?.nama_sekolah?.toLowerCase().includes('ribath') 
+        ? "MA Ribath Nurul Hidayah" 
+        : `SMA/MA ${schoolClean}`;
+
+      // Calculate total columns for main schedule
+      // Col 1: HARI (A)
+      // Col 2: JAM KE (B)
+      // Col 3: PUKUL (C)
+      // Col 4..: Class columns
+      const totalMainCols = 3 + sortedClasses.length;
+
+      // Assign sequential codes to teachers
+      const sortedTeachers = [...guru].sort((a, b) => a.nama.localeCompare(b.nama));
+      const teacherCodeMap = new Map<string, string>();
+      sortedTeachers.forEach((g, idx) => {
+        teacherCodeMap.set(g.id, String(idx + 1));
+      });
+
+      const sortedSubjects = [...mapel].sort((a, b) => a.kode_mapel.localeCompare(b.kode_mapel));
+
+      // --- ROW 2, 3, 4: HEADER TITLE BLOCK ---
+      worksheet.mergeCells(2, 1, 2, totalMainCols);
+      const titleCell1 = worksheet.getCell(2, 1);
+      titleCell1.value = schoolName;
+      titleCell1.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF1A237E' } };
+      titleCell1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells(3, 1, 3, totalMainCols);
+      const titleCell2 = worksheet.getCell(3, 1);
+      titleCell2.value = "JADWAL PELAJARAN";
+      titleCell2.font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FF0D47A1' } };
+      titleCell2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells(4, 1, 4, totalMainCols);
+      const titleCell3 = worksheet.getCell(4, 1);
+      titleCell3.value = schoolYear;
+      titleCell3.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FF424242' } };
+      titleCell3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Set row heights
+      worksheet.getRow(2).height = 24;
+      worksheet.getRow(3).height = 28;
+      worksheet.getRow(4).height = 18;
+      worksheet.getRow(5).height = 26; // Grouped Header row
+      worksheet.getRow(6).height = 22; // Individual Class Name row
+
+      // --- ROW 5 & 6: MAIN HEADERS & GROUPED COLUMNS ---
+      // Merge HARI, JAM KE, PUKUL vertically
+      const mergeAndStyleHeader = (colIdx: number, text: string) => {
+        worksheet.mergeCells(5, colIdx, 6, colIdx);
+        const cell = worksheet.getCell(5, colIdx);
+        cell.value = text;
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1B5E20' } // Dark Green
+        };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      };
+
+      mergeAndStyleHeader(1, "HARI");
+      mergeAndStyleHeader(2, "JAM KE");
+      mergeAndStyleHeader(3, "PUKUL");
+
+      // Grouped Class Headers (Row 5) and Class names (Row 6)
+      let currentCol = 4;
+
+      const styleGroupedHeader = (startCol: number, endCol: number, label: string, colorHex: string, textHex: string = 'FFFFFFFF') => {
+        worksheet.mergeCells(5, startCol, 5, endCol);
+        const cell = worksheet.getCell(5, startCol);
+        cell.value = label;
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: textHex } };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: colorHex }
+        };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      };
+
+      if (mtsClasses.length > 0) {
+        styleGroupedHeader(currentCol, currentCol + mtsClasses.length - 1, mtsLabel, 'FF4CAF50'); // Vibrant Green
+        currentCol += mtsClasses.length;
+      }
+      if (maClasses.length > 0) {
+        styleGroupedHeader(currentCol, currentCol + maClasses.length - 1, maLabel, 'FFA5D6A7', 'FF1B5E20'); // Lighter Mint
+        currentCol += maClasses.length;
+      }
+      if (otherClasses.length > 0) {
+        styleGroupedHeader(currentCol, currentCol + otherClasses.length - 1, "Alumni / Lainnya", 'FFFFB74D', 'FF5D4037'); // Orange
+        currentCol += otherClasses.length;
+      }
+
+      // Write individual Class Names in Row 6
+      sortedClasses.forEach((cls, idx) => {
+        const colIdx = 4 + idx;
+        const cell = worksheet.getCell(6, colIdx);
+        cell.value = cls.nama_kelas;
+        cell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF333333' } };
+        
+        // Determine subtle accent background matching its group
+        let bg = 'FFF5F5F5';
+        const val = getTingkatValue(cls.tingkat);
+        if (val >= 7 && val <= 9) bg = 'FFE8F5E9'; // Very light green
+        else if (val >= 10 && val <= 12) bg = 'FFE0F2F1'; // Very light teal
+        else bg = 'FFFFF3E0'; // Very light orange
+
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: bg }
+        };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+
+      // --- SCHEDULE GRID BUILDING & BREAK DETECTION ---
+      const sortedPeriods = [...jamPelajaran].sort((a, b) => a.jam_ke - b.jam_ke);
+
+      // Structure day row items
+      interface RowItem {
+        type: 'period' | 'break';
+        period?: JamPelajaran;
+        breakLabel?: string;
+        breakTime?: string;
+      }
+
+      const dayRowItems: RowItem[] = [];
+      const timeToMinutes = (timeStr: string): number => {
+        const parts = timeStr.split(':');
+        if (parts.length < 2) return 0;
+        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      };
+
+      sortedPeriods.forEach((p, idx) => {
+        dayRowItems.push({ type: 'period', period: p });
+        
+        // Check for gaps (break) between consecutive periods
+        if (idx < sortedPeriods.length - 1) {
+          const endCurrent = timeToMinutes(p.jam_selesai);
+          const startNext = timeToMinutes(sortedPeriods[idx + 1].jam_mulai);
+          const gap = startNext - endCurrent;
+          if (gap >= 5) {
+            dayRowItems.push({
+              type: 'break',
+              breakLabel: 'ISTIRAHAT',
+              breakTime: `${p.jam_selesai}-${sortedPeriods[idx + 1].jam_mulai}`
+            });
           }
         }
-        csvContent += row + '\n';
+      });
+
+      // Day Colors Map for grouping Column A
+      const dayColors: Record<string, string> = {
+        'senin': 'FF1976D2', // Blue
+        'selasa': 'FF0097A7', // Cyan/Teal
+        'rabu': 'FF5E35B1', // Purple
+        'kamis': 'FFD84315', // Orange
+        'jumat': 'FF2E7D32', // Green
+        'sabtu': 'FFC2185B', // Pink
+        'minggu': 'FF78909C' // Blue-Grey
+      };
+
+      let activeRowIndex = 7;
+
+      hariAktif.forEach((day) => {
+        const startRow = activeRowIndex;
+        const dayColor = dayColors[day.toLowerCase()] || 'FF424242';
+
+        dayRowItems.forEach((item) => {
+          worksheet.getRow(activeRowIndex).height = item.type === 'break' ? 18 : 22;
+
+          if (item.type === 'period' && item.period) {
+            const p = item.period;
+            
+            // Col B: Jam Ke
+            const jamKeCell = worksheet.getCell(activeRowIndex, 2);
+            jamKeCell.value = p.jam_ke;
+            jamKeCell.font = { name: 'Segoe UI', size: 9, bold: true };
+            jamKeCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // Col C: Pukul
+            const pukulCell = worksheet.getCell(activeRowIndex, 3);
+            pukulCell.value = `${p.jam_mulai}-${p.jam_selesai}`;
+            pukulCell.font = { name: 'Segoe UI', size: 9 };
+            pukulCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // Col D..: Class cells
+            sortedClasses.forEach((cls, clsIdx) => {
+              const colIdx = 4 + clsIdx;
+              const cell = worksheet.getCell(activeRowIndex, colIdx);
+              
+              const slots = jadwal.filter(s => s.hari === day && s.jam_ke === p.jam_ke && s.kelas_id === cls.id);
+              if (slots.length > 0) {
+                const label = slots.map(sc => {
+                  const m = mapel.find(sub => sub.id === sc.mapel_id);
+                  const g = guru.find(tea => tea.id === sc.guru_id);
+                  const teacherCode = g ? (teacherCodeMap.get(g.id) || '') : '';
+                  const subjectCode = m ? m.kode_mapel : '';
+                  return teacherCode && subjectCode ? `${teacherCode}.${subjectCode}` : (subjectCode || 'Mapel');
+                }).join(' / ');
+
+                cell.value = label;
+                cell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF212121' } };
+                
+                // Subtle pastel highlight for scheduled classes
+                cell.fill = {
+                  type: 'pattern',
+                  pattern: 'solid',
+                  fgColor: { argb: 'FFF5F7FA' }
+                };
+              } else {
+                cell.value = "-";
+                cell.font = { name: 'Segoe UI', size: 9, color: { argb: 'FFBDBDBD' } };
+              }
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            });
+
+          } else if (item.type === 'break') {
+            // Col B: Empty/Dash
+            const jamKeCell = worksheet.getCell(activeRowIndex, 2);
+            jamKeCell.value = "";
+            jamKeCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // Col C: Break Time
+            const pukulCell = worksheet.getCell(activeRowIndex, 3);
+            pukulCell.value = item.breakTime || "";
+            pukulCell.font = { name: 'Segoe UI', size: 9, italic: true };
+            pukulCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // Merge class columns for Istirahat
+            worksheet.mergeCells(activeRowIndex, 4, activeRowIndex, totalMainCols);
+            const breakCell = worksheet.getCell(activeRowIndex, 4);
+            breakCell.value = item.breakLabel || "ISTIRAHAT";
+            breakCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFC62828' } }; // Dark Red
+            breakCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFFCDD2' } // Soft Red/Pink
+            };
+            breakCell.alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+
+          activeRowIndex++;
+        });
+
+        // Merge Day Column A
+        worksheet.mergeCells(startRow, 1, activeRowIndex - 1, 1);
+        const dayCell = worksheet.getCell(startRow, 1);
+        dayCell.value = day.toUpperCase();
+        dayCell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        dayCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: dayColor }
+        };
+        dayCell.alignment = { 
+          vertical: 'middle', 
+          horizontal: 'center', 
+          textRotation: 90,
+          wrapText: true 
+        };
+      });
+
+      // --- ADD EKSTRAKURIKULER ROW AT THE BOTTOM ---
+      worksheet.getRow(activeRowIndex).height = 24;
+      worksheet.mergeCells(activeRowIndex, 1, activeRowIndex, 3);
+      const eksTitleCell = worksheet.getCell(activeRowIndex, 1);
+      eksTitleCell.value = "EKSTRAKURIKULER";
+      eksTitleCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF424242' } };
+      eksTitleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+      eksTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells(activeRowIndex, 4, activeRowIndex, totalMainCols);
+      const eksContentCell = worksheet.getCell(activeRowIndex, 4);
+      eksContentCell.value = "KALIGRAFI, TILAWAH, PMR, HADROH, MULTIMEDIA, VOLY, FUTSAL, COOKING CLASS, DAN PASKIBRA";
+      eksContentCell.font = { name: 'Segoe UI', size: 8.5, italic: true, color: { argb: 'FF212121' } };
+      eksContentCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF5F5F5' }
+      };
+      eksContentCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+
+      // Apply thin borders across the entire main schedule grid
+      const applyBordersToRange = (ws: any, startR: number, startC: number, endR: number, endC: number) => {
+        for (let r = startR; r <= endR; r++) {
+          const row = ws.getRow(r);
+          for (let c = startC; c <= endC; c++) {
+            const cell = row.getCell(c);
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFD6DBDF' } },
+              left: { style: 'thin', color: { argb: 'FFD6DBDF' } },
+              bottom: { style: 'thin', color: { argb: 'FFD6DBDF' } },
+              right: { style: 'thin', color: { argb: 'FFD6DBDF' } }
+            };
+          }
+        }
+      };
+
+      applyBordersToRange(worksheet, 5, 1, activeRowIndex, totalMainCols);
+
+      // Add double border line at the very bottom of the main schedule
+      for (let c = 1; c <= totalMainCols; c++) {
+        const cell = worksheet.getCell(activeRowIndex, c);
+        cell.border = {
+          ...cell.border,
+          bottom: { style: 'double', color: { argb: 'FF7F8C8D' } }
+        };
       }
-    }
 
-    // Append Legenda Guru
-    csvContent += `\n\nLEGENDA KODE GURU PENGAJAR\n`;
-    csvContent += `Kode,Nama Guru,NIP\n`;
-    for (const g of guru.filter(tea => tea.status_aktif)) {
-      csvContent += `"${getInitialGuru(g.nama)}","${g.nama}","${g.nip || '-'}"\n`;
-    }
+      // --- REFERENCE TABLES (GURU & MAPEL STACKED ON THE RIGHT) ---
+      const spacingCol = totalMainCols + 1;
+      const refCol = totalMainCols + 2;
 
-    // Append Legenda Mapel
-    csvContent += `\nLEGENDA KODE MATA PELAJARAN\n`;
-    csvContent += `Kode,Nama Mata Pelajaran\n`;
-    for (const m of mapel) {
-      csvContent += `"${m.kode_mapel}","${m.nama_mapel}"\n`;
-    }
+      // 1. Teacher Reference Table Header
+      worksheet.mergeCells(5, refCol, 5, refCol + 1);
+      const tHeaderCell = worksheet.getCell(5, refCol);
+      tHeaderCell.value = "KODE GURU & PELAJARAN";
+      tHeaderCell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFFFFFFF' } };
+      tHeaderCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD84315' } // Orange/Red Header
+      };
+      tHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `jadwal_induk_kolektif_${printSchoolName.toLowerCase().replace(/\s+/g, '_')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    if (addLogMessage) {
-      addLogMessage(`Jadwal Induk Kolektif berhasil diekspor ke Excel CSV.`);
+      const tSubKeyCell = worksheet.getCell(6, refCol);
+      tSubKeyCell.value = "KODE";
+      tSubKeyCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+      tSubKeyCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE64A19' }
+      };
+      tSubKeyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const tSubValCell = worksheet.getCell(6, refCol + 1);
+      tSubValCell.value = "NAMA GURU";
+      tSubValCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+      tSubValCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE64A19' }
+      };
+      tSubValCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+
+      // Write Teacher list
+      let teacherRowIndex = 7;
+      sortedTeachers.forEach((g) => {
+        const codeCell = worksheet.getCell(teacherRowIndex, refCol);
+        codeCell.value = parseInt(teacherCodeMap.get(g.id) || '0', 10);
+        codeCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF3E2723' } };
+        codeCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFE0B2' } // Very light warm amber
+        };
+        codeCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        const nameCell = worksheet.getCell(teacherRowIndex, refCol + 1);
+        nameCell.value = g.nama;
+        nameCell.font = { name: 'Segoe UI', size: 9 };
+        nameCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+
+        teacherRowIndex++;
+      });
+
+      applyBordersToRange(worksheet, 5, refCol, teacherRowIndex - 1, refCol + 1);
+
+      // 2. Subject Reference Table Header (Stacked below)
+      const subjStartRow = teacherRowIndex + 1;
+      
+      worksheet.mergeCells(subjStartRow, refCol, subjStartRow, refCol + 1);
+      const mHeaderCell = worksheet.getCell(subjStartRow, refCol);
+      mHeaderCell.value = "KODE & MATA PELAJARAN";
+      mHeaderCell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFFFFFFF' } };
+      mHeaderCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0277BD' } // Ocean Blue Header
+      };
+      mHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const mSubKeyCell = worksheet.getCell(subjStartRow + 1, refCol);
+      mSubKeyCell.value = "KODE";
+      mSubKeyCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+      mSubKeyCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0288D1' }
+      };
+      mSubKeyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const mSubValCell = worksheet.getCell(subjStartRow + 1, refCol + 1);
+      mSubValCell.value = "MATA PELAJARAN";
+      mSubValCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+      mSubValCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0288D1' }
+      };
+      mSubValCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+
+      // Write Subjects
+      let subjectRowIndex = subjStartRow + 2;
+      sortedSubjects.forEach((m) => {
+        const codeCell = worksheet.getCell(subjectRowIndex, refCol);
+        codeCell.value = m.kode_mapel;
+        codeCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF01579B' } };
+        codeCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE1F5FE' } // Very light sky blue
+        };
+        codeCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        const nameCell = worksheet.getCell(subjectRowIndex, refCol + 1);
+        nameCell.value = m.nama_mapel;
+        nameCell.font = { name: 'Segoe UI', size: 9 };
+        nameCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+
+        subjectRowIndex++;
+      });
+
+      applyBordersToRange(worksheet, subjStartRow, refCol, subjectRowIndex - 1, refCol + 1);
+
+      // --- COLUMN WIDTHS AUTO-FIT & CUSTOM SETTINGS ---
+      worksheet.getColumn(1).width = 7.5;  // HARI
+      worksheet.getColumn(2).width = 7;    // JAM KE
+      worksheet.getColumn(3).width = 14;   // PUKUL
+
+      // Set class columns widths
+      for (let c = 4; c <= totalMainCols; c++) {
+        worksheet.getColumn(c).width = 11; // Ideal class column width
+      }
+
+      // Spacing column
+      worksheet.getColumn(spacingCol).width = 4;
+
+      // Reference Table columns
+      worksheet.getColumn(refCol).width = 8;
+      worksheet.getColumn(refCol + 1).width = 28;
+
+      // Add some padding rows at top/bottom just for safety and breathing room
+      worksheet.getRow(1).height = 10;
+
+      // --- SAVE AND DOWNLOAD FILE ---
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jadwal_pelajaran_${schoolName.toLowerCase().replace(/\s+/g, '_') || 'sekolah'}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      if (addLogMessage) {
+        addLogMessage(`Jadwal pelajaran resmi berhasil diekspor ke Excel (.xlsx) dengan visual lengkap & daftar kode referensi.`);
+      }
+    } catch (err: any) {
+      console.error("Gagal mengekspor Excel: ", err);
+      alert(`Terjadi kesalahan saat membuat file Excel: ${err.message || err}`);
     }
   };
 
@@ -823,10 +1304,10 @@ export default function GridTab({
                 ? 'bg-white text-slate-700 border-slate-200 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm cursor-pointer' 
                 : 'bg-slate-50/50 text-slate-400 border-slate-200/60 cursor-not-allowed opacity-75'
             }`}
-            title={isPro ? "Ekspor ke Excel CSV" : "Fitur Ekspor Excel hanya tersedia untuk Akun PRO"}
+            title={isPro ? "Ekspor ke file Excel (.xlsx) format resmi" : "Fitur Ekspor Excel hanya tersedia untuk Akun PRO"}
           >
             <Download className={`w-4 h-4 shrink-0 ${isPro ? 'text-emerald-600' : 'text-slate-400'}`} />
-            <span>Ekspor Excel (CSV)</span>
+            <span>Ekspor Excel (.xlsx)</span>
             {!isPro && (
               <span className="ml-1 text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-extrabold tracking-wide">
                 PRO
@@ -2220,7 +2701,7 @@ export default function GridTab({
                   } : undefined}
                   disabled={!isPro}
                   className={`px-4 py-2 font-bold border rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs ${isPro ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 cursor-pointer' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'}`}
-                  title={isPro ? "Unduh jadwal pelajaran induk seluruh kelas dalam bentuk Excel .csv" : "Ekspor Excel hanya tersedia untuk Akun PRO"}
+                  title={isPro ? "Unduh jadwal pelajaran induk seluruh kelas dalam bentuk Excel .xlsx" : "Ekspor Excel hanya tersedia untuk Akun PRO"}
                 >
                   <Download className="w-4 h-4" />
                   Ekspor Excel (Jadwal Induk) {!isPro && <span className="ml-1 text-[8px] bg-indigo-600 text-white px-1 py-0.5 rounded font-black">PRO</span>}
@@ -2234,7 +2715,7 @@ export default function GridTab({
                   } : undefined}
                   disabled={!isPro}
                   className={`px-4 py-2 font-bold border rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs ${isPro ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 cursor-pointer' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'}`}
-                  title={isPro ? "Unduh jadwal tampilan saringan aktif dalam bentuk Excel .csv" : "Ekspor Excel hanya tersedia untuk Akun PRO"}
+                  title={isPro ? "Unduh jadwal pelajaran induk seluruh kelas dalam bentuk Excel .xlsx" : "Ekspor Excel hanya tersedia untuk Akun PRO"}
                 >
                   <Download className="w-4 h-4" />
                   Ekspor Excel (Tampilan Saringan) {!isPro && <span className="ml-1 text-[8px] bg-indigo-600 text-white px-1 py-0.5 rounded font-black">PRO</span>}
