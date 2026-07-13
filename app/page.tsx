@@ -144,7 +144,7 @@ export default function AdministrativeDashboard() {
     isOpen: boolean;
     title: string;
     message: string;
-    type: 'reset_master' | 'clear_schedule' | 'logout' | 'delete_guru' | 'delete_mapel' | 'delete_kelas' | 'delete_ruangan' | 'delete_pengampu' | 'delete_schedule' | 'save_pending_tab' | 'switch_to_real' | 'switch_to_demo';
+    type: 'reset_master' | 'clear_schedule' | 'logout' | 'delete_guru' | 'delete_mapel' | 'delete_kelas' | 'delete_ruangan' | 'delete_pengampu' | 'delete_schedule' | 'save_pending_tab' | 'switch_to_real' | 'switch_to_demo' | 'guest_migration' | 'sync_conflict';
     onConfirm?: () => void;
   } | null>(null);
 
